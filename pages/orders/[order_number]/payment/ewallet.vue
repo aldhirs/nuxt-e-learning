@@ -1,80 +1,95 @@
 <script setup lang="ts">
-import { dummyOrders, dummyPaymentSessions } from '~/data/dummy'
-
 definePageMeta({ layout: 'minimal' })
 
 const route = useRoute()
 const { formatCurrency } = useFormatters()
 
-const order = computed(() => dummyOrders.find(o => o.order_number === route.params.order_number))
-const session = computed(() => dummyPaymentSessions.ewallet_dana)
+const orderNumber = computed(() => route.params.order_number as string)
+const order = useOrder(orderNumber)
 
-if (!order.value) {
-  throw createError({ statusCode: 404, message: 'Order tidak ditemukan' })
+const walletMap: Record<string, { label: string; color: string }> = {
+  ewallet_ovo:       { label: 'OVO',        color: '#4C3494' },
+  ewallet_dana:      { label: 'DANA',        color: '#118EEA' },
+  ewallet_shopeepay: { label: 'ShopeePay',  color: '#EE4D2D' },
+  ewallet_gopay:     { label: 'GoPay',       color: '#00880A' },
 }
 
-const walletLabel = computed(() => {
-  const method = route.query.method as string
-  const labels: Record<string, string> = { ewallet_ovo: 'OVO', ewallet_dana: 'DANA', ewallet_shopeepay: 'ShopeePay', ewallet_gopay: 'GoPay' }
-  return labels[method] ?? 'E-Wallet'
-})
+const method = computed(() => route.query.method as string || 'ewallet_dana')
+const wallet = computed(() => walletMap[method.value] ?? walletMap.ewallet_dana)
 
-useSeoMeta({ title: `${walletLabel.value} — ${order.value?.order_number}` })
+useSeoMeta({ title: computed(() => `${wallet.value.label} — ${orderNumber.value}`) })
 
 const isRedirecting = ref(false)
+
+const steps = computed(() => [
+  `Klik tombol "Buka ${wallet.value.label}" di bawah.`,
+  `Anda akan diarahkan ke ${wallet.value.label}.`,
+  `Ikuti instruksi di aplikasi ${wallet.value.label}.`,
+  'Klik "Saya Sudah Bayar" setelah selesai.'
+])
 
 async function openWallet() {
   isRedirecting.value = true
   await new Promise(r => setTimeout(r, 800))
-  window.open(session.value?.redirect_url ?? '#', '_blank')
+  // Dalam produksi: window.location.href = session.redirect_url
+  window.open('#', '_blank')
   isRedirecting.value = false
 }
 </script>
 
 <template>
-  <div v-if="order" class="max-w-sm mx-auto px-4 py-10 flex flex-col items-center text-center">
-    <div class="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mb-4">
-      <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+  <!-- Order not found -->
+  <div v-if="!order" class="max-w-xl mx-auto px-4 py-20">
+    <BaseEmptyState
+      icon="alert"
+      title="Order tidak ditemukan"
+      description="Silakan kembali dan ulangi dari pilih metode pembayaran."
+      cta-label="Pilih Metode Bayar"
+      :cta-to="`/orders/${orderNumber}/payment`"
+    />
+  </div>
+
+  <div v-else class="max-w-sm mx-auto px-4 py-10 flex flex-col items-center text-center">
+    <NuxtLink :to="`/orders/${orderNumber}/payment`"
+      class="self-start inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
+      Ganti metode
+    </NuxtLink>
+
+    <!-- Wallet logo area -->
+    <div
+      class="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 text-white text-2xl font-black"
+      :style="{ background: wallet.color }"
+    >
+      {{ wallet.label[0] }}
     </div>
 
-    <h1 class="text-xl font-bold text-slate-800 mb-1">Bayar dengan {{ walletLabel }}</h1>
+    <h1 class="text-xl font-bold text-slate-800 mb-1">Bayar dengan {{ wallet.label }}</h1>
     <p class="text-sm text-slate-500 mb-2">Order <span class="font-mono font-semibold">{{ order.order_number }}</span></p>
-    <p class="text-2xl font-bold text-primary-600 mb-4">{{ formatCurrency(order.total_amount) }}</p>
+    <p class="text-2xl font-bold text-primary-600 mb-2">{{ formatCurrency(order.total_amount) }}</p>
+    <OrderCountdownTimer :expires-at="order.expires_at" class="mb-6" />
 
-    <CountdownTimer v-if="order.expires_at" :expires-at="order.expires_at" class="mb-6" />
-
+    <!-- Instructions -->
     <BaseCard shadow="sm" padding="md" class="border border-slate-200 w-full mb-6 text-left">
-      <p class="text-xs text-slate-500 mb-2">Cara bayar:</p>
+      <p class="text-xs font-semibold text-slate-700 mb-3">Cara pembayaran:</p>
       <ol class="space-y-2">
-        <li class="flex gap-2 text-sm text-slate-600">
-          <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-          Klik tombol "Buka {{ walletLabel }}" di bawah.
-        </li>
-        <li class="flex gap-2 text-sm text-slate-600">
-          <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
-          Anda akan diarahkan ke aplikasi {{ walletLabel }}.
-        </li>
-        <li class="flex gap-2 text-sm text-slate-600">
-          <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
-          Konfirmasi pembayaran di aplikasi {{ walletLabel }}.
-        </li>
-        <li class="flex gap-2 text-sm text-slate-600">
-          <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0">4</span>
-          Kembali ke halaman ini setelah pembayaran selesai.
+        <li v-for="(step, i) in steps" :key="i" class="flex gap-2.5 text-sm text-slate-600">
+          <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0">{{ i + 1 }}</span>
+          {{ step }}
         </li>
       </ol>
     </BaseCard>
 
     <div class="w-full space-y-2">
       <BaseButton variant="primary" size="lg" block :loading="isRedirecting" @click="openWallet">
-        Buka {{ walletLabel }}
+        Buka {{ wallet.label }}
       </BaseButton>
-      <BaseButton variant="secondary" size="lg" block :to="`/orders/${order.order_number}/payment/status`">
+      <BaseButton variant="secondary" size="lg" block :to="`/orders/${orderNumber}/payment/status`">
         Saya Sudah Bayar
       </BaseButton>
-      <BaseButton variant="ghost" size="lg" block :to="`/orders/${order.order_number}`">
+      <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
         Kembali ke Detail Order
       </BaseButton>
     </div>

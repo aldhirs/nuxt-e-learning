@@ -332,6 +332,25 @@ export const dummyCourseList: CourseListItem[] = dummyCourses.map(c => ({
 
 export const dummyOrders: Order[] = [
   {
+    order_id: 4,
+    order_number: 'DRS-260520-1170',
+    course: { id: 1, title: 'Basic Safety Training (BST) — STCW A-VI/1', slug: 'basic-safety-training-bst-stcw', thumbnail_url: 'https://placehold.co/800x450/0F52BA/FFFFFF/png?text=BST+STCW' },
+    student_full_name: 'Aldhi Ramdan',
+    student_email: 'aldhiramdan@gmail.com',
+    student_phone: '+6281234567890',
+    unit_price: 350000,
+    tax_amount: 38500,
+    total_amount: 388500,
+    currency: 'IDR',
+    status: 'pending',
+    payment_method: null,
+    expires_at: new Date(Date.now() + 22 * 60 * 60 * 1000).toISOString(),
+    paid_at: null,
+    cancelled_at: null,
+    cancellation_reason: null,
+    created_at: new Date().toISOString()
+  },
+  {
     order_id: 1,
     order_number: 'DRS-260505-0012',
     course: { id: 2, title: 'Maritime Safety Management — ISM Code Implementation', slug: 'maritime-safety-management-ism-code', thumbnail_url: 'https://placehold.co/800x450/1e5088/FFFFFF/png?text=ISM+Code' },

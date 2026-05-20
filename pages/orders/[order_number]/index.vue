@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { dummyOrders } from '~/data/dummy'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'default' })
@@ -10,32 +9,52 @@ const auth = useAuthStore()
 const { formatCurrency, formatDatetime } = useFormatters()
 
 if (!auth.isAuthenticated) {
-  await router.push('/login?redirect=/orders')
+  await router.push(`/login?redirect=/orders/${route.params.order_number}`)
 }
 
-const order = computed(() => dummyOrders.find(o => o.order_number === route.params.order_number))
+const orderNumber = computed(() => route.params.order_number as string)
+const order = useOrder(orderNumber)
 
-if (!order.value) {
-  throw createError({ statusCode: 404, message: 'Order tidak ditemukan' })
-}
-
-useSeoMeta({ title: `Order ${order.value?.order_number}` })
+useSeoMeta({ title: computed(() => `Order ${orderNumber.value}`) })
 
 const statusInfo = computed(() => {
   if (!order.value) return null
   const map: Record<string, { desc: string; nextAction: string; nextTo?: string }> = {
-    pending: { desc: 'Menunggu pembayaran dari Anda.', nextAction: 'Bayar Sekarang', nextTo: `/orders/${order.value.order_number}/payment` },
-    paid: { desc: 'Pembayaran telah diterima. Anda dapat mengakses course.', nextAction: 'Akses Course', nextTo: '/courses' },
-    expired: { desc: 'Order kedaluwarsa karena tidak dibayar dalam 24 jam.', nextAction: 'Buat Order Baru', nextTo: `/checkout?course=${order.value.course.slug}` },
+    pending: {
+      desc: 'Menunggu pembayaran dari Anda.',
+      nextAction: 'Bayar Sekarang',
+      nextTo: `/orders/${orderNumber.value}/payment`
+    },
+    paid: {
+      desc: 'Pembayaran telah diterima. Anda dapat mengakses course.',
+      nextAction: 'Mulai Belajar',
+      nextTo: '/courses'
+    },
+    expired: {
+      desc: 'Order kedaluwarsa karena tidak dibayar dalam 24 jam.',
+      nextAction: 'Buat Order Baru',
+      nextTo: `/checkout?course=${order.value.course.slug}`
+    },
     cancelled: { desc: 'Order telah dibatalkan.', nextAction: 'Jelajahi Course', nextTo: '/courses' },
-    refunded: { desc: 'Dana telah dikembalikan ke akun Anda.', nextAction: 'Jelajahi Course', nextTo: '/courses' },
+    refunded:  { desc: 'Dana telah dikembalikan ke akun Anda.', nextAction: 'Jelajahi Course', nextTo: '/courses' },
   }
   return map[order.value.status]
 })
 </script>
 
 <template>
-  <div v-if="order" class="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+  <!-- Not found -->
+  <div v-if="!order" class="max-w-3xl mx-auto px-4 sm:px-6 py-20">
+    <BaseEmptyState
+      icon="file-x"
+      title="Order tidak ditemukan"
+      description="Order ini tidak ada atau Anda tidak memiliki akses."
+      cta-label="Lihat Order Saya"
+      cta-to="/orders"
+    />
+  </div>
+
+  <div v-else class="max-w-3xl mx-auto px-4 sm:px-6 py-10">
     <!-- Back -->
     <NuxtLink to="/orders" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-6">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -52,20 +71,15 @@ const statusInfo = computed(() => {
       <OrderStatusBadge :status="order.status" />
     </div>
 
-    <!-- Status explanation -->
+    <!-- Status card -->
     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
       <p class="text-sm text-slate-600 mb-3">{{ statusInfo?.desc }}</p>
-      <CountdownTimer
-        v-if="order.status === 'pending' && order.expires_at"
+      <OrderCountdownTimer
+        v-if="order.status === 'pending'"
         :expires-at="order.expires_at"
         class="mb-3"
       />
-      <BaseButton
-        v-if="statusInfo?.nextTo"
-        variant="primary"
-        size="sm"
-        :to="statusInfo.nextTo"
-      >
+      <BaseButton v-if="statusInfo?.nextTo" variant="primary" size="sm" :to="statusInfo.nextTo">
         {{ statusInfo?.nextAction }}
       </BaseButton>
     </div>
@@ -91,11 +105,7 @@ const statusInfo = computed(() => {
     <!-- Payment summary -->
     <BaseCard shadow="sm" padding="md" class="border border-slate-200 mb-4">
       <h2 class="text-sm font-semibold text-slate-700 mb-4">Ringkasan Pembayaran</h2>
-      <PriceBreakdown
-        :subtotal="order.unit_price"
-        :tax="order.tax_amount"
-        :total="order.total_amount"
-      />
+      <CheckoutPriceBreakdown :subtotal="order.unit_price" :tax="order.tax_amount" :total="order.total_amount" />
     </BaseCard>
 
     <!-- Meta -->
@@ -106,7 +116,7 @@ const statusInfo = computed(() => {
           <dt class="text-slate-500">Tanggal Order</dt>
           <dd class="text-slate-800">{{ formatDatetime(order.created_at) }}</dd>
         </div>
-        <div v-if="order.expires_at" class="flex justify-between">
+        <div class="flex justify-between">
           <dt class="text-slate-500">Batas Bayar</dt>
           <dd class="text-slate-800">{{ formatDatetime(order.expires_at) }}</dd>
         </div>
@@ -116,7 +126,7 @@ const statusInfo = computed(() => {
         </div>
         <div v-if="order.payment_method" class="flex justify-between">
           <dt class="text-slate-500">Metode Bayar</dt>
-          <dd class="text-slate-800 uppercase">{{ order.payment_method.replace('_', ' ') }}</dd>
+          <dd class="text-slate-800 uppercase">{{ order.payment_method.replace(/_/g, ' ') }}</dd>
         </div>
         <div class="flex justify-between">
           <dt class="text-slate-500">Nama Pemesan</dt>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { dummyCourses, dummyUser } from '~/data/dummy'
+import { dummyCourses } from '~/data/dummy'
 import { useAuthStore } from '~/stores/auth'
+import { useOrderStore } from '~/stores/order'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, minLength, helpers } from '@vuelidate/validators'
+import type { Order } from '~/types'
 
 definePageMeta({ layout: 'minimal' })
 
@@ -11,6 +13,7 @@ useSeoMeta({ title: 'Checkout' })
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const orderStore = useOrderStore()
 const { formatCurrency } = useFormatters()
 
 const courseSlug = computed(() => route.query.course as string)
@@ -22,12 +25,12 @@ if (!course.value) {
 
 const isLoading = ref(false)
 const orderCreated = ref(false)
-const orderNumber = ref('')
+const createdOrder = ref<Order | null>(null)
 
 const form = reactive({
-  full_name: auth.isAuthenticated ? dummyUser.full_name : '',
-  email: auth.isAuthenticated ? dummyUser.email : '',
-  phone: auth.isAuthenticated ? dummyUser.phone ?? '' : '',
+  full_name: auth.isAuthenticated ? auth.user?.full_name ?? '' : '',
+  email: auth.isAuthenticated ? auth.user?.email ?? '' : '',
+  phone: '',
   notes: ''
 })
 
@@ -53,8 +56,40 @@ async function placeOrder() {
   isLoading.value = true
   try {
     await new Promise(r => setTimeout(r, 1000))
-    const num = `DRS-${Date.now().toString().slice(-8)}-${Math.floor(Math.random() * 9999).toString().padStart(4, '0')}`
-    orderNumber.value = num
+
+    const now = new Date()
+    const datePart = now.toISOString().slice(2, 10).replace(/-/g, '')
+    const seq = Math.floor(Math.random() * 9000 + 1000)
+    const orderNumber = `DRS-${datePart}-${seq}`
+
+    const order: Order = {
+      order_id: Math.floor(Math.random() * 90000 + 10000),
+      order_number: orderNumber,
+      course: {
+        id: course.value!.id,
+        title: course.value!.title,
+        slug: course.value!.slug,
+        thumbnail_url: course.value!.thumbnail_url
+      },
+      student_full_name: form.full_name,
+      student_email: form.email,
+      student_phone: form.phone || null,
+      unit_price: subtotal.value,
+      tax_amount: tax.value,
+      total_amount: total.value,
+      currency: 'IDR',
+      status: 'pending',
+      payment_method: null,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      paid_at: null,
+      cancelled_at: null,
+      cancellation_reason: null,
+      created_at: now.toISOString()
+    }
+
+    // Simpan ke store agar payment pages bisa menemukan order ini
+    orderStore.setOrder(order)
+    createdOrder.value = order
     orderCreated.value = true
   } finally {
     isLoading.value = false
@@ -62,10 +97,11 @@ async function placeOrder() {
 }
 
 function goToPayment() {
+  if (!createdOrder.value) return
   if (isFree.value) {
-    router.push('/activate?order=' + orderNumber.value)
+    router.push(`/activate?order=${createdOrder.value.order_number}`)
   } else {
-    router.push(`/orders/${orderNumber.value}/payment`)
+    router.push(`/orders/${createdOrder.value.order_number}/payment`)
   }
 }
 </script>
@@ -73,14 +109,14 @@ function goToPayment() {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-10">
     <!-- Success state -->
-    <div v-if="orderCreated" class="text-center py-12">
+    <div v-if="orderCreated && createdOrder" class="text-center py-12">
       <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
       </div>
       <h1 class="text-xl font-bold text-slate-800 mb-2">Order Berhasil Dibuat</h1>
-      <p class="text-slate-500 text-sm mb-1">No. Order: <span class="font-mono font-semibold text-slate-700">{{ orderNumber }}</span></p>
+      <p class="text-slate-500 text-sm mb-1">No. Order: <span class="font-mono font-semibold text-slate-700">{{ createdOrder.order_number }}</span></p>
       <p class="text-slate-500 text-sm mb-8">
         {{ isFree ? 'Course gratis siap diakses.' : 'Selesaikan pembayaran untuk mengakses course.' }}
       </p>
@@ -137,7 +173,7 @@ function goToPayment() {
                 v-model="form.phone"
                 label="No. Telepon"
                 placeholder="08123456789"
-                :error="v$.phone.$error ? v$.phone.$errors[0]?.$message as string : ''"
+                :error="v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : ''"
                 hint="Digunakan untuk konfirmasi pembayaran"
                 required
                 @blur="v$.phone.$touch"
@@ -156,7 +192,7 @@ function goToPayment() {
           <div class="sticky top-20">
             <BaseCard shadow="sm" padding="md" class="border border-slate-200">
               <h2 class="text-sm font-semibold text-slate-700 mb-4">Ringkasan Pesanan</h2>
-              <PriceBreakdown :subtotal="subtotal" :tax="isFree ? 0 : tax" :total="total" />
+              <CheckoutPriceBreakdown :subtotal="subtotal" :tax="isFree ? 0 : tax" :total="total" />
 
               <div class="mt-5">
                 <BaseButton

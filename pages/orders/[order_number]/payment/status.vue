@@ -1,39 +1,42 @@
 <script setup lang="ts">
-import { dummyOrders } from '~/data/dummy'
-
 definePageMeta({ layout: 'minimal' })
 
 const route = useRoute()
+const router = useRouter()
 const { formatCurrency } = useFormatters()
 
-const order = computed(() => dummyOrders.find(o => o.order_number === route.params.order_number))
+const orderNumber = computed(() => route.params.order_number as string)
+const order = useOrder(orderNumber)
 
-if (!order.value) {
-  throw createError({ statusCode: 404, message: 'Order tidak ditemukan' })
-}
+useSeoMeta({ title: computed(() => `Status Pembayaran — ${orderNumber.value}`) })
 
-useSeoMeta({ title: `Status Pembayaran — ${order.value?.order_number}` })
-
-type PollStatus = 'checking' | 'paid' | 'pending' | 'expired' | 'failed'
+type PollStatus = 'checking' | 'paid' | 'pending' | 'expired'
 
 const pollStatus = ref<PollStatus>('checking')
 const pollCount = ref(0)
-const maxPoll = 8
+const maxPoll = 6
 
 async function checkStatus() {
   pollCount.value++
   await new Promise(r => setTimeout(r, 1500))
 
-  if (order.value?.status === 'paid') {
+  if (!order.value) {
+    pollStatus.value = 'pending'
+    return
+  }
+
+  if (order.value.status === 'paid') {
     pollStatus.value = 'paid'
     return
   }
-  if (order.value?.status === 'expired') {
+
+  if (order.value.status === 'expired') {
     pollStatus.value = 'expired'
     return
   }
 
   if (pollCount.value >= maxPoll) {
+    // Setelah maxPoll tetap pending → tampilkan pesan tunggu
     pollStatus.value = 'pending'
     return
   }
@@ -46,13 +49,21 @@ onMounted(checkStatus)
 
 <template>
   <div class="min-h-[calc(100vh-112px)] flex items-center justify-center px-4">
-    <div class="text-center max-w-sm w-full" v-if="order">
+    <div class="text-center max-w-sm w-full">
+
       <!-- Checking -->
       <template v-if="pollStatus === 'checking'">
         <BaseSpinner size="lg" class="mx-auto mb-4" />
         <h1 class="text-xl font-bold text-slate-800 mb-2">Mengecek Status Pembayaran</h1>
-        <p class="text-slate-500 text-sm">Harap tunggu, kami sedang memverifikasi pembayaran Anda...</p>
-        <p class="text-xs text-slate-400 mt-4">Pemeriksaan ke-{{ pollCount }} dari {{ maxPoll }}</p>
+        <p class="text-slate-500 text-sm mb-4">Harap tunggu, kami sedang memverifikasi pembayaran Anda...</p>
+        <div class="flex justify-center gap-1.5">
+          <span
+            v-for="i in maxPoll"
+            :key="i"
+            :class="['inline-block w-2 h-2 rounded-full transition-all duration-300',
+              i <= pollCount ? 'bg-primary-500 scale-110' : 'bg-slate-200']"
+          />
+        </div>
       </template>
 
       <!-- Paid -->
@@ -63,13 +74,11 @@ onMounted(checkStatus)
           </svg>
         </div>
         <h1 class="text-xl font-bold text-slate-800 mb-2">Pembayaran Berhasil!</h1>
-        <p class="text-slate-500 text-sm mb-1">
-          <span class="font-mono font-semibold">{{ order.order_number }}</span>
-        </p>
+        <p class="text-slate-500 text-sm mb-1 font-mono font-semibold">{{ orderNumber }}</p>
         <p class="text-slate-500 text-sm mb-6">Course Anda telah aktif. Selamat belajar!</p>
         <div class="flex flex-col gap-2">
           <BaseButton variant="primary" to="/courses">Mulai Belajar</BaseButton>
-          <BaseButton variant="ghost" :to="`/orders/${order.order_number}`">Lihat Detail Order</BaseButton>
+          <BaseButton variant="ghost" :to="`/orders/${orderNumber}`">Lihat Detail Order</BaseButton>
         </div>
       </template>
 
@@ -83,10 +92,10 @@ onMounted(checkStatus)
         <h1 class="text-xl font-bold text-slate-800 mb-2">Menunggu Konfirmasi</h1>
         <p class="text-slate-500 text-sm mb-6">
           Pembayaran Anda sedang diproses. Enrollment akan aktif otomatis dalam beberapa menit.
-          Anda akan mendapat notifikasi email ke <strong>{{ order.student_email }}</strong>.
+          <span v-if="order">Notifikasi dikirim ke <strong>{{ order.student_email }}</strong>.</span>
         </p>
         <div class="flex flex-col gap-2">
-          <BaseButton variant="primary" :to="`/orders/${order.order_number}`">Lihat Status Order</BaseButton>
+          <BaseButton variant="primary" :to="`/orders/${orderNumber}`">Lihat Status Order</BaseButton>
           <BaseButton variant="ghost" to="/">Kembali ke Beranda</BaseButton>
         </div>
       </template>
@@ -99,14 +108,15 @@ onMounted(checkStatus)
           </svg>
         </div>
         <h1 class="text-xl font-bold text-slate-800 mb-2">Order Kedaluwarsa</h1>
-        <p class="text-slate-500 text-sm mb-6">
-          Waktu pembayaran telah habis. Silakan buat order baru untuk melanjutkan.
-        </p>
+        <p class="text-slate-500 text-sm mb-6">Waktu pembayaran habis. Silakan buat order baru.</p>
         <div class="flex flex-col gap-2">
-          <BaseButton variant="primary" :to="`/courses`">Cari Course</BaseButton>
-          <BaseButton variant="ghost" :to="`/orders/${order.order_number}`">Lihat Detail Order</BaseButton>
+          <BaseButton v-if="order" variant="primary" :to="`/checkout?course=${order.course.slug}`">
+            Beli Lagi
+          </BaseButton>
+          <BaseButton variant="ghost" to="/courses">Lihat Course</BaseButton>
         </div>
       </template>
+
     </div>
   </div>
 </template>
