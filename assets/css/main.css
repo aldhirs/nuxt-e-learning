@@ -1,0 +1,70 @@
+@import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+
+@theme {
+  /* imarePalette — DrillSpace brand */
+  --color-primary-50: #e8f3fc;
+  --color-primary-100: #d1e7f9;
+  --color-primary-200: #a3cff3;
+  --color-primary-300: #6fb4ec;
+  --color-primary-400: #4d9de6;
+  --color-primary-500: #2F80D2;
+  --color-primary-600: #2566ab;
+  --color-primary-700: #1e5088;
+  --color-primary-800: #163a64;
+  --color-primary-900: #0f2741;
+  --color-primary-950: #081729;
+
+  --color-secondary: #2566ab;
+  --color-accent: #d1e7f9;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+}
+
+/* Focus visible ring */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-white text-slate-800 antialiased;
+  }
+
+  /* Reset list style in grids */
+  ul.grid-list {
+    @apply list-none m-0 p-0;
+  }
+}
+
+/* Skeleton shimmer animation */
+@layer utilities {
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+  .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+}
