@@ -1,42 +1,50 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'minimal' })
+import { usePaymentStore } from '~/stores/payment'
+import type { PaymentSessionVA } from '~/types'
+
+definePageMeta({ layout: 'minimal', middleware: 'auth' })
 
 const route = useRoute()
 const { formatCurrency } = useFormatters()
+const paymentStore = usePaymentStore()
 
 const orderNumber = computed(() => route.params.order_number as string)
 const order = useOrder(orderNumber)
 
-const bankMap: Record<string, { label: string; vaNumber: string }> = {
-  va_bca:     { label: 'BCA',         vaNumber: '1234567890123456' },
-  va_mandiri: { label: 'Mandiri',     vaNumber: '8901234567890123' },
-  va_bri:     { label: 'BRI',         vaNumber: '0123456789012345' },
-  va_bni:     { label: 'BNI',         vaNumber: '9012345678901234' },
-  va_bsi:     { label: 'BSI',         vaNumber: '7890123456789012' },
-  va_cimb:    { label: 'CIMB Niaga',  vaNumber: '6789012345678901' },
-}
+// VA session di-stamp ke store saat user submit method picker. Discriminate
+// by payment_method.startsWith('va_') agar TypeScript narrow ke VA shape.
+const session = computed<PaymentSessionVA | null>(() => {
+  const s = paymentStore.getSession(orderNumber.value)
+  if (s && s.payment_method.startsWith('va_')) return s as PaymentSessionVA
+  return null
+})
 
-const method = computed(() => route.query.method as string || 'va_bca')
-const bank = computed(() => bankMap[method.value] ?? bankMap.va_bca)
+const bankLabel = computed(() => session.value?.bank_name ?? '—')
 
-useSeoMeta({ title: computed(() => `${bank.value.label} Virtual Account — ${orderNumber.value}`) })
+useSeoMeta({ title: () => `${bankLabel.value} Virtual Account — ${orderNumber.value}` })
 
 const copied = ref(false)
-
 async function copyVA() {
-  await navigator.clipboard.writeText(bank.value.vaNumber)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
+  if (!session.value?.virtual_account_number) return
+  try {
+    await navigator.clipboard.writeText(session.value.virtual_account_number)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch { /* clipboard denied */ }
 }
 
-const howToSteps = computed(() => [
-  `Buka aplikasi mobile banking atau ATM ${bank.value.label} Anda.`,
-  'Pilih menu Transfer / Bayar / Virtual Account.',
-  `Masukkan nomor Virtual Account di bawah.`,
-  `Konfirmasi jumlah pembayaran sebesar ${formatCurrency(order.value?.total_amount ?? 0)}.`,
-  'Simpan bukti transfer Anda.',
-  'Enrollment course aktif otomatis setelah dikonfirmasi (maks. 5 menit).'
-])
+const howToSteps = computed(() => {
+  if (session.value?.instructions?.length) return session.value.instructions
+  const amount = formatCurrency(session.value?.amount ?? order.value?.total_amount ?? 0)
+  return [
+    `Buka aplikasi mobile banking atau ATM ${bankLabel.value}.`,
+    'Pilih menu Transfer / Bayar / Virtual Account.',
+    'Masukkan nomor Virtual Account di atas.',
+    `Konfirmasi jumlah pembayaran sebesar ${amount}.`,
+    'Simpan bukti transfer Anda.',
+    'Status pembayaran terkonfirmasi otomatis dalam beberapa menit setelah transfer berhasil.'
+  ]
+})
 </script>
 
 <template>
@@ -51,6 +59,17 @@ const howToSteps = computed(() => [
     />
   </div>
 
+  <!-- Session not found (page diakses langsung tanpa pilih method dulu) -->
+  <div v-else-if="!session" class="max-w-xl mx-auto px-4 py-20">
+    <BaseEmptyState
+      icon="alert"
+      title="Sesi pembayaran tidak ditemukan"
+      description="Silakan pilih metode pembayaran terlebih dahulu."
+      cta-label="Pilih Metode Bayar"
+      :cta-to="`/orders/${orderNumber}/payment`"
+    />
+  </div>
+
   <div v-else class="max-w-xl mx-auto px-4 py-10">
     <NuxtLink :to="`/orders/${orderNumber}/payment`"
       class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
@@ -60,20 +79,20 @@ const howToSteps = computed(() => [
       Ganti metode
     </NuxtLink>
 
-    <h1 class="text-xl font-bold text-slate-800 mb-1">{{ bank.label }} Virtual Account</h1>
+    <h1 class="text-xl font-bold text-slate-800 mb-1">{{ bankLabel }} Virtual Account</h1>
     <p class="text-sm text-slate-500 mb-6">Order <span class="font-mono font-semibold">{{ order.order_number }}</span></p>
 
     <!-- VA Card -->
     <BaseCard shadow="md" padding="lg" class="border border-slate-200 mb-6">
-      <p class="text-xs text-slate-500 mb-2">Nomor Virtual Account {{ bank.label }}</p>
-      <div class="flex items-center gap-3 mb-4">
-        <p class="text-2xl font-mono font-bold text-slate-800 flex-1 tracking-widest break-all">{{ bank.vaNumber }}</p>
+      <p class="text-xs text-slate-500 mb-2">Nomor Virtual Account {{ bankLabel }}</p>
+      <div class="flex items-center gap-3 mb-2">
+        <p class="text-2xl font-mono font-bold text-slate-800 flex-1 tracking-widest break-all">{{ session.virtual_account_number }}</p>
         <button
           type="button"
           :class="['flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-all font-medium',
             copied ? 'bg-green-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700']"
-          @click="copyVA"
           aria-label="Salin nomor VA"
+          @click="copyVA"
         >
           <svg v-if="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -84,15 +103,16 @@ const howToSteps = computed(() => [
           {{ copied ? 'Tersalin!' : 'Salin' }}
         </button>
       </div>
+      <p v-if="session.account_name" class="text-xs text-slate-500 mb-4">a.n. {{ session.account_name }}</p>
 
       <div class="border-t border-slate-100 pt-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <p class="text-xs text-slate-500">Total Bayar</p>
-          <p class="font-bold text-primary-600 text-lg">{{ formatCurrency(order.total_amount) }}</p>
+          <p class="font-bold text-primary-600 text-lg">{{ formatCurrency(session.amount) }}</p>
         </div>
         <div class="text-right">
           <p class="text-xs text-slate-500">Batas Waktu</p>
-          <OrderCountdownTimer :expires-at="order.expires_at" />
+          <OrderCountdownTimer :expires-at="session.expires_at" />
         </div>
       </div>
     </BaseCard>

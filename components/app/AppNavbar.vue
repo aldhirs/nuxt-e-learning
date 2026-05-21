@@ -3,8 +3,15 @@ import { useAuthStore } from '~/stores/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 const mobileMenuOpen = ref(false)
 const scrolled = ref(false)
+
+async function handleLogout() {
+  auth.logout()
+  mobileMenuOpen.value = false
+  await router.push('/')
+}
 
 const navLinks = [
   { label: 'Beranda', to: '/' },
@@ -76,8 +83,21 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
 
         <!-- Auth state -->
         <template v-if="auth.isAuthenticated">
-          <span class="text-sm text-slate-600">Hai, {{ auth.user?.full_name.split(' ')[0] }}</span>
-          <BaseButton variant="ghost" size="sm" @click="auth.mockLogout">Keluar</BaseButton>
+          <NuxtLink
+            to="/orders"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-primary-600 hover:bg-slate-50 transition-colors"
+            aria-label="Lihat order saya"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Order
+          </NuxtLink>
+          <NuxtLink
+            to="/profile"
+            class="text-sm text-slate-600 hover:text-primary-600 transition-colors"
+          >Hai, {{ (auth.user?.full_name?.split(' ')[0]) || auth.user?.username || 'Akun' }}</NuxtLink>
+          <BaseButton variant="ghost" size="sm" @click="handleLogout">Keluar</BaseButton>
         </template>
         <template v-else>
           <BaseButton variant="ghost" size="sm" to="/login">Masuk</BaseButton>
@@ -141,8 +161,10 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
 
         <div class="border-t border-slate-100 pt-3 mt-1 flex flex-col gap-2">
           <template v-if="auth.isAuthenticated">
-            <p class="text-sm text-slate-600 px-3">Hai, {{ auth.user?.full_name }}</p>
-            <BaseButton variant="secondary" block @click="auth.mockLogout">Keluar</BaseButton>
+            <p class="text-sm text-slate-600 px-3">Hai, {{ auth.user?.full_name || auth.user?.username || 'Akun' }}</p>
+            <BaseButton variant="ghost" block to="/orders">Order Saya</BaseButton>
+            <BaseButton variant="ghost" block to="/profile">Profil Saya</BaseButton>
+            <BaseButton variant="secondary" block @click="handleLogout">Keluar</BaseButton>
           </template>
           <template v-else>
             <BaseButton variant="secondary" block to="/login">Masuk</BaseButton>

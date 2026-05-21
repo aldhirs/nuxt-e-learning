@@ -32,8 +32,9 @@ const { formatCurrency } = useFormatters()
       <p class="text-xs text-primary-600 font-medium truncate">{{ course.partner.name }}</p>
       <h4 class="text-sm font-medium text-slate-800 line-clamp-2 group-hover:text-primary-600 transition-colors leading-snug">{{ course.title }}</h4>
       <div class="mt-1">
-        <span v-if="course.price === 0" class="text-xs font-semibold text-green-600">Gratis</span>
-        <span v-else class="text-xs font-semibold text-primary-600">{{ formatCurrency(course.price) }}</span>
+        <span v-if="course.is_free" class="text-xs font-semibold text-green-600">Gratis</span>
+        <span v-else-if="course.price !== null" class="text-xs font-semibold text-primary-600">{{ formatCurrency(course.price) }}</span>
+        <span v-else class="text-xs text-slate-400 italic">Harga belum diset</span>
       </div>
     </div>
   </NuxtLink>

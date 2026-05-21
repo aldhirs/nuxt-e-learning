@@ -16,9 +16,9 @@ const { formatCurrency, formatDate } = useFormatters()
       <!-- Thumbnail -->
       <div class="w-full sm:w-24 h-32 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden bg-slate-200">
         <img
-          v-if="order.course.thumbnail_url"
+          v-if="order.course?.thumbnail_url"
           :src="order.course.thumbnail_url"
-          :alt="order.course.title"
+          :alt="order.course.title ?? `Course #${order.course_id}`"
           class="w-full h-full object-cover"
           loading="lazy"
         />
@@ -35,7 +35,7 @@ const { formatCurrency, formatDate } = useFormatters()
           <div>
             <p class="text-xs text-slate-500 font-mono">{{ order.order_number }}</p>
             <h3 class="font-semibold text-slate-800 text-sm leading-snug mt-0.5 line-clamp-2 group-hover:text-primary-600 transition-colors">
-              {{ order.course.title }}
+              {{ order.course?.title ?? `Course #${order.course_id}` }}
             </h3>
           </div>
           <OrderStatusBadge :status="order.status" />

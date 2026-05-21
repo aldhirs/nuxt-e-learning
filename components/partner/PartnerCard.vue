@@ -14,7 +14,7 @@ defineProps<Props>()
       <!-- Logo -->
       <div
         class="w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold overflow-hidden flex-shrink-0"
-        :style="{ background: partner.theme?.primary_color ?? '#2F80D2', color: '#fff' }"
+        :style="{ background: partner.theme_primary ?? '#2F80D2', color: '#fff' }"
       >
         <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="w-full h-full object-contain" />
         <span v-else>{{ partner.name[0] }}</span>
@@ -22,7 +22,6 @@ defineProps<Props>()
 
       <div class="flex-1">
         <h3 class="font-semibold text-slate-800 text-sm group-hover:text-primary-600 transition-colors">{{ partner.name }}</h3>
-        <p v-if="partner.description" class="text-xs text-slate-500 mt-1 line-clamp-2">{{ partner.description }}</p>
       </div>
 
       <div class="text-xs text-slate-400">

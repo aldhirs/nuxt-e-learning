@@ -8,6 +8,12 @@ interface Props {
 defineProps<Props>()
 
 const { formatCurrency, discountPercent } = useFormatters()
+
+const difficultyLabel: Record<string, string> = {
+  beginner: 'Pemula',
+  intermediate: 'Menengah',
+  advanced: 'Mahir'
+}
 </script>
 
 <template>
@@ -29,12 +35,12 @@ const { formatCurrency, discountPercent } = useFormatters()
         </div>
 
         <!-- Free badge -->
-        <div v-if="course.price === 0" class="absolute top-2 left-2">
+        <div v-if="course.is_free" class="absolute top-2 left-2">
           <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-500 text-white">GRATIS</span>
         </div>
 
         <!-- Discount badge -->
-        <div v-else-if="course.compare_at_price && course.compare_at_price > course.price" class="absolute top-2 left-2">
+        <div v-else-if="course.price !== null && course.compare_at_price && course.compare_at_price > course.price" class="absolute top-2 left-2">
           <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-500 text-white">
             -{{ discountPercent(course.price, course.compare_at_price) }}%
           </span>
@@ -50,29 +56,21 @@ const { formatCurrency, discountPercent } = useFormatters()
 
         <!-- Meta row -->
         <div class="flex items-center gap-3 text-xs text-slate-500 mb-3">
-          <span class="flex items-center gap-1">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {{ course.total_duration_minutes }}m
-          </span>
-          <span class="flex items-center gap-1">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {{ course.total_lessons }} pelajaran
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
+            {{ difficultyLabel[course.difficulty] ?? course.difficulty }}
           </span>
         </div>
 
         <!-- Price -->
         <div class="mt-auto">
-          <div v-if="course.price === 0" class="text-green-600 font-bold text-base">Gratis</div>
-          <div v-else class="flex items-baseline gap-2">
+          <div v-if="course.is_free" class="text-green-600 font-bold text-base">Gratis</div>
+          <div v-else-if="course.price !== null" class="flex items-baseline gap-2">
             <span class="text-primary-600 font-bold text-base">{{ formatCurrency(course.price) }}</span>
             <span v-if="course.compare_at_price && course.compare_at_price > course.price" class="text-slate-400 line-through text-xs">
               {{ formatCurrency(course.compare_at_price) }}
             </span>
           </div>
+          <div v-else class="text-slate-400 text-xs italic">Harga belum diset</div>
         </div>
       </div>
     </BaseCard>

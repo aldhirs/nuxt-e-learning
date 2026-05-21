@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import type { PaymentMethod } from '~/types'
+import { usePaymentApi } from '~/composables/api/usePaymentApi'
+import { usePaymentStore } from '~/stores/payment'
+import type { PaymentMethod, StoredPaymentSession } from '~/types'
 
-definePageMeta({ layout: 'minimal' })
+definePageMeta({ layout: 'minimal', middleware: 'auth' })
 
 const route = useRoute()
 const router = useRouter()
 const { formatCurrency } = useFormatters()
+const paymentApi = usePaymentApi()
+const paymentStore = usePaymentStore()
 
 const orderNumber = computed(() => route.params.order_number as string)
 const order = useOrder(orderNumber)
 
-useSeoMeta({ title: computed(() => `Pilih Metode Bayar — ${orderNumber.value}`) })
+useSeoMeta({ title: () => `Pilih Metode Bayar — ${orderNumber.value}` })
 
 const selectedMethod = ref<PaymentMethod | ''>('')
 const isLoading = ref(false)
+const serverError = ref('')
 
 interface MethodGroup {
   label: string
@@ -27,13 +32,13 @@ const methodGroups: MethodGroup[] = [
       { value: 'va_bca',     label: 'BCA Virtual Account',     description: 'Transfer via ATM / mobile banking BCA' },
       { value: 'va_mandiri', label: 'Mandiri Virtual Account', description: 'Transfer via ATM / mobile banking Mandiri' },
       { value: 'va_bri',     label: 'BRI Virtual Account',     description: 'Transfer via ATM / mobile banking BRI' },
-      { value: 'va_bni',     label: 'BNI Virtual Account',     description: 'Transfer via ATM / mobile banking BNI' },
+      { value: 'va_bni',     label: 'BNI Virtual Account',     description: 'Transfer via ATM / mobile banking BNI' }
     ]
   },
   {
     label: 'QRIS',
     methods: [
-      { value: 'qris', label: 'QRIS', description: 'Scan QR dengan semua aplikasi e-wallet' },
+      { value: 'qris', label: 'QRIS', description: 'Scan QR dengan semua aplikasi e-wallet' }
     ]
   },
   {
@@ -41,25 +46,48 @@ const methodGroups: MethodGroup[] = [
     methods: [
       { value: 'ewallet_ovo',       label: 'OVO',        description: 'Bayar dengan OVO' },
       { value: 'ewallet_dana',      label: 'DANA',       description: 'Bayar dengan DANA' },
-      { value: 'ewallet_shopeepay', label: 'ShopeePay',  description: 'Bayar dengan ShopeePay' },
+      { value: 'ewallet_shopeepay', label: 'ShopeePay',  description: 'Bayar dengan ShopeePay' }
     ]
   }
 ]
 
 async function proceed() {
   if (!selectedMethod.value || !order.value) return
+  serverError.value = ''
   isLoading.value = true
-  await new Promise(r => setTimeout(r, 500))
+  try {
+    const session = await paymentApi.initiate(orderNumber.value, {
+      payment_method: selectedMethod.value
+    })
+    // Stamp ke store agar detail page (VA/QRIS/ewallet) bisa render tanpa
+    // refetch — sekaligus survive refresh via localStorage.
+    const stored: StoredPaymentSession = { ...session, order_number: orderNumber.value }
+    paymentStore.setSession(stored)
 
-  const method = selectedMethod.value
-  const base = `/orders/${orderNumber.value}/payment`
-
-  if (method.startsWith('va_')) {
-    router.push(`${base}/va?method=${method}`)
-  } else if (method === 'qris') {
-    router.push(`${base}/qris`)
-  } else {
-    router.push(`${base}/ewallet?method=${method}`)
+    const method = selectedMethod.value
+    const base = `/orders/${orderNumber.value}/payment`
+    if (method.startsWith('va_')) {
+      await router.push(`${base}/va`)
+    } else if (method === 'qris') {
+      await router.push(`${base}/qris`)
+    } else {
+      await router.push(`${base}/ewallet`)
+    }
+  } catch (err: unknown) {
+    const e = err as { status?: number; code?: string; message?: string; reason?: string }
+    if (e.status === 502 || (e.code && String(e.code) === '502')) {
+      serverError.value = e.message || 'Layanan pembayaran sedang tidak tersedia. Silakan coba beberapa saat lagi.'
+    } else if (e.status === 422) {
+      serverError.value = e.message || 'Metode pembayaran ini belum tersedia. Pilih metode lain.'
+    } else if (e.status === 401) {
+      router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    } else if (e.status === 0) {
+      serverError.value = 'Tidak bisa terhubung ke server. Cek koneksi internet Anda.'
+    } else {
+      serverError.value = e.message || 'Gagal memulai pembayaran. Silakan coba lagi.'
+    }
+  } finally {
+    isLoading.value = false
   }
 }
 </script>
@@ -76,7 +104,7 @@ async function proceed() {
     />
   </div>
 
-  <!-- Already paid / expired -->
+  <!-- Already paid / expired / cancelled -->
   <div v-else-if="order.status !== 'pending'" class="max-w-xl mx-auto px-4 py-20 text-center">
     <BaseEmptyState
       icon="alert"
@@ -99,6 +127,11 @@ async function proceed() {
         <p class="text-xl font-bold text-primary-600">{{ formatCurrency(order.total_amount) }}</p>
       </div>
       <OrderCountdownTimer :expires-at="order.expires_at" />
+    </div>
+
+    <!-- Server error -->
+    <div v-if="serverError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+      {{ serverError }}
     </div>
 
     <!-- Method groups -->

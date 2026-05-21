@@ -1,49 +1,84 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'minimal' })
+import { usePaymentStore } from '~/stores/payment'
+import type { PaymentMethodEwallet, PaymentSessionEwallet } from '~/types'
+
+definePageMeta({ layout: 'minimal', middleware: 'auth' })
 
 const route = useRoute()
 const { formatCurrency } = useFormatters()
+const paymentStore = usePaymentStore()
 
 const orderNumber = computed(() => route.params.order_number as string)
 const order = useOrder(orderNumber)
 
-const walletMap: Record<string, { label: string; color: string }> = {
+const session = computed<PaymentSessionEwallet | null>(() => {
+  const s = paymentStore.getSession(orderNumber.value)
+  if (!s) return null
+  if (s.payment_method.startsWith('ewallet_')) return s as PaymentSessionEwallet
+  return null
+})
+
+// Visual styling per provider — fallback ke generic primary kalau provider
+// di luar map (mis. BE return provider baru di kemudian hari).
+const walletStyles: Record<PaymentMethodEwallet, { label: string; color: string }> = {
   ewallet_ovo:       { label: 'OVO',        color: '#4C3494' },
-  ewallet_dana:      { label: 'DANA',        color: '#118EEA' },
-  ewallet_shopeepay: { label: 'ShopeePay',  color: '#EE4D2D' },
-  ewallet_gopay:     { label: 'GoPay',       color: '#00880A' },
+  ewallet_dana:      { label: 'DANA',       color: '#118EEA' },
+  ewallet_shopeepay: { label: 'ShopeePay',  color: '#EE4D2D' }
 }
+const walletStyle = computed(() => {
+  const m = session.value?.payment_method
+  return m ? (walletStyles[m] ?? { label: session.value?.provider_name ?? 'E-Wallet', color: '#2F80D2' })
+           : { label: 'E-Wallet', color: '#2F80D2' }
+})
 
-const method = computed(() => route.query.method as string || 'ewallet_dana')
-const wallet = computed(() => walletMap[method.value] ?? walletMap.ewallet_dana)
-
-useSeoMeta({ title: computed(() => `${wallet.value.label} — ${orderNumber.value}`) })
+useSeoMeta({ title: () => `${walletStyle.value.label} — ${orderNumber.value}` })
 
 const isRedirecting = ref(false)
 
-const steps = computed(() => [
-  `Klik tombol "Buka ${wallet.value.label}" di bawah.`,
-  `Anda akan diarahkan ke ${wallet.value.label}.`,
-  `Ikuti instruksi di aplikasi ${wallet.value.label}.`,
-  'Klik "Saya Sudah Bayar" setelah selesai.'
-])
+const steps = computed(() => {
+  if (session.value?.instructions?.length) return session.value.instructions
+  const name = walletStyle.value.label
+  return [
+    `Klik tombol "Buka ${name}" di bawah.`,
+    `Anda akan diarahkan ke aplikasi ${name}.`,
+    `Konfirmasi pembayaran di aplikasi ${name}.`,
+    'Kembali ke halaman ini dan klik "Saya Sudah Bayar".'
+  ]
+})
 
 async function openWallet() {
+  const s = session.value
+  if (!s) return
   isRedirecting.value = true
-  await new Promise(r => setTimeout(r, 800))
-  // Dalam produksi: window.location.href = session.redirect_url
-  window.open('#', '_blank')
-  isRedirecting.value = false
+  try {
+    // Prefer deeplink kalau ada (mobile); fallback ke redirect_url universal.
+    const target = s.deeplink_url || s.redirect_url
+    if (target) {
+      // Buka tab baru supaya halaman ini tetap ada untuk klik "Saya Sudah Bayar".
+      window.open(target, '_blank', 'noopener,noreferrer')
+    }
+  } finally {
+    setTimeout(() => { isRedirecting.value = false }, 600)
+  }
 }
 </script>
 
 <template>
-  <!-- Order not found -->
   <div v-if="!order" class="max-w-xl mx-auto px-4 py-20">
     <BaseEmptyState
       icon="alert"
       title="Order tidak ditemukan"
       description="Silakan kembali dan ulangi dari pilih metode pembayaran."
+      cta-label="Pilih Metode Bayar"
+      :cta-to="`/orders/${orderNumber}/payment`"
+    />
+  </div>
+
+  <div v-else-if="!session" class="max-w-xl mx-auto px-4 py-20">
+    <BaseEmptyState
+      icon="alert"
+      title="Sesi e-wallet tidak ditemukan"
+      description="Silakan pilih metode pembayaran terlebih dahulu."
       cta-label="Pilih Metode Bayar"
       :cta-to="`/orders/${orderNumber}/payment`"
     />
@@ -58,20 +93,18 @@ async function openWallet() {
       Ganti metode
     </NuxtLink>
 
-    <!-- Wallet logo area -->
     <div
       class="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 text-white text-2xl font-black"
-      :style="{ background: wallet.color }"
+      :style="{ background: walletStyle.color }"
     >
-      {{ wallet.label[0] }}
+      {{ walletStyle.label[0] }}
     </div>
 
-    <h1 class="text-xl font-bold text-slate-800 mb-1">Bayar dengan {{ wallet.label }}</h1>
+    <h1 class="text-xl font-bold text-slate-800 mb-1">Bayar dengan {{ walletStyle.label }}</h1>
     <p class="text-sm text-slate-500 mb-2">Order <span class="font-mono font-semibold">{{ order.order_number }}</span></p>
-    <p class="text-2xl font-bold text-primary-600 mb-2">{{ formatCurrency(order.total_amount) }}</p>
-    <OrderCountdownTimer :expires-at="order.expires_at" class="mb-6" />
+    <p class="text-2xl font-bold text-primary-600 mb-2">{{ formatCurrency(session.amount) }}</p>
+    <OrderCountdownTimer :expires-at="session.expires_at" class="mb-6" />
 
-    <!-- Instructions -->
     <BaseCard shadow="sm" padding="md" class="border border-slate-200 w-full mb-6 text-left">
       <p class="text-xs font-semibold text-slate-700 mb-3">Cara pembayaran:</p>
       <ol class="space-y-2">
@@ -83,8 +116,8 @@ async function openWallet() {
     </BaseCard>
 
     <div class="w-full space-y-2">
-      <BaseButton variant="primary" size="lg" block :loading="isRedirecting" @click="openWallet">
-        Buka {{ wallet.label }}
+      <BaseButton variant="primary" size="lg" block :loading="isRedirecting" :disabled="!session.redirect_url" @click="openWallet">
+        Buka {{ walletStyle.label }}
       </BaseButton>
       <BaseButton variant="secondary" size="lg" block :to="`/orders/${orderNumber}/payment/status`">
         Saya Sudah Bayar

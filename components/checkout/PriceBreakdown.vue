@@ -5,11 +5,27 @@ interface Props {
   tax?: number
   total: number
   currency?: string
+  // showTaxAlways: tampilkan baris Pajak walaupun nilainya 0 (transparansi
+  // ke user — terutama di halaman detail order setelah checkout selesai).
+  showTaxAlways?: boolean
 }
 
-withDefaults(defineProps<Props>(), { currency: 'IDR' })
+const props = withDefaults(defineProps<Props>(), {
+  currency: 'IDR',
+  showTaxAlways: true
+})
 
 const { formatCurrency } = useFormatters()
+
+// Hitung persentase pajak dari subtotal saat ini. Pakai pembulatan integer
+// agar UI tidak menampilkan desimal aneh untuk PPN bulat (11%, 12%).
+const taxPercentLabel = computed(() => {
+  const subtotal = props.subtotal
+  const tax = props.tax ?? 0
+  if (subtotal <= 0 || tax <= 0) return ''
+  const pct = Math.round((tax / subtotal) * 100)
+  return ` (${pct}%)`
+})
 </script>
 
 <template>
@@ -22,12 +38,12 @@ const { formatCurrency } = useFormatters()
       <span>Diskon</span>
       <span>- {{ formatCurrency(discount) }}</span>
     </div>
-    <div v-if="tax && tax > 0" class="flex justify-between text-slate-500">
-      <span>PPN (11%)</span>
-      <span>{{ formatCurrency(tax) }}</span>
+    <div v-if="showTaxAlways || (tax && tax > 0)" class="flex justify-between text-slate-500">
+      <span>Pajak{{ taxPercentLabel }}</span>
+      <span>{{ formatCurrency(tax ?? 0) }}</span>
     </div>
     <div class="border-t border-slate-200 pt-2 flex justify-between font-bold text-slate-800 text-base">
-      <span>Total</span>
+      <span>Total Keseluruhan</span>
       <span class="text-primary-600">{{ formatCurrency(total) }}</span>
     </div>
   </div>
