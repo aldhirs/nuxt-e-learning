@@ -1,0 +1,38 @@
+  # ============================================================
+  # NUXT STOREFRONT — takes over the primary domain
+  # ============================================================
+  # Append this block under `services:` in
+  # /root/e-learning/staging/docker-compose.yml on the VPS.
+  #
+  # Domain split (post-migration):
+  #   staging.drillspace.id      → nuxt-e-learning-staging  (storefront B2C)
+  #   staging.lms.drillspace.id  → vue-e-learning-staging   (admin / LMS)
+  #   api.staging.drillspace.id  → go-e-learning-staging    (backend)
+  #
+  # Vue admin's existing Traefik label must be edited at the same time
+  # to use `staging.lms.drillspace.id` (see deploy/README.md §migration).
+  nuxt-e-learning-staging:
+    image: tecnoduct/nuxt-e-learning:staging
+    container_name: nuxt-e-learning-staging
+    restart: always
+    depends_on:
+      - go-e-learning-staging
+    environment:
+      NODE_ENV: production
+      NITRO_PORT: '3000'
+      NITRO_HOST: 0.0.0.0
+      # The public envs are baked in at build time via build-args, but
+      # we still pass them at runtime so Nitro's runtimeConfig.public
+      # honours overrides if/when we move to per-env runtime config.
+      NUXT_PUBLIC_API_BASE_URL: https://api.staging.drillspace.id/api/v1
+      NUXT_PUBLIC_ANALYTICS_ENABLED: 'false'
+      NUXT_PUBLIC_ENABLE_PROFILE_EDIT: 'true'
+    networks:
+      - tecnoduct-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elearning-storefront.rule=Host(`staging.drillspace.id`)"
+      - "traefik.http.routers.elearning-storefront.entrypoints=websecure"
+      - "traefik.http.routers.elearning-storefront.tls.certresolver=letsencrypt"
+      - "traefik.http.services.elearning-storefront.loadbalancer.server.port=3000"
+      - "com.docker.compose.service=nuxt-e-learning-staging"

@@ -1,0 +1,36 @@
+name: Verify PR (lint + typecheck + build smoke)
+
+on:
+    pull_request:
+        branches: [main, staging]
+    push:
+        branches: [main, staging]
+
+jobs:
+    verify:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Node 20
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install dependencies
+              run: npm ci --no-audit --no-fund
+
+            - name: Prepare Nuxt (generate types)
+              run: npm run postinstall
+
+            - name: Lint
+              run: npm run lint --if-present
+
+            - name: Typecheck (Nuxt SSR build is the strongest typecheck — it covers types + bundling)
+              run: npm run build
+              env:
+                  NUXT_PUBLIC_API_BASE_URL: https://api.staging.drillspace.id/api/v1
+                  NUXT_PUBLIC_ANALYTICS_ENABLED: 'false'
+                  NUXT_PUBLIC_ENABLE_PROFILE_EDIT: 'true'
