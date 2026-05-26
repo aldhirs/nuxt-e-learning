@@ -44,7 +44,7 @@ const serverError = ref('')
 const form = reactive({
   full_name: auth.user?.full_name ?? '',
   email: auth.user?.email ?? '',
-  phone: ''
+  phone: auth.user?.phone ?? ''
 })
 
 // Hidrasi ulang kalau /me lands setelah page mount (cookie ada tapi store kosong).
@@ -52,6 +52,7 @@ watch(() => auth.user, (u) => {
   if (u) {
     if (!form.full_name && u.full_name) form.full_name = u.full_name
     if (!form.email && u.email) form.email = u.email
+    if (!form.phone && u.phone) form.phone = u.phone
   }
 })
 
@@ -280,7 +281,7 @@ function goToPayment() {
                   size="lg"
                   block
                   :loading="isLoading"
-                  :disabled="isLoading || isFreeCourse || isPriceUnset || v$.$invalid"
+                  :disabled="isLoading || isFreeCourse || isPriceUnset"
                   @click="placeOrder"
                 >
                   Bayar {{ formatCurrency(total) }}

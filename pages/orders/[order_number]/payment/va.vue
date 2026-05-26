@@ -1,96 +1,499 @@
 <script setup lang="ts">
+import { usePaymentApi } from '~/composables/api/usePaymentApi'
+import { useOrdersApi } from '~/composables/api/useOrdersApi'
 import { usePaymentStore } from '~/stores/payment'
-import type { PaymentSessionVA } from '~/types'
 
 definePageMeta({ layout: 'minimal', middleware: 'auth' })
 
 const route = useRoute()
+const router = useRouter()
 const { formatCurrency } = useFormatters()
 const paymentStore = usePaymentStore()
+const paymentApi = usePaymentApi()
+const ordersApi = useOrdersApi()
 
 const orderNumber = computed(() => route.params.order_number as string)
-const order = useOrder(orderNumber)
 
-// VA session di-stamp ke store saat user submit method picker. Discriminate
-// by payment_method.startsWith('va_') agar TypeScript narrow ke VA shape.
-const session = computed<PaymentSessionVA | null>(() => {
-  const s = paymentStore.getSession(orderNumber.value)
-  if (s && s.payment_method.startsWith('va_')) return s as PaymentSessionVA
-  return null
+// Fix blank page: fetch order directly instead of relying on store hydration
+const { data: order, pending: orderPending } = await useAsyncData(
+  () => `va-page-order:${orderNumber.value}`,
+  () => ordersApi.getMyOrder(orderNumber.value).catch((e: { status?: number }) => {
+    if (e.status === 404) return null
+    throw e
+  }),
+  { watch: [orderNumber] }
+)
+
+// Raw session from store (fallback when fresh page load happens after store setSession)
+const rawSession = computed(() => paymentStore.getSession(orderNumber.value))
+
+const bankNameMap: Record<string, string> = {
+  va_bca: 'BCA', va_mandiri: 'Mandiri', va_bri: 'BRI', va_bni: 'BNI',
+  va_cimb: 'CIMB', va_bsi: 'BSI', va_permata: 'Permata', va_danamon: 'Danamon'
+}
+
+const bankColorMap: Record<string, string> = {
+  va_bca: 'bg-blue-600',
+  va_mandiri: 'bg-amber-500',
+  va_bri: 'bg-blue-800',
+  va_bni: 'bg-orange-500'
+}
+
+// Derive all VA fields: prefer live order data, fall back to store session
+const paymentMethod = computed(() =>
+  order.value?.payment_method
+  || (rawSession.value?.payment_method as string)
+  || ''
+)
+
+const bankLabel = computed(() =>
+  bankNameMap[paymentMethod.value] || paymentMethod.value?.replace('va_', '').toUpperCase() || '—'
+)
+
+const bankColorClass = computed(() =>
+  bankColorMap[paymentMethod.value] || 'bg-primary-600'
+)
+
+// VA number: from order.payment_reference (BE returns this from initiate)
+// or from stored session virtual_account_number as fallback
+const vaNumber = computed(() =>
+  order.value?.payment_reference
+  || (rawSession.value as Record<string, unknown> | null)?.virtual_account_number as string
+  || (rawSession.value as Record<string, unknown> | null)?.payment_reference as string
+  || '—'
+)
+
+const vaAmount = computed(() =>
+  order.value?.total_amount
+  || (rawSession.value as Record<string, unknown> | null)?.amount as number
+  || 0
+)
+
+const vaExpiresAt = computed(() =>
+  order.value?.expires_at
+  || (rawSession.value as Record<string, unknown> | null)?.expires_at as string
+  || ''
+)
+
+const isExpired = computed(() => {
+  if (!vaExpiresAt.value) return false
+  return new Date(vaExpiresAt.value).getTime() < Date.now()
 })
 
-const bankLabel = computed(() => session.value?.bank_name ?? '—')
+const hasVaData = computed(() => {
+  if (!order.value && !rawSession.value) return false
+  // Has VA data if order has payment_method starting with va_ and has payment_reference
+  if (order.value?.payment_method?.startsWith('va_') && order.value?.payment_reference) return true
+  // Or if store has a VA session
+  if (rawSession.value?.payment_method?.startsWith('va_')) return true
+  return false
+})
 
 useSeoMeta({ title: () => `${bankLabel.value} Virtual Account — ${orderNumber.value}` })
 
+// Copy VA number
 const copied = ref(false)
 async function copyVA() {
-  if (!session.value?.virtual_account_number) return
+  const num = vaNumber.value
+  if (!num || num === '—') return
   try {
-    await navigator.clipboard.writeText(session.value.virtual_account_number)
+    await navigator.clipboard.writeText(num)
     copied.value = true
-    setTimeout(() => { copied.value = false }, 2000)
+    setTimeout(() => { copied.value = false }, 2500)
   } catch { /* clipboard denied */ }
 }
 
-const howToSteps = computed(() => {
-  if (session.value?.instructions?.length) return session.value.instructions
-  const amount = formatCurrency(session.value?.amount ?? order.value?.total_amount ?? 0)
-  return [
-    `Buka aplikasi mobile banking atau ATM ${bankLabel.value}.`,
-    'Pilih menu Transfer / Bayar / Virtual Account.',
-    'Masukkan nomor Virtual Account di atas.',
-    `Konfirmasi jumlah pembayaran sebesar ${amount}.`,
-    'Simpan bukti transfer Anda.',
-    'Status pembayaran terkonfirmasi otomatis dalam beberapa menit setelah transfer berhasil.'
-  ]
+// --- Polling ---
+const POLL_INTERVAL_MS = 10_000
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+
+// Payment success overlay state
+const showSuccessOverlay = ref(false)
+const redirectCountdown = ref(3)
+let redirectTimer: ReturnType<typeof setInterval> | null = null
+
+function stopPolling() {
+  if (pollTimer) clearTimeout(pollTimer)
+  pollTimer = null
+}
+
+async function checkStatus() {
+  try {
+    const snap = await paymentApi.getStatus(orderNumber.value)
+    if (snap.status === 'paid') {
+      stopPolling()
+      paymentStore.clearSession(orderNumber.value)
+      showSuccessOverlay.value = true
+      redirectCountdown.value = 3
+      redirectTimer = setInterval(() => {
+        redirectCountdown.value--
+        if (redirectCountdown.value <= 0) {
+          if (redirectTimer) clearInterval(redirectTimer)
+          router.push(`/orders/${orderNumber.value}`)
+        }
+      }, 1000)
+      return
+    }
+  } catch {
+    // Non-fatal — just retry next tick
+  }
+  if (!showSuccessOverlay.value) {
+    pollTimer = setTimeout(checkStatus, POLL_INTERVAL_MS)
+  }
+}
+
+onMounted(() => {
+  // Start polling once mounted on client
+  pollTimer = setTimeout(checkStatus, POLL_INTERVAL_MS)
+})
+
+onBeforeUnmount(() => {
+  stopPolling()
+  if (redirectTimer) clearInterval(redirectTimer)
+})
+
+// --- Manual "Saya Sudah Transfer" check ---
+const manualChecking = ref(false)
+const manualResult = ref<'' | 'pending' | 'paid'>('')
+
+async function manualCheck() {
+  if (manualChecking.value) return
+  manualChecking.value = true
+  manualResult.value = ''
+  try {
+    const snap = await paymentApi.getStatus(orderNumber.value)
+    if (snap.status === 'paid') {
+      stopPolling()
+      paymentStore.clearSession(orderNumber.value)
+      showSuccessOverlay.value = true
+      redirectCountdown.value = 3
+      redirectTimer = setInterval(() => {
+        redirectCountdown.value--
+        if (redirectCountdown.value <= 0) {
+          if (redirectTimer) clearInterval(redirectTimer)
+          router.push(`/orders/${orderNumber.value}`)
+        }
+      }, 1000)
+    } else {
+      manualResult.value = 'pending'
+      // Hide toast after 4s
+      setTimeout(() => { manualResult.value = '' }, 4000)
+    }
+  } catch {
+    manualResult.value = 'pending'
+    setTimeout(() => { manualResult.value = '' }, 4000)
+  } finally {
+    manualChecking.value = false
+  }
+}
+
+// --- Accordion instructions ---
+const showAtm = ref(false)
+const showMobile = ref(true) // Mobile Banking expanded by default
+const showInternet = ref(false)
+
+interface BankMethod {
+  atm: string[]
+  mobile: string[]
+  internet: string[]
+}
+
+interface BankInstruction {
+  name: string
+  color: string
+  methods: BankMethod
+}
+
+const bankInstructions = computed<BankInstruction | null>(() => {
+  const v = vaNumber.value
+  const a = formatCurrency(vaAmount.value)
+  const instructions: Record<string, BankInstruction> = {
+    va_bca: {
+      name: 'BCA', color: 'bg-blue-600',
+      methods: {
+        atm: [
+          'Masukkan kartu ATM BCA dan PIN Anda',
+          'Pilih Transaksi Lainnya → Transfer → ke Rek BCA Virtual Account',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Selesai, simpan struk sebagai bukti'
+        ],
+        mobile: [
+          'Buka aplikasi BCA Mobile',
+          'Pilih m-BCA → m-Transfer → BCA Virtual Account',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Masukkan PIN m-BCA dan konfirmasi'
+        ],
+        internet: [
+          'Login KlikBCA di klikbca.com',
+          'Pilih Transfer Dana → Transfer ke BCA Virtual Account',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Masukkan KeyBCA APPLI 1 dan konfirmasi'
+        ]
+      }
+    },
+    va_mandiri: {
+      name: 'Mandiri', color: 'bg-amber-500',
+      methods: {
+        atm: [
+          'Masukkan kartu ATM Mandiri dan PIN Anda',
+          'Pilih Bayar/Beli → Lainnya → Multi Payment',
+          'Masukkan kode perusahaan: 70012',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a} dan selesaikan transaksi`
+        ],
+        mobile: [
+          'Buka aplikasi Livin\' by Mandiri',
+          'Pilih Pembayaran → Multi Payment',
+          'Masukkan kode perusahaan: 70012',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a} dan masukkan PIN`
+        ],
+        internet: [
+          'Login Internet Banking Mandiri di ib.bankmandiri.co.id',
+          'Pilih Pembayaran → Multi Payment',
+          'Masukkan kode perusahaan: 70012',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a} dan masukkan token`
+        ]
+      }
+    },
+    va_bri: {
+      name: 'BRI', color: 'bg-blue-800',
+      methods: {
+        atm: [
+          'Masukkan kartu ATM BRI dan PIN Anda',
+          'Pilih Transaksi Lain → Pembayaran → Lainnya → BRIVA',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Selesai, simpan struk sebagai bukti'
+        ],
+        mobile: [
+          'Buka aplikasi BRImo',
+          'Pilih BRIVA',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Masukkan PIN BRImo dan konfirmasi'
+        ],
+        internet: [
+          'Login Internet Banking BRI di ib.bri.co.id',
+          'Pilih Pembayaran → BRIVA',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Masukkan password dan mToken BRI'
+        ]
+      }
+    },
+    va_bni: {
+      name: 'BNI', color: 'bg-orange-500',
+      methods: {
+        atm: [
+          'Masukkan kartu ATM BNI dan PIN Anda',
+          'Pilih Menu Lainnya → Transfer → Rekening Tabungan → Virtual Account',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Selesai, simpan struk sebagai bukti'
+        ],
+        mobile: [
+          'Buka aplikasi BNI Mobile Banking',
+          'Pilih Transfer → Virtual Account Billing',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Masukkan PIN BNI Mobile dan konfirmasi'
+        ],
+        internet: [
+          'Login BNI Internet Banking di ibank.bni.co.id',
+          'Pilih Transfer → Virtual Account Billing',
+          `Masukkan nomor VA: ${v}`,
+          `Konfirmasi nominal ${a}`,
+          'Masukkan password transaksi'
+        ]
+      }
+    }
+  }
+  return instructions[paymentMethod.value] || null
 })
 </script>
 
 <template>
-  <!-- Order not found -->
-  <div v-if="!order" class="max-w-xl mx-auto px-4 py-20">
+  <!-- Step Progress Bar -->
+  <div class="bg-white border-b border-slate-100">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+      <div class="flex items-center justify-center gap-1">
+        <div class="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <span class="hidden sm:block text-xs font-medium text-emerald-600 mx-1">Detail Course</span>
+        <div class="h-0.5 w-10 mx-1 bg-emerald-500"></div>
+        <div class="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <span class="hidden sm:block text-xs font-medium text-emerald-600 mx-1">Checkout</span>
+        <div class="h-0.5 w-10 mx-1 bg-primary-500"></div>
+        <div class="w-7 h-7 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center">3</div>
+        <span class="hidden sm:block text-xs font-medium text-primary-600 mx-1">Pembayaran</span>
+        <div class="h-0.5 w-10 mx-1 bg-slate-200"></div>
+        <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-400 text-xs font-bold flex items-center justify-center">4</div>
+        <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Selesai</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Success Overlay -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div
+        v-if="showSuccessOverlay"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        aria-live="assertive"
+      >
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mx-4 max-w-sm w-full text-center">
+          <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 class="text-xl font-black text-slate-800 mb-2">Pembayaran Berhasil!</h2>
+          <p class="text-slate-500 text-sm mb-1">Order <span class="font-mono font-bold text-slate-700">{{ orderNumber }}</span></p>
+          <p class="text-slate-400 text-xs mt-3">Mengalihkan dalam {{ redirectCountdown }} detik...</p>
+          <div class="mt-4">
+            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                :style="{ width: `${((3 - redirectCountdown) / 3) * 100}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- Toast: still pending after manual check -->
+  <Teleport to="body">
+    <Transition name="slide-up">
+      <div
+        v-if="manualResult === 'pending'"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-800 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-2"
+        role="status"
+      >
+        <svg class="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Pembayaran belum terkonfirmasi. Mohon tunggu beberapa saat.
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- Loading skeleton — only shown when store has no session AND fetch is in flight -->
+  <div v-if="!rawSession && orderPending" class="max-w-2xl mx-auto px-4 py-10 space-y-4">
+    <BaseSkeleton class="h-5 w-32" />
+    <BaseSkeleton class="h-7 w-56" />
+    <BaseSkeleton class="h-48 w-full rounded-2xl" />
+    <BaseSkeleton class="h-16 w-full rounded-xl" />
+    <BaseSkeleton class="h-64 w-full rounded-2xl" />
+    <BaseSkeleton class="h-12 w-full rounded-xl" />
+  </div>
+
+  <!-- Order not found — store empty AND fetch returned null -->
+  <div v-else-if="!rawSession && !order" class="max-w-xl mx-auto px-4 py-20">
     <BaseEmptyState
       icon="alert"
       title="Order tidak ditemukan"
       description="Silakan kembali dan ulangi dari pilih metode pembayaran."
-      cta-label="Pilih Metode Bayar"
-      :cta-to="`/orders/${orderNumber}/payment`"
+      cta-label="Lihat Order Saya"
+      cta-to="/orders"
     />
   </div>
 
-  <!-- Session not found (page diakses langsung tanpa pilih method dulu) -->
-  <div v-else-if="!session" class="max-w-xl mx-auto px-4 py-20">
+  <!-- No VA data in either store or fetched order -->
+  <div v-else-if="!hasVaData" class="max-w-xl mx-auto px-4 py-20">
     <BaseEmptyState
       icon="alert"
-      title="Sesi pembayaran tidak ditemukan"
-      description="Silakan pilih metode pembayaran terlebih dahulu."
+      title="Data Virtual Account tidak tersedia"
+      description="Silakan pilih metode pembayaran Virtual Account terlebih dahulu."
       cta-label="Pilih Metode Bayar"
       :cta-to="`/orders/${orderNumber}/payment`"
     />
   </div>
 
-  <div v-else class="max-w-xl mx-auto px-4 py-10">
-    <NuxtLink :to="`/orders/${orderNumber}/payment`"
-      class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+  <!-- VA Payment Detail — shows immediately from store session, refreshes when order fetched -->
+  <div v-else class="max-w-2xl mx-auto px-4 py-8 space-y-5">
+
+    <!-- Back link -->
+    <NuxtLink
+      v-if="!isExpired"
+      :to="`/orders/${orderNumber}/payment`"
+      class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition-colors group"
+    >
+      <svg class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
-      Ganti metode
+      Ganti metode pembayaran
     </NuxtLink>
 
-    <h1 class="text-xl font-bold text-slate-800 mb-1">{{ bankLabel }} Virtual Account</h1>
-    <p class="text-sm text-slate-500 mb-6">Order <span class="font-mono font-semibold">{{ order.order_number }}</span></p>
+    <!-- Expired alert -->
+    <div v-if="isExpired" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
+      <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-red-700">Order Kedaluwarsa</p>
+        <p class="text-xs text-red-600 mt-0.5">Waktu pembayaran telah habis. Silakan buat order baru untuk melanjutkan.</p>
+      </div>
+    </div>
 
-    <!-- VA Card -->
-    <BaseCard shadow="md" padding="lg" class="border border-slate-200 mb-6">
-      <p class="text-xs text-slate-500 mb-2">Nomor Virtual Account {{ bankLabel }}</p>
-      <div class="flex items-center gap-3 mb-2">
-        <p class="text-2xl font-mono font-bold text-slate-800 flex-1 tracking-widest break-all">{{ session.virtual_account_number }}</p>
+    <!-- Countdown alert (amber) -->
+    <div v-else class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+      <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-amber-800">Selesaikan pembayaran dalam</p>
+        <p class="text-xs text-amber-600">Order <span class="font-mono font-bold">{{ orderNumber }}</span></p>
+      </div>
+      <div class="text-right">
+        <OrderCountdownTimer :expires-at="vaExpiresAt" />
+      </div>
+    </div>
+
+    <!-- VA Gradient Card -->
+    <div
+      :class="['rounded-2xl overflow-hidden transition-opacity', isExpired ? 'opacity-50 grayscale' : '']"
+      style="background: linear-gradient(135deg, #1e5088 0%, #2566ab 50%, #2F80D2 100%);"
+    >
+      <div class="p-6 md:p-8 text-white">
+        <!-- Bank logo -->
+        <div class="flex items-center justify-between mb-6">
+          <div :class="['bg-white rounded-xl px-4 py-2 text-sm font-extrabold tracking-wider', bankColorClass]" style="color: white;">
+            {{ bankLabel }}
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-white/60">Virtual Account</p>
+            <p class="text-xs text-white/80 font-medium">a.n. DRILLSPACE</p>
+          </div>
+        </div>
+
+        <!-- VA Number -->
+        <div class="mb-6">
+          <p class="text-xs text-white/60 mb-2 uppercase tracking-wider">Nomor Virtual Account</p>
+          <p class="font-mono text-3xl md:text-4xl font-black tracking-wider break-all select-all">
+            {{ vaNumber }}
+          </p>
+        </div>
+
+        <!-- Copy button -->
         <button
           type="button"
-          :class="['flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-all font-medium',
-            copied ? 'bg-green-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700']"
+          :disabled="isExpired || vaNumber === '—'"
+          class="mb-6 flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/30 text-sm font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          :style="copied ? 'background: rgba(16,185,129,.4);' : 'background: rgba(255,255,255,.15);'"
           aria-label="Salin nomor VA"
           @click="copyVA"
         >
@@ -100,41 +503,235 @@ const howToSteps = computed(() => {
           <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          {{ copied ? 'Tersalin!' : 'Salin' }}
+          {{ copied ? 'Tersalin!' : 'Salin Nomor VA' }}
         </button>
-      </div>
-      <p v-if="session.account_name" class="text-xs text-slate-500 mb-4">a.n. {{ session.account_name }}</p>
 
-      <div class="border-t border-slate-100 pt-4 flex items-center justify-between flex-wrap gap-3">
+        <!-- Bottom: account name + amount -->
+        <div class="border-t border-white/20 pt-5 grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs text-white/60 mb-1">Atas Nama</p>
+            <p class="text-sm font-bold">DRILLSPACE</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-white/60 mb-1">Total Pembayaran</p>
+            <p class="text-base font-black tabular-nums">{{ formatCurrency(vaAmount) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exact amount notice -->
+    <div class="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+      <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+      </svg>
+      <span>
+        Bayar dengan nominal <strong>tepat</strong> sesuai tagihan.
+        Lebih atau kurang 1 digit akan gagal diverifikasi otomatis.
+      </span>
+    </div>
+
+    <!-- Realtime status card -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5">
+      <div class="flex items-center justify-between gap-4">
         <div>
-          <p class="text-xs text-slate-500">Total Bayar</p>
-          <p class="font-bold text-primary-600 text-lg">{{ formatCurrency(session.amount) }}</p>
+          <p class="text-sm font-bold text-slate-700 flex items-center gap-2">
+            Status Pembayaran
+            <span class="animate-spin w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full" aria-hidden="true"></span>
+          </p>
+          <p class="text-xs text-slate-400 mt-0.5">Status otomatis diperbarui setiap 10 detik</p>
         </div>
-        <div class="text-right">
-          <p class="text-xs text-slate-500">Batas Waktu</p>
-          <OrderCountdownTimer :expires-at="session.expires_at" />
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 flex-shrink-0">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Menunggu Pembayaran
+        </span>
+      </div>
+    </div>
+
+    <!-- Accordion: Bank Instructions -->
+    <div v-if="bankInstructions" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100">
+        <h2 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+          <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Cara Pembayaran {{ bankInstructions.name }}
+        </h2>
+      </div>
+
+      <!-- ATM -->
+      <div class="border-b border-slate-100">
+        <button
+          type="button"
+          class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+          :aria-expanded="showAtm"
+          @click="showAtm = !showAtm"
+        >
+          <span class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+            ATM
+          </span>
+          <svg
+            :class="['w-4 h-4 text-slate-400 transition-transform duration-200', showAtm ? 'rotate-180' : '']"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div v-show="showAtm" class="px-5 pb-5">
+          <ol class="space-y-3">
+            <li
+              v-for="(step, i) in bankInstructions.methods.atm"
+              :key="i"
+              class="flex gap-3 text-sm text-slate-600 leading-relaxed"
+            >
+              <span class="w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                {{ i + 1 }}
+              </span>
+              <span>{{ step }}</span>
+            </li>
+          </ol>
         </div>
       </div>
-    </BaseCard>
 
-    <!-- Instructions -->
-    <BaseCard shadow="sm" padding="md" class="border border-slate-200 mb-6">
-      <h2 class="text-sm font-semibold text-slate-700 mb-3">Cara Pembayaran</h2>
-      <ol class="space-y-2.5">
-        <li v-for="(step, i) in howToSteps" :key="i" class="flex gap-3 text-sm text-slate-600">
-          <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{{ i + 1 }}</span>
-          {{ step }}
-        </li>
-      </ol>
-    </BaseCard>
+      <!-- Mobile Banking (expanded by default) -->
+      <div class="border-b border-slate-100">
+        <button
+          type="button"
+          class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+          :aria-expanded="showMobile"
+          @click="showMobile = !showMobile"
+        >
+          <span class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Mobile Banking
+            <span class="text-xs text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded-full">Populer</span>
+          </span>
+          <svg
+            :class="['w-4 h-4 text-slate-400 transition-transform duration-200', showMobile ? 'rotate-180' : '']"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div v-show="showMobile" class="px-5 pb-5">
+          <ol class="space-y-3">
+            <li
+              v-for="(step, i) in bankInstructions.methods.mobile"
+              :key="i"
+              class="flex gap-3 text-sm text-slate-600 leading-relaxed"
+            >
+              <span class="w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                {{ i + 1 }}
+              </span>
+              <span>{{ step }}</span>
+            </li>
+          </ol>
+        </div>
+      </div>
 
-    <div class="space-y-2">
-      <BaseButton variant="primary" size="lg" block :to="`/orders/${orderNumber}/payment/status`">
-        Saya Sudah Bayar
+      <!-- Internet Banking -->
+      <div>
+        <button
+          type="button"
+          class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+          :aria-expanded="showInternet"
+          @click="showInternet = !showInternet"
+        >
+          <span class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+            Internet Banking
+          </span>
+          <svg
+            :class="['w-4 h-4 text-slate-400 transition-transform duration-200', showInternet ? 'rotate-180' : '']"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div v-show="showInternet" class="px-5 pb-5">
+          <ol class="space-y-3">
+            <li
+              v-for="(step, i) in bankInstructions.methods.internet"
+              :key="i"
+              class="flex gap-3 text-sm text-slate-600 leading-relaxed"
+            >
+              <span class="w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                {{ i + 1 }}
+              </span>
+              <span>{{ step }}</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="space-y-3">
+      <BaseButton
+        v-if="!isExpired"
+        variant="primary"
+        size="lg"
+        block
+        :loading="manualChecking"
+        :disabled="manualChecking"
+        @click="manualCheck"
+      >
+        <svg v-if="!manualChecking" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        {{ manualChecking ? 'Memeriksa...' : 'Saya Sudah Transfer' }}
       </BaseButton>
+
+      <BaseButton
+        v-if="isExpired && order?.course?.slug"
+        variant="primary"
+        size="lg"
+        block
+        :to="`/checkout?course=${order.course.slug}`"
+      >
+        Buat Order Baru
+      </BaseButton>
+
       <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
         Kembali ke Detail Order
       </BaseButton>
     </div>
+
+    <p class="text-xs text-slate-400 text-center flex items-center justify-center gap-1.5 pb-4">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      Transaksi aman &amp; terenkripsi SSL 256-bit
+    </p>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 1rem);
+}
+</style>

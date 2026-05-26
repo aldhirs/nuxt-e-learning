@@ -4,134 +4,86 @@ import { usePartnersApi } from '~/composables/api/usePartnersApi'
 import type { Paginated, CourseListItem, Partner } from '~/types'
 
 definePageMeta({ layout: 'default' })
-
 useSeoMeta({
   title: 'Katalog Course',
   description: 'Temukan ratusan course maritim bersertifikat dari instruktur terbaik Indonesia.'
 })
 
-const route = useRoute()
+const route  = useRoute()
 const router = useRouter()
-const coursesApi = useCoursesApi()
+const coursesApi  = useCoursesApi()
 const partnersApi = usePartnersApi()
 
 const PAGE_SIZE = 12
 
-// ─── Filter state derived from URL query ────────────────────────────────────
+// ── Applied filters (from URL — these drive API calls) ────────────────────────
 const filters = computed<CourseListFilters>(() => {
   const q = route.query
   return {
-    search: (q.search as string) || undefined,
-    difficulty: (q.difficulty as CourseListFilters['difficulty']) || undefined,
+    search:       (q.search as string) || undefined,
+    difficulty:   (q.difficulty as CourseListFilters['difficulty']) || undefined,
     partner_slug: (q.partner_slug as string) || undefined,
-    is_free: q.is_free === 'true' ? true : undefined,
-    price_min: q.price_min ? Number(q.price_min) : undefined,
-    price_max: q.price_max ? Number(q.price_max) : undefined,
-    sort: (q.sort as CourseSort) || undefined,
-    limit: PAGE_SIZE,
-    offset: q.offset ? Number(q.offset) : 0
+    is_free:      q.is_free === 'true' ? true : undefined,
+    sort:         (q.sort as CourseSort) || undefined,
+    limit:        PAGE_SIZE,
+    offset:       q.offset ? Number(q.offset) : 0,
   }
 })
 
 const currentPage = computed(() => Math.floor((filters.value.offset ?? 0) / PAGE_SIZE) + 1)
 
-// Debounced search input (300ms before push to URL)
-const searchInput = ref((route.query.search as string) || '')
-let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(searchInput, (v) => {
-  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
-  searchDebounceTimer = setTimeout(() => {
-    updateQuery({ search: v || undefined, offset: undefined })
-  }, 300)
-})
-
-// Sync when URL changes externally (back/forward)
-watch(() => route.query.search, (v) => {
-  if ((v as string | undefined) !== searchInput.value) searchInput.value = (v as string) || ''
-})
-
-// ─── Fetch ──────────────────────────────────────────────────────────────────
+// ── Data fetch ────────────────────────────────────────────────────────────────
 const queryKey = computed(() => `courses-catalog:${JSON.stringify(filters.value)}`)
 const { data: page, pending, error, refresh } = await useAsyncData<Paginated<CourseListItem>>(
-  () => queryKey.value,
+  queryKey.value,
   () => coursesApi.listCourses(filters.value),
   { watch: [filters] }
 )
 
-const courses = computed(() => page.value?.data ?? [])
+const courses    = computed(() => page.value?.data ?? [])
 const totalCount = computed(() => page.value?.meta?.total ?? 0)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / PAGE_SIZE)))
-const hasPrev = computed(() => currentPage.value > 1)
-const hasNext = computed(() => currentPage.value < totalPages.value)
+const hasPrev    = computed(() => currentPage.value > 1)
+const hasNext    = computed(() => currentPage.value < totalPages.value)
 
-// ─── Partner options (loaded once) ─────────────────────────────────────────
+// ── Partner options ───────────────────────────────────────────────────────────
 const { data: partnersPage } = await useAsyncData<Paginated<Partner>>(
   'catalog-partners',
   () => partnersApi.listPartners({ limit: 100, sort: 'alphabetical' })
 )
-const partnerOptions = computed(() => {
-  const list = partnersPage.value?.data ?? []
-  return [
-    { value: '', label: 'Semua Partner' },
-    ...list.map(p => ({ value: p.slug, label: p.name }))
-  ]
+const partnerList = computed(() => partnersPage.value?.data ?? [])
+
+// ── Sort (immediate, outside drawer) ─────────────────────────────────────────
+const selectedSort = computed({
+  get: () => filters.value.sort || '',
+  set: (v: string) => updateQuery({ sort: v || undefined, offset: undefined })
 })
 
-const difficultyOptions = [
-  { value: '', label: 'Semua Level' },
-  { value: 'beginner', label: 'Pemula' },
-  { value: 'intermediate', label: 'Menengah' },
-  { value: 'advanced', label: 'Mahir' }
-]
+// ── Applied filter state (derived from URL) ───────────────────────────────────
+const hasActiveFilter = computed(() =>
+  Boolean(filters.value.search || filters.value.difficulty || filters.value.partner_slug || filters.value.is_free)
+)
+const activeFilterCount = computed(() => [
+  filters.value.search,
+  filters.value.difficulty,
+  filters.value.partner_slug,
+  filters.value.is_free,
+].filter(Boolean).length)
 
-const sortOptions = [
-  { value: '', label: 'Urutan Default' },
-  { value: 'newest', label: 'Terbaru' },
-  { value: 'cheapest', label: 'Harga Terendah' },
-  { value: 'most_expensive', label: 'Harga Tertinggi' },
-  { value: 'alphabetical', label: 'A → Z' }
-]
-
-// ─── Filter handlers ────────────────────────────────────────────────────────
+// ── URL helpers ───────────────────────────────────────────────────────────────
 function updateQuery(partial: Record<string, string | number | boolean | undefined>) {
   const merged: Record<string, string> = {}
   for (const [k, v] of Object.entries(route.query)) {
     if (typeof v === 'string' && v) merged[k] = v
   }
   for (const [k, v] of Object.entries(partial)) {
-    if (v === undefined || v === null || v === '' || v === false) {
-      delete merged[k]
-    } else {
-      merged[k] = String(v)
-    }
+    if (v === undefined || v === null || v === '' || v === false) delete merged[k]
+    else merged[k] = String(v)
   }
   router.push({ query: merged })
 }
 
-const selectedDifficulty = computed({
-  get: () => filters.value.difficulty || '',
-  set: (v: string) => updateQuery({ difficulty: v || undefined, offset: undefined })
-})
-const selectedPartner = computed({
-  get: () => filters.value.partner_slug || '',
-  set: (v: string) => updateQuery({ partner_slug: v || undefined, offset: undefined })
-})
-const selectedSort = computed({
-  get: () => filters.value.sort || '',
-  set: (v: string) => updateQuery({ sort: v || undefined, offset: undefined })
-})
-const isFreeOnly = computed({
-  get: () => filters.value.is_free === true,
-  set: (v: boolean) => updateQuery({ is_free: v || undefined, offset: undefined })
-})
-
-const hasActiveFilter = computed(() =>
-  Boolean(filters.value.search || filters.value.difficulty || filters.value.partner_slug || filters.value.sort || filters.value.is_free)
-)
-
 function clearFilters() {
-  searchInput.value = ''
   router.push({ query: {} })
 }
 
@@ -140,134 +92,466 @@ function goPage(p: number) {
   updateQuery({ offset: (clamped - 1) * PAGE_SIZE })
   if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+// ── Filter drawer local state (buffered — not applied until Terapkan) ─────────
+const filterOpen = ref(false)
+
+// Local copies — only written to URL on applyFilters()
+const localSearch     = ref('')
+const localDifficulty = ref('')
+const localPartner    = ref('')
+const localIsFree     = ref(false)
+
+function openFilter() {
+  // Snapshot current URL state into local state
+  localSearch.value     = filters.value.search       || ''
+  localDifficulty.value = filters.value.difficulty   || ''
+  localPartner.value    = filters.value.partner_slug || ''
+  localIsFree.value     = filters.value.is_free === true
+  filterOpen.value = true
+}
+
+function closeFilter() {
+  // Discard pending local changes (do NOT apply to URL)
+  filterOpen.value = false
+}
+
+function applyFilters() {
+  updateQuery({
+    search:       localSearch.value     || undefined,
+    difficulty:   localDifficulty.value || undefined,
+    partner_slug: localPartner.value    || undefined,
+    is_free:      localIsFree.value     || undefined,
+    offset:       undefined,
+  })
+  filterOpen.value = false
+}
+
+function resetDrawer() {
+  // Clear URL immediately and reset local state
+  localSearch.value     = ''
+  localDifficulty.value = ''
+  localPartner.value    = ''
+  localIsFree.value     = false
+  clearFilters()
+  filterOpen.value = false
+}
+
+// Local filter has unsaved changes compared to what's in the URL
+const localHasChanges = computed(() =>
+  localSearch.value     !== (filters.value.search       || '') ||
+  localDifficulty.value !== (filters.value.difficulty   || '') ||
+  localPartner.value    !== (filters.value.partner_slug || '') ||
+  localIsFree.value     !== (filters.value.is_free === true)
+)
+
+onMounted(() => {
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeFilter() }
+  window.addEventListener('keydown', onKey)
+  onUnmounted(() => window.removeEventListener('keydown', onKey))
+})
+
+// Sort / difficulty label helpers
+const sortOptions = [
+  { value: '',               label: 'Urutan Default' },
+  { value: 'newest',         label: 'Terbaru' },
+  { value: 'cheapest',       label: 'Harga Terendah' },
+  { value: 'most_expensive', label: 'Harga Tertinggi' },
+  { value: 'alphabetical',   label: 'A → Z' },
+]
+
+const difficultyOptions = [
+  { value: 'beginner',     label: 'Pemula',    icon: '🟢' },
+  { value: 'intermediate', label: 'Menengah',  icon: '🟡' },
+  { value: 'advanced',     label: 'Mahir',     icon: '🔴' },
+]
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-    <!-- Header -->
-    <div class="mb-6 flex items-end justify-between flex-wrap gap-3">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800">Katalog Course</h1>
-        <p class="text-slate-500 text-sm mt-1">
-          <span v-if="pending && !page">Memuat course...</span>
-          <span v-else-if="totalCount > 0">{{ totalCount }} course tersedia</span>
-          <span v-else>Belum ada course</span>
-          <span v-if="hasActiveFilter"> · filter aktif</span>
-        </p>
+  <div id="main-content">
+
+    <!-- ── Page header ──────────────────────────────────────────────────────── -->
+    <div class="bg-white border-b border-slate-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <nav class="flex items-center gap-2 text-xs text-slate-400 mb-3" aria-label="Breadcrumb">
+          <NuxtLink to="/" class="hover:text-primary-500 transition-colors">Beranda</NuxtLink>
+          <span aria-hidden="true">/</span>
+          <span class="text-slate-600 font-medium">Katalog Course</span>
+        </nav>
+        <h1 class="text-3xl font-extrabold text-slate-900">Katalog Course</h1>
+        <p class="text-slate-500 mt-1.5 text-sm">Tingkatkan kompetensi maritim Anda dari instruktur bersertifikat STCW</p>
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-3 mb-8">
-      <div class="flex-1 min-w-[200px] max-w-sm">
-        <div class="relative">
-          <input
-            v-model="searchInput"
-            type="search"
-            placeholder="Cari course..."
-            class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none"
-            aria-label="Cari course"
-          />
-          <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+    <!-- ── Sticky toolbar ───────────────────────────────────────────────────── -->
+    <div class="sticky top-28 z-30 bg-white/95 backdrop-blur border-b border-slate-100 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+
+        <!-- Filter button + count -->
+        <div class="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            :class="[
+              'inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all duration-200 active:scale-95',
+              hasActiveFilter
+                ? 'bg-primary-500 text-white border-primary-500 shadow-md shadow-primary-500/20'
+                : 'bg-white text-slate-700 border-slate-200 hover:border-primary-300 hover:text-primary-600'
+            ]"
+            @click="openFilter"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
+            </svg>
+            Filter
+            <span v-if="activeFilterCount > 0"
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white text-primary-600 text-xs font-bold">
+              {{ activeFilterCount }}
+            </span>
+          </button>
+
+          <p class="text-sm text-slate-500 hidden sm:block">
+            <template v-if="pending && !page">Memuat...</template>
+            <template v-else>
+              <span class="font-semibold text-slate-700">{{ totalCount.toLocaleString('id-ID') }}</span> course
+              <span v-if="hasActiveFilter" class="text-primary-500"> · filter aktif</span>
+            </template>
+          </p>
         </div>
-      </div>
 
-      <BaseSelect
-        v-model="selectedDifficulty"
-        :options="difficultyOptions"
-        class="min-w-[150px]"
-        aria-label="Filter level"
-      />
-
-      <BaseSelect
-        v-model="selectedPartner"
-        :options="partnerOptions"
-        class="min-w-[200px]"
-        aria-label="Filter partner"
-      />
-
-      <BaseSelect
-        v-model="selectedSort"
-        :options="sortOptions"
-        class="min-w-[170px]"
-        aria-label="Urutkan"
-      />
-
-      <label class="inline-flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
-        <input v-model="isFreeOnly" type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-400" />
-        Gratis saja
-      </label>
-
-      <button
-        v-if="hasActiveFilter"
-        type="button"
-        class="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2"
-        @click="clearFilters"
-      >
-        Reset filter
-      </button>
-    </div>
-
-    <!-- Loading -->
-    <div v-if="pending && !page" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true" aria-label="Memuat course">
-      <div v-for="i in 6" :key="i" class="rounded-xl overflow-hidden">
-        <BaseSkeleton class="h-44 rounded-none" />
-        <div class="p-4 bg-white space-y-2">
-          <BaseSkeleton class="h-3 w-1/3" />
-          <BaseSkeleton class="h-4" />
-          <BaseSkeleton class="h-4 w-3/4" />
-          <BaseSkeleton class="h-5 w-1/4 mt-2" />
-        </div>
-      </div>
-    </div>
-
-    <!-- Error -->
-    <BaseCard v-else-if="error" padding="lg" class="border border-red-200 bg-red-50">
-      <p class="text-sm text-red-700 mb-3">
-        Gagal memuat course. {{ (error as { message?: string }).message ?? '' }}
-      </p>
-      <div class="flex gap-2">
-        <BaseButton variant="primary" size="sm" @click="refresh()">Coba lagi</BaseButton>
-        <BaseButton v-if="hasActiveFilter" variant="ghost" size="sm" @click="clearFilters">Reset filter</BaseButton>
-      </div>
-    </BaseCard>
-
-    <!-- Empty (no filter) -->
-    <BaseEmptyState
-      v-else-if="courses.length === 0 && !hasActiveFilter"
-      icon="inbox"
-      title="Belum ada course"
-      description="Course akan ditampilkan ketika partner mempublikasikan materi."
-    />
-
-    <!-- Empty (filtered) -->
-    <BaseEmptyState
-      v-else-if="courses.length === 0 && hasActiveFilter"
-      icon="search"
-      title="Course tidak ditemukan"
-      description="Coba kata kunci lain atau ubah filter."
-      cta-label="Reset Filter"
-      @cta-click="clearFilters"
-    />
-
-    <!-- Success -->
-    <div v-else>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <CourseCard v-for="course in courses" :key="course.id" :course="course" />
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="totalPages > 1" class="flex items-center justify-between mt-10 gap-4 flex-wrap">
-        <p class="text-sm text-slate-500">
-          Halaman {{ currentPage }} dari {{ totalPages }} · {{ courses.length }} dari {{ totalCount }} course
-        </p>
+        <!-- Sort (immediate) -->
         <div class="flex items-center gap-2">
-          <BaseButton variant="ghost" size="sm" :disabled="!hasPrev || pending" @click="goPage(currentPage - 1)">← Sebelumnya</BaseButton>
-          <BaseButton variant="ghost" size="sm" :disabled="!hasNext || pending" @click="goPage(currentPage + 1)">Berikutnya →</BaseButton>
+          <span class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">Urutkan:</span>
+          <div class="relative">
+            <select
+              :value="selectedSort"
+              class="appearance-none pl-3 pr-8 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 font-medium focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400 cursor-pointer"
+              @change="selectedSort = ($event.target as HTMLSelectElement).value"
+            >
+              <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+            <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- ── Main content ─────────────────────────────────────────────────────── -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <!-- Active filter chips (immediately removable) -->
+      <div v-if="hasActiveFilter" class="flex flex-wrap gap-2 mb-6">
+        <span v-if="filters.search"
+          class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
+          "{{ filters.search }}"
+          <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
+            aria-label="Hapus filter pencarian"
+            @click="updateQuery({ search: undefined, offset: undefined })">
+            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </span>
+        <span v-if="filters.difficulty"
+          class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
+          {{ difficultyOptions.find(d => d.value === filters.difficulty)?.label }}
+          <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
+            aria-label="Hapus filter level"
+            @click="updateQuery({ difficulty: undefined, offset: undefined })">
+            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </span>
+        <span v-if="filters.partner_slug"
+          class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
+          {{ partnerList.find(p => p.slug === filters.partner_slug)?.name ?? filters.partner_slug }}
+          <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
+            aria-label="Hapus filter partner"
+            @click="updateQuery({ partner_slug: undefined, offset: undefined })">
+            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </span>
+        <span v-if="filters.is_free"
+          class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
+          Gratis saja
+          <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-green-200 transition-colors"
+            aria-label="Hapus filter gratis"
+            @click="updateQuery({ is_free: undefined, offset: undefined })">
+            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </span>
+        <button type="button"
+          class="text-xs text-slate-400 hover:text-red-500 transition-colors ml-1 underline underline-offset-2"
+          @click="clearFilters">
+          Reset semua
+        </button>
+      </div>
+
+      <!-- Loading -->
+      <div v-if="pending && !page" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" aria-busy="true">
+        <div v-for="i in 8" :key="i" class="rounded-2xl overflow-hidden bg-white border border-slate-100 animate-fade-in-up" :style="{ animationDelay: `${(i-1)*50}ms` }">
+          <BaseSkeleton class="aspect-video"/>
+          <div class="p-4 space-y-2.5">
+            <BaseSkeleton class="h-3 w-1/3"/>
+            <BaseSkeleton class="h-4 w-full"/>
+            <BaseSkeleton class="h-4 w-3/4"/>
+            <BaseSkeleton class="h-5 w-1/3 mt-1"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <BaseCard v-else-if="error" padding="lg" class="border border-red-200 bg-red-50">
+        <p class="text-sm text-red-700 mb-3">Gagal memuat course. {{ (error as { message?: string }).message ?? '' }}</p>
+        <div class="flex gap-2">
+          <BaseButton variant="primary" size="sm" @click="refresh()">Coba lagi</BaseButton>
+          <BaseButton v-if="hasActiveFilter" variant="ghost" size="sm" @click="clearFilters">Reset filter</BaseButton>
+        </div>
+      </BaseCard>
+
+      <!-- Empty: no filter -->
+      <BaseEmptyState
+        v-else-if="courses.length === 0 && !hasActiveFilter"
+        icon="inbox"
+        title="Belum ada course"
+        description="Course akan ditampilkan ketika partner mempublikasikan materi."
+      />
+
+      <!-- Empty: filtered -->
+      <BaseEmptyState
+        v-else-if="courses.length === 0"
+        icon="search"
+        title="Course tidak ditemukan"
+        description="Coba kata kunci lain atau ubah filter."
+        cta-label="Reset Filter"
+        @cta-click="clearFilters"
+      />
+
+      <!-- Grid -->
+      <div v-else>
+        <Transition name="grid-fade" mode="out-in">
+          <div :key="JSON.stringify(filters)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div
+              v-for="(course, i) in courses"
+              :key="course.id"
+              class="animate-fade-in-up"
+              :style="{ animationDelay: `${i * 45}ms` }"
+            >
+              <CourseCard :course="course"/>
+            </div>
+          </div>
+        </Transition>
+
+        <!-- Pagination -->
+        <div v-if="totalPages > 1" class="mt-12 flex flex-col items-center gap-4">
+          <p class="text-sm text-slate-400">
+            Halaman <span class="font-semibold text-slate-700">{{ currentPage }}</span> dari {{ totalPages }}
+            · <span class="font-semibold text-slate-700">{{ courses.length }}</span> dari {{ totalCount }} course
+          </p>
+          <div class="flex items-center gap-2">
+            <button type="button"
+              :disabled="!hasPrev || pending"
+              :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
+                hasPrev && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
+              @click="goPage(currentPage - 1)">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              Sebelumnya
+            </button>
+
+            <div class="hidden sm:flex items-center gap-1">
+              <button
+                v-for="n in Math.min(5, totalPages)"
+                :key="n"
+                type="button"
+                :class="['w-9 h-9 rounded-lg text-sm font-semibold transition-all active:scale-95',
+                  n === currentPage ? 'bg-primary-500 text-white shadow-md shadow-primary-500/30' : 'text-slate-600 hover:bg-slate-100']"
+                @click="goPage(n)">{{ n }}</button>
+              <span v-if="totalPages > 5" class="text-slate-400 text-sm px-1">...</span>
+              <button v-if="totalPages > 5" type="button"
+                :class="['w-9 h-9 rounded-lg text-sm font-semibold transition-all active:scale-95',
+                  totalPages === currentPage ? 'bg-primary-500 text-white' : 'text-slate-600 hover:bg-slate-100']"
+                @click="goPage(totalPages)">{{ totalPages }}</button>
+            </div>
+
+            <button type="button"
+              :disabled="!hasNext || pending"
+              :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
+                hasNext && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
+              @click="goPage(currentPage + 1)">
+              Berikutnya
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         FILTER DRAWER
+    ═══════════════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <!-- Backdrop -->
+      <Transition name="backdrop">
+        <div v-if="filterOpen" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40" aria-hidden="true" @click="closeFilter"/>
+      </Transition>
+
+      <!-- Drawer -->
+      <Transition name="drawer">
+        <div v-if="filterOpen"
+          class="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col"
+          role="dialog" aria-modal="true" aria-label="Filter course">
+
+          <!-- Header -->
+          <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+                <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
+                </svg>
+              </div>
+              <h2 class="text-base font-bold text-slate-800">Filter</h2>
+              <!-- Pending changes indicator -->
+              <span v-if="localHasChanges" class="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                Belum diterapkan
+              </span>
+            </div>
+            <button type="button"
+              class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              aria-label="Tutup filter"
+              @click="closeFilter">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="flex-1 overflow-y-auto px-6 py-5 space-y-7">
+
+            <!-- Search -->
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Pencarian</label>
+              <div class="relative">
+                <input
+                  v-model="localSearch"
+                  type="text"
+                  placeholder="Cari nama course..."
+                  class="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none transition-colors"
+                  aria-label="Cari course"
+                />
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Level -->
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Level</label>
+              <div class="space-y-2">
+                <label
+                  v-for="opt in difficultyOptions"
+                  :key="opt.value"
+                  :class="['flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none',
+                    localDifficulty === opt.value ? 'border-primary-300 bg-primary-50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50']"
+                >
+                  <div :class="['w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                    localDifficulty === opt.value ? 'border-primary-500 bg-primary-500' : 'border-slate-300']">
+                    <div v-if="localDifficulty === opt.value" class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                  </div>
+                  <span class="text-sm font-medium text-slate-700">{{ opt.icon }} {{ opt.label }}</span>
+                  <input type="radio" name="local-difficulty" :value="opt.value" :checked="localDifficulty === opt.value"
+                    class="sr-only"
+                    @change="localDifficulty = localDifficulty === opt.value ? '' : opt.value" />
+                </label>
+                <button v-if="localDifficulty" type="button"
+                  class="text-xs text-slate-400 hover:text-slate-600 transition-colors ml-1"
+                  @click="localDifficulty = ''">
+                  Hapus pilihan
+                </button>
+              </div>
+            </div>
+
+            <!-- Free only -->
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Ketersediaan</label>
+              <label
+                :class="['flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all select-none',
+                  localIsFree ? 'border-green-300 bg-green-50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50']"
+              >
+                <div class="flex items-center gap-3">
+                  <span class="text-lg" aria-hidden="true">🎁</span>
+                  <div>
+                    <p class="text-sm font-medium text-slate-700">Gratis saja</p>
+                    <p class="text-xs text-slate-400">Hanya course gratis</p>
+                  </div>
+                </div>
+                <div :class="['relative w-10 h-6 rounded-full transition-colors duration-200 flex-shrink-0', localIsFree ? 'bg-green-500' : 'bg-slate-200']"
+                  role="switch" :aria-checked="localIsFree">
+                  <div :class="['absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200', localIsFree ? 'translate-x-4' : 'translate-x-0']"></div>
+                  <input v-model="localIsFree" type="checkbox" class="sr-only"/>
+                </div>
+              </label>
+            </div>
+
+            <!-- Partner -->
+            <div v-if="partnerList.length > 0">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Partner</label>
+              <div class="space-y-1 max-h-52 overflow-y-auto pr-1">
+                <label
+                  v-for="partner in partnerList"
+                  :key="partner.slug"
+                  :class="['flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all select-none',
+                    localPartner === partner.slug ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700']"
+                >
+                  <div :class="['w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                    localPartner === partner.slug ? 'border-primary-500 bg-primary-500' : 'border-slate-300']">
+                    <svg v-if="localPartner === partner.slug" class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <span class="text-sm truncate">{{ partner.name }}</span>
+                  <span v-if="partner.course_count" class="ml-auto text-xs text-slate-400 flex-shrink-0">{{ partner.course_count }}</span>
+                  <input type="radio" :value="partner.slug" :checked="localPartner === partner.slug"
+                    class="sr-only"
+                    @change="localPartner = localPartner === partner.slug ? '' : partner.slug"/>
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+            <button type="button"
+              class="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors active:scale-95"
+              @click="resetDrawer">
+              Reset Semua
+            </button>
+            <button type="button"
+              :class="['flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95',
+                localHasChanges
+                  ? 'bg-primary-500 text-white hover:bg-primary-600 shadow-md shadow-primary-500/20'
+                  : 'bg-primary-500 text-white hover:bg-primary-600 shadow-md shadow-primary-500/20']"
+              @click="applyFilters">
+              Terapkan Filter
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
+
+<style scoped>
+.drawer-enter-active  { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.drawer-leave-active  { transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.drawer-enter-from, .drawer-leave-to { transform: translateX(100%); }
+
+.backdrop-enter-active, .backdrop-leave-active { transition: opacity 0.2s ease; }
+.backdrop-enter-from, .backdrop-leave-to { opacity: 0; }
+
+.grid-fade-enter-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.grid-fade-leave-active { transition: opacity 0.15s ease; }
+.grid-fade-enter-from   { opacity: 0; transform: translateY(4px); }
+.grid-fade-leave-to     { opacity: 0; }
+</style>

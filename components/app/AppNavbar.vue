@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 
-const auth = useAuthStore()
-const route = useRoute()
+const auth   = useAuthStore()
+const route  = useRoute()
 const router = useRouter()
+
 const mobileMenuOpen = ref(false)
-const scrolled = ref(false)
+const scrolled       = ref(false)
+const searchQuery    = ref('')
 
 async function handleLogout() {
   auth.logout()
@@ -13,162 +15,258 @@ async function handleLogout() {
   await router.push('/')
 }
 
-const navLinks = [
-  { label: 'Beranda', to: '/' },
-  { label: 'Course', to: '/courses' },
-  { label: 'Partner', to: '/partners' }
+function submitSearch() {
+  const q = searchQuery.value.trim()
+  if (!q) { router.push('/courses'); return }
+  router.push({ path: '/courses', query: { search: q } })
+  mobileMenuOpen.value = false
+}
+
+// Row 1 right-side links
+const quickLinks = [
+  { label: 'Tentang', to: '/tentang' },
+  { label: 'Partner', to: '/partners' },
+  { label: 'Kontak',  to: '/kontak' },
+]
+
+// Row 2 category bar
+const categoryPills = [
+  { label: 'Semua Course', to: '/courses',                         primary: false },
+  { label: 'Course Gratis', to: '/courses?is_free=true',           primary: true  },
+]
+const categoryLinks = [
+  { label: 'Pemula',          to: '/courses?difficulty=beginner' },
+  { label: 'Menengah',      to: '/courses?difficulty=intermediate' },
+  { label: 'Mahir',    to: '/courses?difficulty=advanced' },
 ]
 
 onMounted(() => {
-  window.addEventListener('scroll', () => { scrolled.value = window.scrollY > 8 })
+  window.addEventListener('scroll', () => { scrolled.value = window.scrollY > 4 })
 })
-
 watch(() => route.path, () => { mobileMenuOpen.value = false })
 </script>
 
 <template>
   <header
     :class="[
-      'sticky top-0 z-50 transition-all duration-200',
-      scrolled ? 'bg-white/95 backdrop-blur-lg shadow-sm' : 'bg-white/90 backdrop-blur-md'
+      'sticky top-0 z-50 transition-all duration-200 bg-white',
+      scrolled ? 'shadow-md' : 'border-b border-slate-100'
     ]"
   >
-    <!-- Skip to content -->
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-500 focus:text-white focus:rounded-md">
       Skip to main content
     </a>
 
-    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" aria-label="Navigasi utama">
+    <!-- ── Row 1: Main nav ─────────────────────────────────────────────────── -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
+
       <!-- Logo -->
-      <NuxtLink to="/" class="flex items-center gap-2 font-bold text-xl text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md" aria-label="DrillSpace — Halaman Utama">
-        <svg class="w-8 h-8 text-primary-500" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
-          <path d="M16 2L3 9v14l13 7 13-7V9L16 2zm0 2.5l10.5 5.7V22l-10.5 5.7L5.5 22V10.2L16 4.5z"/>
-          <circle cx="16" cy="16" r="4" />
-        </svg>
-        <span>DrillSpace</span>
+      <NuxtLink to="/" class="flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md" aria-label="DrillSpace — Halaman Utama">
+        <img src="/images/logo.png" alt="DrillSpace" class="h-9 w-auto" />
       </NuxtLink>
 
-      <!-- Desktop Nav -->
-      <div class="hidden md:flex items-center gap-1">
+      <!-- Search bar (desktop) -->
+      <form class="hidden md:flex flex-1 max-w-xl items-center relative" @submit.prevent="submitSearch">
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Cari course maritim..."
+          class="w-full pl-5 pr-14 py-2.5 text-sm rounded-full border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-400 focus:ring-0 outline-none transition-all"
+          aria-label="Cari course"
+        />
+        <button
+          type="submit"
+          class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center transition-colors active:scale-95"
+          aria-label="Cari"
+        >
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Right: notification + quick links + auth -->
+      <div class="hidden md:flex items-center gap-1 ml-auto flex-shrink-0">
+
+        <!-- Notification bell -->
         <NuxtLink
-          v-for="link in navLinks"
+          v-if="auth.isAuthenticated"
+          to="/orders"
+          class="relative w-10 h-10 flex items-center justify-center rounded-full text-slate-500 hover:text-primary-600 hover:bg-slate-100 transition-colors"
+          aria-label="Order saya"
+        >
+          <svg data-v-8b9e73ec="" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path data-v-8b9e73ec="" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+        </NuxtLink>
+
+        <!-- Quick text links -->
+        <NuxtLink
+          v-for="link in quickLinks"
           :key="link.to"
           :to="link.to"
-          :class="[
-            'px-3 py-2 rounded-md text-sm font-medium transition-colors',
-            route.path === link.to
-              ? 'text-primary-600 bg-primary-50'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          ]"
+          class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors rounded-md hover:bg-slate-50"
         >
           {{ link.label }}
         </NuxtLink>
-      </div>
 
-      <!-- Desktop Search + Auth -->
-      <div class="hidden md:flex items-center gap-3">
-        <!-- Search -->
-        <form action="/courses" method="get" class="relative">
-          <input
-            name="search"
-            type="search"
-            placeholder="Cari course..."
-            class="pl-9 pr-3 py-2 text-sm rounded-md border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none w-48 transition-all focus:w-64"
-            aria-label="Cari course"
-          />
-          <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </form>
+        <div class="w-px h-5 bg-slate-200 mx-1"></div>
 
         <!-- Auth state -->
         <template v-if="auth.isAuthenticated">
           <NuxtLink
-            to="/orders"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-primary-600 hover:bg-slate-50 transition-colors"
-            aria-label="Lihat order saya"
+            to="/profile"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-all text-sm font-medium text-slate-700"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            Order
+            <div class="w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+              {{ (auth.user?.full_name || auth.user?.username || 'U').charAt(0).toUpperCase() }}
+            </div>
+            <span class="hidden lg:block max-w-[100px] truncate">
+              {{ auth.user?.full_name?.split(' ')[0] || auth.user?.username || 'Akun' }}
+            </span>
+          </NuxtLink>
+          <button
+            type="button"
+            class="ml-1 px-3 py-1.5 rounded-full text-sm font-medium text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all"
+            @click="handleLogout"
+          >
+            Keluar
+          </button>
+        </template>
+        <template v-if="!auth.isAuthenticated">
+          <NuxtLink
+            to="/login"
+            class="px-4 py-2 rounded-full text-sm font-semibold text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-all"
+          >
+            Masuk
           </NuxtLink>
           <NuxtLink
-            to="/profile"
-            class="text-sm text-slate-600 hover:text-primary-600 transition-colors"
-          >Hai, {{ (auth.user?.full_name?.split(' ')[0]) || auth.user?.username || 'Akun' }}</NuxtLink>
-          <BaseButton variant="ghost" size="sm" @click="handleLogout">Keluar</BaseButton>
-        </template>
-        <template v-else>
-          <BaseButton variant="ghost" size="sm" to="/login">Masuk</BaseButton>
-          <BaseButton variant="primary" size="sm" to="/register">Daftar</BaseButton>
+            to="/register"
+            class="px-5 py-2 rounded-full text-sm font-bold bg-primary-500 text-white hover:bg-primary-600 shadow-sm hover:shadow-md hover:shadow-primary-500/20 transition-all active:scale-95"
+          >
+            Daftar
+          </NuxtLink>
         </template>
       </div>
 
-      <!-- Mobile burger -->
+      <!-- Mobile: hamburger -->
       <button
         type="button"
-        class="md:hidden p-2 rounded-md text-slate-600 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+        class="md:hidden ml-auto p-2 rounded-md text-slate-600 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
         :aria-expanded="mobileMenuOpen"
         aria-controls="mobile-menu"
         aria-label="Buka menu navigasi"
         @click="mobileMenuOpen = !mobileMenuOpen"
       >
         <svg v-if="!mobileMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
         <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
       </button>
-    </nav>
+    </div>
 
-    <!-- Mobile menu overlay -->
+    <!-- ── Row 2: Category bar (desktop only) ───────────────────────────────── -->
+    <div class="hidden md:block border-t border-slate-100 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center gap-3">
+        <!-- Pill buttons -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <NuxtLink
+            v-for="pill in categoryPills"
+            :key="pill.to"
+            :to="pill.to"
+            :class="[
+              'px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95',
+              pill.primary
+                ? 'bg-primary-500 text-white hover:bg-primary-600 shadow-sm'
+                : 'border-2 border-slate-300 text-slate-600 hover:border-primary-400 hover:text-primary-600'
+            ]"
+          >
+            {{ pill.label }}
+          </NuxtLink>
+        </div>
+
+        <!-- Divider -->
+        <div class="w-px h-5 bg-slate-200 flex-shrink-0"></div>
+
+        <!-- Category links (scrollable) -->
+        <nav class="flex items-center gap-1 overflow-x-auto no-scrollbar" aria-label="Kategori course">
+          <NuxtLink
+            v-for="cat in categoryLinks"
+            :key="cat.label"
+            :to="cat.to"
+            class="flex-shrink-0 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-primary-600 hover:bg-primary-50 transition-all whitespace-nowrap"
+          >
+            {{ cat.label }}
+          </NuxtLink>
+        </nav>
+      </div>
+    </div>
+
+    <!-- ── Mobile menu ───────────────────────────────────────────────────────── -->
     <Transition name="slide-down">
       <div
         v-if="mobileMenuOpen"
         id="mobile-menu"
-        class="md:hidden border-t border-slate-100 bg-white px-4 py-4 flex flex-col gap-2 shadow-lg"
+        class="md:hidden border-t border-slate-100 bg-white shadow-xl"
       >
-        <!-- Search mobile -->
-        <form action="/courses" method="get">
-          <div class="relative mb-2">
+        <!-- Mobile search -->
+        <div class="px-4 pt-4 pb-2">
+          <form class="relative" @submit.prevent="submitSearch">
             <input
-              name="search"
+              v-model="searchQuery"
               type="search"
-              placeholder="Cari course..."
-              class="w-full pl-9 pr-3 py-2.5 text-sm rounded-md border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none"
+              placeholder="Cari course maritim..."
+              class="w-full pl-5 pr-14 py-3 text-sm rounded-full border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-400 outline-none"
               aria-label="Cari course"
             />
-            <svg class="absolute left-2.5 top-3 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </form>
+            <button type="submit"
+              class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-primary-500 flex items-center justify-center active:scale-95"
+              aria-label="Cari">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </button>
+          </form>
+        </div>
+
+        <!-- Category pills mobile -->
+        <div class="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+          <NuxtLink v-for="pill in categoryPills" :key="pill.label"
+            :to="pill.to"
+            :class="['flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold',
+              pill.primary ? 'bg-primary-500 text-white' : 'border-2 border-slate-300 text-slate-600']">
+            {{ pill.label }}
+          </NuxtLink>
+          <NuxtLink v-for="cat in categoryLinks" :key="cat.label" :to="cat.to"
+            class="flex-shrink-0 px-3 py-1.5 rounded-md text-sm text-slate-600 bg-slate-50 whitespace-nowrap">
+            {{ cat.label }}
+          </NuxtLink>
+        </div>
 
         <!-- Nav links -->
-        <NuxtLink
-          v-for="link in navLinks"
-          :key="link.to"
-          :to="link.to"
-          :class="[
-            'px-3 py-3 rounded-md text-base font-medium transition-colors min-h-[44px] flex items-center',
-            route.path === link.to ? 'text-primary-600 bg-primary-50' : 'text-slate-700 hover:bg-slate-50'
-          ]"
-        >
-          {{ link.label }}
-        </NuxtLink>
+        <div class="px-4 pb-2 space-y-1 border-t border-slate-100 pt-3">
+          <NuxtLink v-for="link in quickLinks" :key="link.to" :to="link.to"
+            class="flex items-center px-3 py-3 rounded-xl text-base font-medium text-slate-700 hover:bg-slate-50 transition-colors min-h-[44px]">
+            {{ link.label }}
+          </NuxtLink>
+        </div>
 
-        <div class="border-t border-slate-100 pt-3 mt-1 flex flex-col gap-2">
+        <!-- Auth mobile -->
+        <div class="px-4 pb-4 pt-2 border-t border-slate-100 space-y-2">
           <template v-if="auth.isAuthenticated">
-            <p class="text-sm text-slate-600 px-3">Hai, {{ auth.user?.full_name || auth.user?.username || 'Akun' }}</p>
-            <BaseButton variant="ghost" block to="/orders">Order Saya</BaseButton>
-            <BaseButton variant="ghost" block to="/profile">Profil Saya</BaseButton>
-            <BaseButton variant="secondary" block @click="handleLogout">Keluar</BaseButton>
+            <div class="flex items-center gap-3 px-3 py-2 mb-1">
+              <div class="w-8 h-8 rounded-full bg-primary-500 text-white text-sm font-bold flex items-center justify-center">
+                {{ (auth.user?.full_name || auth.user?.username || 'U').charAt(0).toUpperCase() }}
+              </div>
+              <p class="text-sm font-semibold text-slate-800">{{ auth.user?.full_name || auth.user?.username }}</p>
+            </div>
+            <NuxtLink to="/orders" class="flex items-center px-3 py-3 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">Order Saya</NuxtLink>
+            <NuxtLink to="/profile" class="flex items-center px-3 py-3 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">Profil Saya</NuxtLink>
+            <button type="button" class="w-full px-3 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 text-left min-h-[44px]" @click="handleLogout">Keluar</button>
           </template>
           <template v-else>
-            <BaseButton variant="secondary" block to="/login">Masuk</BaseButton>
-            <BaseButton variant="primary" block to="/register">Daftar</BaseButton>
+            <NuxtLink to="/login" class="block w-full text-center py-3 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-700 hover:border-primary-300">Masuk</NuxtLink>
+            <NuxtLink to="/register" class="block w-full text-center py-3 rounded-xl bg-primary-500 text-sm font-bold text-white hover:bg-primary-600">Daftar</NuxtLink>
           </template>
         </div>
       </div>
@@ -177,6 +275,9 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
 </template>
 
 <style scoped>
-.slide-down-enter-active, .slide-down-leave-active { transition: all 0.2s ease; }
-.slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-8px); }
+.slide-down-enter-active, .slide-down-leave-active { transition: all 0.22s ease; }
+.slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-6px); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>

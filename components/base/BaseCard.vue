@@ -28,11 +28,11 @@ const shadowClasses: Record<string, string> = {
 }
 
 const classes = computed(() => [
-  'bg-white rounded-lg transition-all duration-200',
+  'bg-white rounded-2xl transition-all duration-300',
   paddingClasses[props.padding],
   shadowClasses[props.shadow],
   props.border ? 'border border-slate-100' : '',
-  props.hover ? 'hover:shadow-lg hover:-translate-y-0.5 cursor-pointer' : ''
+  props.hover ? 'hover:shadow-lg hover:-translate-y-1 hover:shadow-green-900/10 cursor-pointer' : ''
 ])
 </script>
 

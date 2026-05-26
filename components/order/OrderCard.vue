@@ -5,50 +5,157 @@ interface Props {
   order: OrderListItem
 }
 
-defineProps<Props>()
-
+const props = defineProps<Props>()
 const { formatCurrency, formatDate } = useFormatters()
+
+const statusConfig: Record<string, { label: string; dotClass: string; badgeClass: string }> = {
+  pending:   { label: 'Menunggu Bayar',  dotClass: 'bg-amber-400',  badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+  paid:      { label: 'Lunas',           dotClass: 'bg-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  expired:   { label: 'Kedaluwarsa',    dotClass: 'bg-red-400',     badgeClass: 'bg-red-50 text-red-600 border-red-200' },
+  cancelled: { label: 'Dibatalkan',     dotClass: 'bg-slate-400',   badgeClass: 'bg-slate-50 text-slate-600 border-slate-200' },
+  refunded:  { label: 'Direfund',       dotClass: 'bg-blue-400',    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' }
+}
+
+const statusInfo = computed(() =>
+  statusConfig[props.order.status] ?? { label: props.order.status, dotClass: 'bg-slate-400', badgeClass: 'bg-slate-50 text-slate-600 border-slate-200' }
+)
+
+// Context-sensitive action button
+const action = computed(() => {
+  const o = props.order
+  const detailTo = `/orders/${o.order_number}`
+  switch (o.status) {
+    case 'pending': {
+      const m = o.payment_method
+      let to = `/orders/${o.order_number}/payment`
+      if (m?.startsWith('va_'))       to = `/orders/${o.order_number}/payment/va`
+      else if (m === 'qris')          to = `/orders/${o.order_number}/payment/qris`
+      else if (m?.startsWith('ewallet_')) to = `/orders/${o.order_number}/payment/ewallet`
+      return { label: 'Bayar Sekarang', to, primary: true }
+    }
+    case 'paid':
+      return o.course?.slug
+        ? { label: 'Mulai Belajar', to: `/courses/${o.course.slug}`, primary: true }
+        : { label: 'Lihat Detail', to: detailTo, primary: false }
+    case 'expired':
+      return o.course?.slug
+        ? { label: 'Beli Lagi', to: `/checkout?course=${o.course.slug}`, primary: false }
+        : { label: 'Lihat Detail', to: detailTo, primary: false }
+    default:
+      return { label: 'Lihat Detail', to: detailTo, primary: false }
+  }
+})
+
+const courseTitle = computed(() =>
+  props.order.course?.title ?? `Course #${props.order.course_id}`
+)
 </script>
 
 <template>
-  <NuxtLink :to="`/orders/${order.order_number}`" class="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xl">
-    <BaseCard hover shadow="sm" padding="md" class="flex flex-col sm:flex-row gap-4">
+  <div class="group bg-white rounded-2xl border border-slate-200 hover:border-primary-200 hover:shadow-[0_8px_30px_rgba(47,126,208,0.10)] transition-all duration-300 overflow-hidden">
+    <div class="flex">
+
       <!-- Thumbnail -->
-      <div class="w-full sm:w-24 h-32 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden bg-slate-200">
+      <NuxtLink
+        :to="`/orders/${order.order_number}`"
+        class="relative flex-shrink-0 w-28 sm:w-36 overflow-hidden bg-slate-100"
+        tabindex="-1"
+        aria-hidden="true"
+      >
         <img
           v-if="order.course?.thumbnail_url"
           :src="order.course.thumbnail_url"
-          :alt="order.course.title ?? `Course #${order.course_id}`"
-          class="w-full h-full object-cover"
+          :alt="courseTitle"
+          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
-        <div v-else class="w-full h-full flex items-center justify-center bg-primary-50">
-          <svg class="w-8 h-8 text-primary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <div
+          v-else
+          class="w-full h-full min-h-[100px] flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100"
+        >
+          <svg class="w-10 h-10 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
         </div>
-      </div>
 
-      <!-- Info -->
-      <div class="flex-1 min-w-0">
-        <div class="flex items-start justify-between gap-2 flex-wrap">
-          <div>
-            <p class="text-xs text-slate-500 font-mono">{{ order.order_number }}</p>
-            <h3 class="font-semibold text-slate-800 text-sm leading-snug mt-0.5 line-clamp-2 group-hover:text-primary-600 transition-colors">
-              {{ order.course?.title ?? `Course #${order.course_id}` }}
-            </h3>
+        <!-- Pending pulse indicator -->
+        <div v-if="order.status === 'pending'" class="absolute top-2 left-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+          </span>
+        </div>
+      </NuxtLink>
+
+      <!-- Content -->
+      <div class="flex-1 min-w-0 p-4 flex flex-col justify-between gap-3">
+
+        <!-- Top row -->
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-xs text-slate-400 font-mono mb-1 tracking-wide">
+              {{ order.order_number }}
+            </p>
+            <NuxtLink
+              :to="`/orders/${order.order_number}`"
+              class="block font-bold text-slate-800 text-sm sm:text-base leading-snug line-clamp-2 hover:text-primary-600 transition-colors"
+            >
+              {{ courseTitle }}
+            </NuxtLink>
+            <p class="text-xs text-slate-400 mt-1">DrillSpace E-Learning</p>
           </div>
-          <OrderStatusBadge :status="order.status" />
+
+          <!-- Status badge -->
+          <span
+            :class="['flex-shrink-0 inline-flex items-center gap-1.5 border text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap', statusInfo.badgeClass]"
+          >
+            <span :class="['w-1.5 h-1.5 rounded-full flex-shrink-0', statusInfo.dotClass]" aria-hidden="true"></span>
+            {{ statusInfo.label }}
+          </span>
         </div>
 
-        <div class="flex items-center justify-between mt-3 flex-wrap gap-2">
+        <!-- Bottom row: amount + date + action -->
+        <div class="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <span v-if="order.total_amount === 0" class="text-sm font-bold text-green-600">Gratis</span>
-            <span v-else class="text-sm font-bold text-primary-600">{{ formatCurrency(order.total_amount) }}</span>
+            <p class="text-base sm:text-lg font-black tabular-nums" :class="order.total_amount === 0 ? 'text-emerald-600' : 'text-primary-600'">
+              {{ order.total_amount === 0 ? 'Gratis' : formatCurrency(order.total_amount) }}
+            </p>
+            <p class="text-xs text-slate-400 mt-0.5">{{ formatDate(order.created_at) }}</p>
           </div>
-          <p class="text-xs text-slate-400">{{ formatDate(order.created_at) }}</p>
+
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Secondary: always show "Lihat Detail" when primary action goes elsewhere -->
+            <NuxtLink
+              v-if="action.to !== `/orders/${order.order_number}`"
+              :to="`/orders/${order.order_number}`"
+              class="text-xs font-semibold text-slate-400 hover:text-primary-600 transition-colors whitespace-nowrap"
+            >
+              Lihat Detail
+            </NuxtLink>
+
+            <!-- Primary action -->
+            <NuxtLink
+              :to="action.to"
+              :class="[
+                'inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all duration-200 active:scale-95',
+                action.primary
+                  ? 'bg-primary-500 text-white hover:bg-primary-600 shadow-sm hover:shadow-[0_0_0_3px_#bcd9fc]'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              ]"
+            >
+              <svg v-if="action.primary && order.status === 'pending'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              <svg v-else-if="action.primary && order.status === 'paid'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ action.label }}
+            </NuxtLink>
+          </div>
         </div>
+
       </div>
-    </BaseCard>
-  </NuxtLink>
+    </div>
+  </div>
 </template>

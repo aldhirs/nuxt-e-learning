@@ -4,12 +4,8 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <!-- Brand -->
         <div>
-          <div class="flex items-center gap-2 text-white font-bold text-lg mb-3">
-            <svg class="w-7 h-7 text-primary-400" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
-              <path d="M16 2L3 9v14l13 7 13-7V9L16 2zm0 2.5l10.5 5.7V22l-10.5 5.7L5.5 22V10.2L16 4.5z"/>
-              <circle cx="16" cy="16" r="4" />
-            </svg>
-            DrillSpace
+          <div class="mb-3">
+            <img src="/images/logo.png" alt="DrillSpace" class="h-10 w-auto bg-white rounded-lg px-2 py-1" />
           </div>
           <p class="text-sm leading-relaxed">Platform pelatihan maritim terpercaya. Tingkatkan kompetensi Anda bersama para ahli industri.</p>
         </div>

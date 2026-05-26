@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 
-definePageMeta({ middleware: 'auth' })
+definePageMeta({ layout: 'profile', middleware: 'auth' })
 useSeoMeta({ title: 'Profil Saya' })
 
 const auth = useAuthStore()
@@ -63,12 +63,11 @@ async function doLogout() {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-10">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-slate-800">Profil Saya</h1>
-      <BaseButton variant="ghost" size="sm" :loading="refreshing" @click="refresh">
-        Muat ulang
-      </BaseButton>
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-xl font-bold text-slate-800">Profil Saya</h2>
+      </div>
     </div>
 
     <!-- Loading state (first load, no cached user) -->

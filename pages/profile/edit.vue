@@ -3,7 +3,12 @@ import { useAuthStore } from '~/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, minLength, helpers } from '@vuelidate/validators'
 
-definePageMeta({ middleware: 'auth' })
+const phoneValidator = helpers.withMessage(
+  'Nomor HP tidak valid (contoh: 08123456789 atau +628123456789)',
+  (v: string) => !v || /^(\+62|62|0)8[1-9][0-9]{7,11}$/.test(v.replace(/[\s\-().]/g, ''))
+)
+
+definePageMeta({ layout: 'profile', middleware: 'auth' })
 useSeoMeta({ title: 'Edit Profil' })
 
 const auth = useAuthStore()
@@ -24,7 +29,8 @@ const initialReady = ref(false)
 const form = reactive({
   full_name: '',
   username: '',
-  email: ''
+  email: '',
+  phone: ''
 })
 
 const usernameFormat = helpers.regex(/^[a-zA-Z0-9_.-]+$/)
@@ -38,7 +44,8 @@ const rules = {
       usernameFormat
     )
   },
-  email: { required, email }
+  email: { required, email },
+  phone: { phoneValidator }
 }
 const v$ = useVuelidate(rules, form)
 
@@ -48,6 +55,7 @@ async function hydrate() {
     form.full_name = auth.user.full_name || ''
     form.username = auth.user.username || ''
     form.email = auth.user.email || ''
+    form.phone = auth.user.phone || ''
   }
   initialReady.value = true
 }
@@ -70,9 +78,12 @@ async function submit() {
     const fullName = form.full_name.trim()
     const username = form.username.trim().toLowerCase()
     const emailNew = form.email.trim().toLowerCase()
+    const phone = form.phone.trim()
     if (fullName !== (auth.user?.full_name || '')) payload.full_name = fullName
     if (username !== (auth.user?.username || '')) payload.username = username
     if (emailNew !== (auth.user?.email || '').toLowerCase()) payload.email = emailNew
+    // Kirim phone jika berubah. "" = hapus nomor (BE set NULL). Non-empty = update.
+    if (phone !== (auth.user?.phone || '')) payload.phone = phone
 
     if (Object.keys(payload).length === 0) {
       successMessage.value = 'Tidak ada perubahan.'
@@ -115,10 +126,10 @@ async function submit() {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto px-4 py-10">
+  <div class="flex-1 min-w-0">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-slate-800">Edit Profil</h1>
+        <h2 class="text-xl font-bold text-slate-800">Edit Profil</h2>
         <p class="text-sm text-slate-500 mt-1">Perbarui informasi akun Anda.</p>
       </div>
       <BaseButton variant="ghost" size="sm" to="/profile">← Kembali</BaseButton>
@@ -169,6 +180,14 @@ async function submit() {
           :error="fieldErrors.email || (v$.email.$error ? 'Email tidak valid' : '')"
           required
           @blur="v$.email.$touch"
+        />
+        <BaseInput
+          v-model="form.phone"
+          type="tel"
+          label="Nomor HP"
+          placeholder="08123456789 atau +628123456789"
+          :error="fieldErrors.phone || (v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : '')"
+          @blur="v$.phone.$touch"
         />
 
         <div class="flex flex-col sm:flex-row gap-3 pt-2">

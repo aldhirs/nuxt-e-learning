@@ -14,9 +14,15 @@ const form = reactive({
   full_name: '',
   username: '',
   email: '',
+  phone: '',
   password: '',
   password_confirm: ''
 })
+
+const phoneValidator = helpers.withMessage(
+  'Nomor HP tidak valid (contoh: 08123456789 atau +628123456789)',
+  (v: string) => !v || /^(\+62|62|0)8[1-9][0-9]{7,11}$/.test(v.replace(/[\s\-().]/g, ''))
+)
 const isLoading = ref(false)
 const serverError = ref('')
 const success = ref(false)
@@ -35,6 +41,7 @@ const rules = {
     )
   },
   email: { required, email },
+  phone: { phoneValidator },
   password: { required, minLength: minLength(8) },
   password_confirm: {
     required,
@@ -58,12 +65,14 @@ async function submit() {
 
   isLoading.value = true
   try {
-    await auth.register({
+    const registerPayload: Parameters<typeof auth.register>[0] = {
       full_name: form.full_name.trim(),
       username: form.username.trim().toLowerCase(),
       email: form.email.trim().toLowerCase(),
       password: form.password
-    })
+    }
+    if (form.phone.trim()) registerPayload.phone = form.phone.trim()
+    await auth.register(registerPayload)
     // BE saat ini set akun aktif langsung — coba auto-login agar UX seamless.
     try {
       await auth.login({
@@ -153,6 +162,15 @@ async function submit() {
             required
             hint="Diisi otomatis dari email, bisa diubah."
             @blur="v$.username.$touch"
+          />
+          <BaseInput
+            v-model="form.phone"
+            type="tel"
+            label="Nomor HP"
+            placeholder="08123456789 (opsional)"
+            :error="v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : ''"
+            hint="Opsional. Digunakan untuk konfirmasi pembelian."
+            @blur="v$.phone.$touch"
           />
           <BaseInput
             v-model="form.password"

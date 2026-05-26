@@ -187,14 +187,12 @@ export interface EnrollFreeResponse {
 
 export type OrderStatus = 'pending' | 'paid' | 'expired' | 'cancelled' | 'refunded'
 
-// Snapshot course untuk UI list/detail. BE saat ini tidak nest course di response
-// order — hanya kembalikan course_id. Field ini di-hidrasi FE-side dari fetch
-// course-by-slug (kalau slug diketahui) atau dari cache Pinia saat checkout.
-// Lihat BE-FEEDBACK item #N nanti.
+// Nested course snippet returned by GET /orders/:order_number.
+// BE now embeds this directly so storefront needs only one request per order page.
 export interface OrderCourse {
   id: number
-  title?: string
-  slug?: string
+  title: string
+  slug: string
   thumbnail_url?: string | null
 }
 
@@ -370,6 +368,7 @@ export interface RegisterRequest {
   username: string
   email: string
   password: string
+  phone?: string  // optional — BE simpan ke users.phone (E.164), absent = NULL
 }
 
 export interface RegisterResponse {
@@ -392,8 +391,7 @@ export interface ForgotPasswordRequest {
 
 export interface ResetPasswordRequest {
   token: string
-  password: string
-  password_confirm: string
+  new_password: string
 }
 
 // PUT /auth/storefront/me — partial body. All fields optional; absent fields
@@ -402,6 +400,7 @@ export interface UpdateProfileRequest {
   full_name?: string
   email?: string
   username?: string
+  phone?: string  // "" = clear (set NULL), "+62..." = update, absent = skip
 }
 
 // ─── API Response ─────────────────────────────────────────────────────────────

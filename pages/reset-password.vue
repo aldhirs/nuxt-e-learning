@@ -3,6 +3,12 @@ import { useAuthStore } from '~/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
 import { required, minLength, sameAs, helpers } from '@vuelidate/validators'
 
+// Mirrors BE isPasswordComplex: min 8 char, must contain letter AND digit.
+const passwordComplex = helpers.withMessage(
+  'Kata sandi minimal 8 karakter dan harus mengandung huruf dan angka',
+  (v: string) => /[a-zA-Z]/.test(v) && /[0-9]/.test(v) && v.length >= 8
+)
+
 definePageMeta({ layout: 'minimal' })
 useSeoMeta({ title: 'Reset Kata Sandi' })
 
@@ -19,7 +25,7 @@ const success = ref(false)
 
 const passwordRef = computed(() => form.password)
 const rules = {
-  password: { required, minLength: minLength(8) },
+  password: { required, passwordComplex },
   password_confirm: {
     required,
     sameAs: helpers.withMessage('Kata sandi tidak cocok', sameAs(passwordRef))
@@ -39,8 +45,7 @@ async function submit() {
   try {
     await auth.resetPassword({
       token: tokenParam.value,
-      password: form.password,
-      password_confirm: form.password_confirm
+      new_password: form.password
     })
     success.value = true
     setTimeout(() => router.push('/login'), 2000)
@@ -105,7 +110,7 @@ async function submit() {
             type="password"
             label="Kata Sandi Baru"
             placeholder="Minimal 8 karakter"
-            :error="v$.password.$error ? 'Kata sandi minimal 8 karakter' : ''"
+            :error="v$.password.$error ? (v$.password.$errors[0]?.$message as string) : ''"
             required
             @blur="v$.password.$touch"
           />

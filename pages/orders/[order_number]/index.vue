@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { useOrdersApi } from '~/composables/api/useOrdersApi'
-import { useCoursesApi } from '~/composables/api/useCoursesApi'
-import { useOrderStore } from '~/stores/order'
-import type { CourseListItem, Order, Paginated } from '~/types'
+import type { Order } from '~/types'
 
-definePageMeta({ layout: 'default', middleware: 'auth' })
+definePageMeta({ layout: 'profile', middleware: 'auth' })
 
 const route = useRoute()
-const router = useRouter()
 const ordersApi = useOrdersApi()
-const coursesApi = useCoursesApi()
-const orderStore = useOrderStore()
 const { formatCurrency, formatDatetime } = useFormatters()
 
 const orderNumber = computed(() => route.params.order_number as string)
@@ -28,47 +23,30 @@ const { data: orderFetched, pending, error, refresh } = await useAsyncData<Order
   { watch: [orderNumber] }
 )
 
-// Workaround BE-FEEDBACK #10: BE order response tidak nest course. Tiga
-// sumber untuk title + thumbnail (urut prioritas):
-//   1) Snapshot di Pinia store — di-stamp /checkout setelah createOrder.
-//   2) Lookup dari katalog public via /public/courses (cached useAsyncData
-//      key sama dengan /orders list, jadi sering hit cache tanpa refetch).
-//   3) Fallback "Course #ID" — kalau dua sumber di atas miss.
-const { data: coursesPage } = await useAsyncData<Paginated<CourseListItem>>(
-  'course-id-lookup',
-  () => coursesApi.listCourses({ limit: 100 })
-)
-const courseById = computed(() => {
-  const map = new Map<number, CourseListItem>()
-  for (const c of coursesPage.value?.data ?? []) map.set(c.id, c)
-  return map
-})
-
-const order = computed<Order | null>(() => {
-  const fetched = orderFetched.value
-  if (!fetched) return null
-  if (fetched.course?.title) return fetched
-
-  const cached = orderStore.currentOrder
-  if (cached?.order_number === fetched.order_number && cached.course?.title) {
-    return { ...fetched, course: cached.course }
-  }
-  const lookup = courseById.value.get(fetched.course_id)
-  if (lookup) {
-    return {
-      ...fetched,
-      course: {
-        id: lookup.id,
-        title: lookup.title,
-        slug: lookup.slug,
-        thumbnail_url: lookup.thumbnail_url
-      }
-    }
-  }
-  return fetched
-})
+// BE now nests course directly in the order response (id, title, slug, thumbnail_url).
+const order = computed<Order | null>(() => orderFetched.value)
 
 useSeoMeta({ title: () => `Order ${orderNumber.value}` })
+
+// Determine the correct payment destination based on already-selected method.
+// If payment_method is set on the order (from a previous initiate call), go directly
+// to the method-specific page. Only fall back to selection if no method yet.
+const payTo = computed(() => {
+  const o = order.value
+  if (!o) return '/orders'
+  const base = `/orders/${o.order_number}/payment`
+  const method = o.payment_method
+  if (!method) return base
+  if (method.startsWith('va_')) return `${base}/va`
+  if (method === 'qris') return `${base}/qris`
+  if (method.startsWith('ewallet_')) return `${base}/ewallet`
+  return base
+})
+
+// True when a payment method has already been chosen (but order still pending).
+const hasPaymentMethod = computed(() =>
+  order.value?.status === 'pending' && !!order.value?.payment_method
+)
 
 const statusInfo = computed(() => {
   const o = order.value
@@ -79,7 +57,7 @@ const statusInfo = computed(() => {
     pending: {
       desc: 'Menunggu pembayaran. Selesaikan sebelum batas waktu di bawah.',
       nextAction: 'Bayar Sekarang',
-      nextTo: `/orders/${o.order_number}/payment`
+      nextTo: payTo.value
     },
     paid: {
       desc: 'Pembayaran telah diterima. Anda dapat mulai belajar sekarang.',
@@ -142,7 +120,7 @@ async function confirmCancel() {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+  <div class="flex-1 min-w-0">
     <NuxtLink to="/orders" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-6">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -194,6 +172,15 @@ async function confirmCancel() {
       <!-- Status card -->
       <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
         <p class="text-sm text-slate-600 mb-3">{{ statusInfo?.desc }}</p>
+
+        <!-- Show chosen payment method when already selected -->
+        <div v-if="hasPaymentMethod" class="flex items-center gap-2 mb-3 text-sm text-slate-600">
+          <svg class="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+          <span>Metode: <strong class="text-slate-800 uppercase">{{ order.payment_method!.replace(/_/g, ' ') }}</strong></span>
+        </div>
+
         <OrderCountdownTimer
           v-if="order.status === 'pending'"
           :expires-at="order.expires_at"
@@ -202,6 +189,15 @@ async function confirmCancel() {
         <div class="flex flex-wrap gap-2">
           <BaseButton v-if="statusInfo?.nextTo" variant="primary" size="sm" :to="statusInfo.nextTo">
             {{ statusInfo?.nextAction }}
+          </BaseButton>
+          <!-- Show "Ganti Metode" only when a method is already selected -->
+          <BaseButton
+            v-if="hasPaymentMethod"
+            variant="secondary"
+            size="sm"
+            :to="`/orders/${order.order_number}/payment`"
+          >
+            Ganti Metode
           </BaseButton>
           <BaseButton
             v-if="order.status === 'pending'"
