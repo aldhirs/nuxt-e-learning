@@ -3,7 +3,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email } from '@vuelidate/validators'
 
-definePageMeta({ layout: 'minimal' })
+definePageMeta({ layout: 'default' })
 useSeoMeta({ title: 'Lupa Kata Sandi' })
 
 const auth = useAuthStore()
