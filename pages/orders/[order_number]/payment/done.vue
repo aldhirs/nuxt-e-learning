@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { useOrdersApi } from '~/composables/api/useOrdersApi'
 import { useEnrollmentApi } from '~/composables/api/useEnrollmentApi'
+import { useAuthStore } from '~/stores/auth'
 import type { Order, EnrollmentCheckResponse } from '~/types'
 
 definePageMeta({ layout: 'minimal', middleware: 'auth' })
 
 const route = useRoute()
 const { formatCurrency } = useFormatters()
+const auth = useAuthStore()
 const ordersApi = useOrdersApi()
 const enrollmentApi = useEnrollmentApi()
-const { learningUrl } = useLearningUrl()
+const { startSsoRedirect, isLoading: ssoLoading } = useSsoRedirect()
 
 const orderNumber = computed(() => route.params.order_number as string)
 useSeoMeta({ title: () => `Payment Successful — ${orderNumber.value}` })
@@ -34,14 +36,26 @@ const { data: enrollment } = await useAsyncData<EnrollmentCheckResponse | null>(
 const clientSlug = computed(() => enrollment.value?.client?.slug ?? null)
 const courseSlug = computed(() => order.value?.course?.slug ?? null)
 
-// CTA URL: direct LMS login if client slug available, else storefront course detail
-const startLearningHref = computed<string | null>(() => {
-  if (clientSlug.value) return learningUrl(clientSlug.value)
-  if (courseSlug.value) return `/courses/${courseSlug.value}`
-  return '/courses'
-})
+const canStartLearning = computed(() =>
+  !!clientSlug.value && !!order.value?.course_id && !!enrollment.value?.enrollment_id
+)
 
-const isExternalUrl = computed(() => startLearningHref.value?.startsWith('http') ?? false)
+const fallbackHref = computed(() =>
+  courseSlug.value ? `/courses/${courseSlug.value}` : '/courses'
+)
+
+async function handleStartLearning() {
+  if (canStartLearning.value && auth.user?.id) {
+    await startSsoRedirect(
+      clientSlug.value!,
+      order.value!.course_id!,
+      enrollment.value!.enrollment_id!,
+      auth.user.id
+    )
+  } else {
+    navigateTo(fallbackHref.value)
+  }
+}
 </script>
 
 <template>
@@ -162,34 +176,28 @@ const isExternalUrl = computed(() => startLearningHref.value?.startsWith('http')
 
       <!-- CTAs -->
       <div class="space-y-3">
-        <!-- Start Learning — primary, external link to client LMS -->
-        <a
-          v-if="isExternalUrl && startLearningHref"
-          :href="startLearningHref"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-base transition-all duration-200 shadow-lg shadow-emerald-200 hover:shadow-emerald-300 active:scale-95"
+        <!-- Start Learning — SSO redirect or storefront fallback -->
+        <button
+          type="button"
+          :disabled="ssoLoading"
+          class="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-base transition-all duration-200 shadow-lg shadow-emerald-200 hover:shadow-emerald-300 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+          @click="handleStartLearning"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Start Learning Now
-          <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
-        <NuxtLink
-          v-else-if="startLearningHref"
-          :to="startLearningHref"
-          class="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-base transition-all duration-200 shadow-lg shadow-emerald-200 hover:shadow-emerald-300 active:scale-95"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Start Learning Now
-        </NuxtLink>
+          <template v-if="ssoLoading">
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Opening your course...
+          </template>
+          <template v-else>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Start Learning Now
+          </template>
+        </button>
 
         <!-- View Order Details — secondary -->
         <NuxtLink

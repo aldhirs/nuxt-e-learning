@@ -61,13 +61,13 @@ export function mapApiError(
     }
   }
 
-  // 4. Global message — always present so banner shows something useful
+  // 4. Global message — only surface when no inline field error exists.
+  // Prefer the specific reason over the generic message text.
   if (Object.keys(perField).length === 0) {
-    // No field mapped: show server reason or message
     global = e.reason || e.message || 'Failed to process request. Please try again.'
   } else {
-    // Field mapped: still surface the high-level message at the top
-    global = e.message || e.reason || ''
+    // Inline field errors already tell the user what's wrong — skip the banner.
+    global = ''
   }
 
   // Network / unknown failures

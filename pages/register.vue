@@ -36,8 +36,10 @@ function clearServerErrors() {
   serverError.value = ''
   fieldErrors.value = {}
 }
-// Clear stale field errors as the user edits — feels less sticky.
-watch(() => ({ ...form }), () => { if (Object.keys(fieldErrors.value).length) fieldErrors.value = {} }, { deep: true })
+// Clear stale errors as the user edits — feels less sticky.
+watch(() => ({ ...form }), () => {
+  if (Object.keys(fieldErrors.value).length || serverError.value) clearServerErrors()
+}, { deep: true })
 
 const passwordRef = computed(() => form.password)
 const usernameFormat = helpers.regex(/^[a-z0-9_.-]+$/i)
@@ -99,9 +101,9 @@ async function submit() {
     }
     success.value = true
   } catch (err: unknown) {
-    const { global, perField } = mapApiError(err, FORM_FIELDS)
+    const { perField } = mapApiError(err, FORM_FIELDS)
     fieldErrors.value = perField
-    serverError.value = global
+    serverError.value = (err as { message?: string }).message || 'Permintaan gagal diproses.'
   } finally {
     isLoading.value = false
   }

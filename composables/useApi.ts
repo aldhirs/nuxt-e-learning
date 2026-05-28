@@ -25,6 +25,7 @@ interface RawErrorPayload {
 }
 
 export interface ApiError extends Error {
+  isApiError: true
   status: number
   code: string
   reason?: string
@@ -35,6 +36,7 @@ export interface ApiError extends Error {
 function buildApiError(status: number, payload: RawErrorPayload | undefined, fallbackMessage: string): ApiError {
   const message = payload?.message || fallbackMessage
   const err = new Error(message) as ApiError
+  err.isApiError = true
   err.status = status
   err.code = payload?.code !== undefined ? String(payload.code) : `HTTP_${status}`
   err.reason = payload?.details?.reason
@@ -88,7 +90,7 @@ export function useApi() {
       }
       return res as T
     } catch (err: unknown) {
-      if ((err as ApiError).status !== undefined) throw err
+      if ((err as ApiError).isApiError === true) throw err
       const fetchErr = err as { response?: { status?: number; _data?: { error?: RawErrorPayload } }; message?: string }
       const status = fetchErr.response?.status ?? 0
       const payload = fetchErr.response?._data?.error

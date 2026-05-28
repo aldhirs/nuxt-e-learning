@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { useMyCoursesApi } from '~/composables/api/useMyCoursesApi'
 import type { PurchasedCoursesPage } from '~/composables/api/useMyCoursesApi'
+import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'profile', middleware: 'auth' })
 useSeoMeta({ title: 'My Courses' })
 
 const route  = useRoute()
 const router = useRouter()
+const auth   = useAuthStore()
 const myCoursesApi = useMyCoursesApi()
-const { learningUrl } = useLearningUrl()
+const { startSsoRedirect, isLoadingFor } = useSsoRedirect()
 const { formatDate } = useFormatters()
 
 const PAGE_SIZE = 10
@@ -95,7 +97,6 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Cancelled', cls: 'bg-slate-100 text-slate-500' },
 }
 
-// learningUrl is provided by useLearningUrl() composable
 </script>
 
 <template>
@@ -311,19 +312,28 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
                   {{ enrollmentStatusConfig[item.status].label }}
                 </span>
 
-                <!-- CTA: active / completed → external learning URL -->
-                <a
-                  v-if="item.course?.slug && item.course?.client?.slug && item.status !== 'cancelled'"
-                  :href="learningUrl(item.course.client.slug)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all"
+                <!-- CTA: active / completed → SSO redirect to LMS -->
+                <button
+                  v-if="item.course?.client?.slug && item.status !== 'cancelled'"
+                  type="button"
+                  :disabled="isLoadingFor(item.enrollment_id)"
+                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-wait"
+                  @click="startSsoRedirect(item.course.client.slug, item.course.id, item.enrollment_id, auth.user!.id)"
                 >
-                  {{ item.status === 'completed' ? 'View Course' : 'Continue Learning' }}
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
+                  <template v-if="isLoadingFor(item.enrollment_id)">
+                    <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Opening...
+                  </template>
+                  <template v-else>
+                    {{ item.status === 'completed' ? 'View Course' : 'Continue Learning' }}
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </template>
+                </button>
 
                 <!-- CTA: no client slug fallback → storefront course page -->
                 <BaseButton
