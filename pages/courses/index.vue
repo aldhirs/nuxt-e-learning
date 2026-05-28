@@ -17,7 +17,9 @@ const partnersApi = usePartnersApi()
 const PAGE_SIZE = 12
 
 // ── Applied filters (from URL — these drive API calls) ────────────────────────
-const filters = computed<CourseListFilters>(() => {
+// `offset` is intentionally NOT URL-backed: pagination is "Load More" style,
+// so refreshing the page should always restart from the first batch.
+const filters = computed<Omit<CourseListFilters, 'limit' | 'offset'>>(() => {
   const q = route.query
   return {
     search:       (q.search as string) || undefined,
@@ -25,26 +27,59 @@ const filters = computed<CourseListFilters>(() => {
     partner_slug: (q.partner_slug as string) || undefined,
     is_free:      q.is_free === 'true' ? true : undefined,
     sort:         (q.sort as CourseSort) || undefined,
-    limit:        PAGE_SIZE,
-    offset:       q.offset ? Number(q.offset) : 0,
   }
 })
 
-const currentPage = computed(() => Math.floor((filters.value.offset ?? 0) / PAGE_SIZE) + 1)
+// ── Load More state ───────────────────────────────────────────────────────────
+// Accumulated list of courses fetched so far. Reset whenever filters change.
+const allCourses     = ref<CourseListItem[]>([])
+const totalCount     = ref(0)
+const isLoadingMore  = ref(false)
+const loadMoreError  = ref('')
 
-// ── Data fetch ────────────────────────────────────────────────────────────────
+// Initial fetch — SSR-friendly via useAsyncData. Re-runs when filters change.
 const queryKey = computed(() => `courses-catalog:${JSON.stringify(filters.value)}`)
 const { data: page, pending, error, refresh } = await useAsyncData<Paginated<CourseListItem>>(
   queryKey.value,
-  () => coursesApi.listCourses(filters.value),
+  () => coursesApi.listCourses({ ...filters.value, limit: PAGE_SIZE, offset: 0 }),
   { watch: [filters] }
 )
 
-const courses    = computed(() => page.value?.data ?? [])
-const totalCount = computed(() => page.value?.meta?.total ?? 0)
-const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / PAGE_SIZE)))
-const hasPrev    = computed(() => currentPage.value > 1)
-const hasNext    = computed(() => currentPage.value < totalPages.value)
+// Sync the accumulated list whenever the first-page fetch settles (initial
+// load + every filter change resets back to offset=0).
+watch(page, (p) => {
+  allCourses.value = p?.data ?? []
+  totalCount.value = p?.meta?.total ?? 0
+  loadMoreError.value = ''
+}, { immediate: true })
+
+const courses = computed(() => allCourses.value)
+const hasMore = computed(() => allCourses.value.length < totalCount.value)
+const remainingCount = computed(() => Math.max(0, totalCount.value - allCourses.value.length))
+
+async function loadMore() {
+  if (!hasMore.value || isLoadingMore.value) return
+  isLoadingMore.value = true
+  loadMoreError.value = ''
+  try {
+    const next = await coursesApi.listCourses({
+      ...filters.value,
+      limit: PAGE_SIZE,
+      offset: allCourses.value.length, // offset = how many we already have
+    })
+    // De-dupe by id in case of any backend race / overlap.
+    const existing = new Set(allCourses.value.map(c => c.id))
+    const fresh = (next.data ?? []).filter(c => !existing.has(c.id))
+    allCourses.value = [...allCourses.value, ...fresh]
+    // Refresh total in case it changed server-side mid-session.
+    totalCount.value = next.meta?.total ?? totalCount.value
+  } catch (err) {
+    loadMoreError.value = (err as { message?: string }).message
+      || 'Failed to load more courses. Please try again.'
+  } finally {
+    isLoadingMore.value = false
+  }
+}
 
 // ── Partner options ───────────────────────────────────────────────────────────
 const { data: partnersPage } = await useAsyncData<Paginated<Partner>>(
@@ -56,7 +91,7 @@ const partnerList = computed(() => partnersPage.value?.data ?? [])
 // ── Sort (immediate, outside drawer) ─────────────────────────────────────────
 const selectedSort = computed({
   get: () => filters.value.sort || '',
-  set: (v: string) => updateQuery({ sort: v || undefined, offset: undefined })
+  set: (v: string) => updateQuery({ sort: v || undefined })
 })
 
 // ── Applied filter state (derived from URL) ───────────────────────────────────
@@ -85,12 +120,6 @@ function updateQuery(partial: Record<string, string | number | boolean | undefin
 
 function clearFilters() {
   router.push({ query: {} })
-}
-
-function goPage(p: number) {
-  const clamped = Math.max(1, Math.min(totalPages.value, p))
-  updateQuery({ offset: (clamped - 1) * PAGE_SIZE })
-  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // ── Filter drawer local state (buffered — not applied until Terapkan) ─────────
@@ -122,7 +151,6 @@ function applyFilters() {
     difficulty:   localDifficulty.value || undefined,
     partner_slug: localPartner.value    || undefined,
     is_free:      localIsFree.value     || undefined,
-    offset:       undefined,
   })
   filterOpen.value = false
 }
@@ -247,7 +275,7 @@ const difficultyOptions = [
           "{{ filters.search }}"
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
             aria-label="Remove search filter"
-            @click="updateQuery({ search: undefined, offset: undefined })">
+            @click="updateQuery({ search: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </span>
@@ -256,7 +284,7 @@ const difficultyOptions = [
           {{ difficultyOptions.find(d => d.value === filters.difficulty)?.label }}
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
             aria-label="Remove level filter"
-            @click="updateQuery({ difficulty: undefined, offset: undefined })">
+            @click="updateQuery({ difficulty: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </span>
@@ -265,7 +293,7 @@ const difficultyOptions = [
           {{ partnerList.find(p => p.slug === filters.partner_slug)?.name ?? filters.partner_slug }}
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
             aria-label="Remove partner filter"
-            @click="updateQuery({ partner_slug: undefined, offset: undefined })">
+            @click="updateQuery({ partner_slug: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </span>
@@ -274,7 +302,7 @@ const difficultyOptions = [
           Free only
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-green-200 transition-colors"
             aria-label="Remove free filter"
-            @click="updateQuery({ is_free: undefined, offset: undefined })">
+            @click="updateQuery({ is_free: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </span>
@@ -340,45 +368,41 @@ const difficultyOptions = [
           </div>
         </Transition>
 
-        <!-- Pagination -->
-        <div v-if="totalPages > 1" class="mt-12 flex flex-col items-center gap-4">
+        <!-- Load More -->
+        <div v-if="totalCount > 0" class="mt-12 flex flex-col items-center gap-3">
+          <!-- Progress indicator -->
           <p class="text-sm text-slate-400">
-            Page <span class="font-semibold text-slate-700">{{ currentPage }}</span> of {{ totalPages }}
-            · <span class="font-semibold text-slate-700">{{ courses.length }}</span> of {{ totalCount }} courses
+            Showing <span class="font-semibold text-slate-700">{{ courses.length }}</span>
+            of <span class="font-semibold text-slate-700">{{ totalCount }}</span> courses
           </p>
-          <div class="flex items-center gap-2">
-            <button type="button"
-              :disabled="!hasPrev || pending"
-              :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
-                hasPrev && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
-              @click="goPage(currentPage - 1)">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              Previous
-            </button>
 
-            <div class="hidden sm:flex items-center gap-1">
-              <button
-                v-for="n in Math.min(5, totalPages)"
-                :key="n"
-                type="button"
-                :class="['w-9 h-9 rounded-lg text-sm font-semibold transition-all active:scale-95',
-                  n === currentPage ? 'bg-primary-500 text-white shadow-md shadow-primary-500/30' : 'text-slate-600 hover:bg-slate-100']"
-                @click="goPage(n)">{{ n }}</button>
-              <span v-if="totalPages > 5" class="text-slate-400 text-sm px-1">...</span>
-              <button v-if="totalPages > 5" type="button"
-                :class="['w-9 h-9 rounded-lg text-sm font-semibold transition-all active:scale-95',
-                  totalPages === currentPage ? 'bg-primary-500 text-white' : 'text-slate-600 hover:bg-slate-100']"
-                @click="goPage(totalPages)">{{ totalPages }}</button>
-            </div>
+          <!-- Load more error -->
+          <p v-if="loadMoreError" class="text-xs text-red-600">{{ loadMoreError }}</p>
 
-            <button type="button"
-              :disabled="!hasNext || pending"
-              :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
-                hasNext && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
-              @click="goPage(currentPage + 1)">
-              Next
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </button>
+          <!-- Button (only when more to load) -->
+          <button
+            v-if="hasMore"
+            type="button"
+            :disabled="isLoadingMore"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border-2 border-primary-200 text-primary-700 text-sm font-bold hover:border-primary-400 hover:bg-primary-50 hover:shadow-lg hover:shadow-primary-100 active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none"
+            @click="loadMore"
+          >
+            <svg
+              v-if="!isLoadingMore"
+              class="w-4 h-4"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            <span v-else class="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            {{ isLoadingMore ? 'Loading...' : `Load ${Math.min(PAGE_SIZE, remainingCount)} more` }}
+          </button>
+
+          <!-- End-of-list indicator -->
+          <div v-else-if="totalCount > PAGE_SIZE" class="flex items-center gap-3 text-xs text-slate-400 mt-1">
+            <span class="h-px w-12 bg-slate-200"></span>
+            You've reached the end
+            <span class="h-px w-12 bg-slate-200"></span>
           </div>
         </div>
       </div>
