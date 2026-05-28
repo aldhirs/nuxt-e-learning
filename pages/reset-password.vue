@@ -21,7 +21,10 @@ const tokenParam = computed(() => (route.query.token as string | undefined)?.tri
 const form = reactive({ password: '', password_confirm: '' })
 const isLoading = ref(false)
 const serverError = ref('')
+const fieldErrors = ref<Record<string, string>>({})
 const success = ref(false)
+
+watch(() => ({ ...form }), () => { if (Object.keys(fieldErrors.value).length) fieldErrors.value = {} }, { deep: true })
 
 const passwordRef = computed(() => form.password)
 const rules = {
@@ -35,6 +38,7 @@ const v$ = useVuelidate(rules, form)
 
 async function submit() {
   serverError.value = ''
+  fieldErrors.value = {}
   if (!tokenParam.value) {
     serverError.value = 'Invalid reset link. Token not found.'
     return
@@ -50,14 +54,12 @@ async function submit() {
     success.value = true
     setTimeout(() => router.push('/login'), 2000)
   } catch (err: unknown) {
-    const e = err as { status?: number; message?: string }
-    if (e.status === 404) {
-      serverError.value = e.message || 'Reset link is invalid or has expired. Request a new one?'
-    } else if (e.status === 422) {
-      serverError.value = e.message || 'Password does not meet requirements.'
-    } else {
-      serverError.value = e.message || 'Failed to reset password.'
+    const { global, perField } = mapApiError(err, ['password', 'new_password'])
+    // BE may name the field "new_password" — map to local "password" input
+    fieldErrors.value = {
+      password: perField.password || perField.new_password || ''
     }
+    serverError.value = global
   } finally {
     isLoading.value = false
   }
@@ -110,7 +112,7 @@ async function submit() {
             type="password"
             label="New Password"
             placeholder="Min. 8 characters"
-            :error="v$.password.$error ? (v$.password.$errors[0]?.$message as string) : ''"
+            :error="fieldErrors.password || (v$.password.$error ? (v$.password.$errors[0]?.$message as string) : '')"
             required
             @blur="v$.password.$touch"
           />

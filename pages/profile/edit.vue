@@ -90,30 +90,15 @@ async function submit() {
     successMessage.value = 'Profile updated successfully.'
     setTimeout(() => router.push('/profile'), 1200)
   } catch (err: unknown) {
-    const e = err as { status?: number; code?: string; reason?: string; message?: string; fields?: Record<string, string> }
-    if (e.fields && Object.keys(e.fields).length > 0) fieldErrors.value = e.fields
-    if (e.status === 401) {
+    if ((err as { status?: number }).status === 401) {
       serverError.value = 'Your session has expired. Please sign in again.'
       auth.logout()
       router.push('/login?redirect=/profile/edit')
-    } else if (e.status === 409) {
-      const code = (e.code || '').toUpperCase()
-      if (code.includes('EMAIL') || code === '3102') {
-        serverError.value = 'Email is already in use by another user.'
-        fieldErrors.value.email = 'Email is already in use by another user.'
-      } else if (code.includes('USERNAME') || code === '3103') {
-        serverError.value = 'Username is already taken.'
-        fieldErrors.value.username = 'Username is already taken.'
-      } else {
-        serverError.value = e.message || 'Email or username is already taken.'
-      }
-    } else if (e.status === 422 || e.status === 400) {
-      serverError.value = e.message || 'Invalid data. Please review your inputs.'
-    } else if (e.status === 0) {
-      serverError.value = 'Unable to connect to server. Check your internet connection.'
-    } else {
-      serverError.value = e.message || 'Failed to update profile.'
+      return
     }
+    const { global, perField } = mapApiError(err, ['full_name', 'username', 'email', 'phone'])
+    fieldErrors.value = perField
+    serverError.value = global
   } finally {
     isLoading.value = false
   }

@@ -37,9 +37,12 @@ const { data: course, pending: coursePending, error: courseError } = await useAs
 )
 
 const isLoading = ref(false)
-const orderCreated = ref(false)
-const createdOrder = ref<Order | null>(null)
 const serverError = ref('')
+const fieldErrors = ref<Record<string, string>>({})
+
+// Field names known to this form — used by mapApiError to pin BE errors to inputs.
+// BE may also return student_* variants, so we cover both.
+const FORM_FIELDS = ['full_name', 'email', 'phone', 'student_full_name', 'student_email', 'student_phone']
 
 const form = reactive({
   full_name: auth.user?.full_name ?? '',
@@ -84,6 +87,7 @@ function normalizePhone(raw: string): string {
 
 async function placeOrder() {
   serverError.value = ''
+  fieldErrors.value = {}
   if (!course.value) return
   if (isFreeCourse.value) {
     serverError.value = 'This course is free. Please click "Enroll Free" on the course page.'
@@ -105,8 +109,8 @@ async function placeOrder() {
       student_phone: normalizePhone(form.phone)
     })
 
-    // Snapshot course supaya halaman order detail bisa render title/thumbnail
-    // tanpa refetch (BE tidak nest course).
+    // Snapshot course so /orders/[order_number]/payment can render title/thumb
+    // without refetching (BE doesn't nest course in createOrder response).
     const orderWithCourse: Order = {
       ...res.order,
       course: {
@@ -117,41 +121,58 @@ async function placeOrder() {
       }
     }
     orderStore.setOrder(orderWithCourse)
-    createdOrder.value = orderWithCourse
-    orderCreated.value = true
+
+    // Direct redirect to payment method selection — no success screen.
+    await router.push(`/orders/${orderWithCourse.order_number}/payment`)
   } catch (err: unknown) {
-    const e = err as { status?: number; code?: string; reason?: string; message?: string; fields?: Record<string, string> }
-    const reason = (e.reason || '').toLowerCase()
-    if (e.status === 409 || reason.includes('sudah enrolled') || reason.includes('already')) {
-      serverError.value = 'You are already enrolled or have an active order for this course.'
-    } else if (e.fields && Object.keys(e.fields).length > 0) {
-      serverError.value = Object.values(e.fields).join(' • ')
-    } else if (e.status === 422) {
-      serverError.value = e.message || 'Course cannot be checked out. Check the course status or try another course.'
-    } else if (e.status === 401) {
+    // Handle session expiry separately — needs redirect, not message
+    if ((err as { status?: number }).status === 401) {
       auth.logout()
       router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
       return
-    } else if (e.status === 0) {
-      serverError.value = 'Unable to connect to server. Check your internet connection.'
-    } else {
-      serverError.value = e.message || 'Failed to create order. Please try again.'
     }
+    const { global, perField } = mapApiError(err, FORM_FIELDS)
+    // Normalize student_* field names from BE → local form field names
+    fieldErrors.value = {
+      full_name: perField.full_name || perField.student_full_name || '',
+      email:     perField.email     || perField.student_email     || '',
+      phone:     perField.phone     || perField.student_phone     || ''
+    }
+    serverError.value = global
   } finally {
     isLoading.value = false
   }
 }
-
-function goToPayment() {
-  if (!createdOrder.value) return
-  // BE-provided redirect_url = /orders/{n}/payment. PRD #3 payment endpoints
-  // belum deploy — page payment akan tampilkan placeholder. Untuk MVP, arahkan
-  // user ke detail order biar mereka tetap punya jejak.
-  router.push(`/orders/${createdOrder.value.order_number}`)
-}
 </script>
 
 <template>
+  <!-- ── Step Progress Bar — Step 2 (Checkout) is active ───────────────────── -->
+  <div class="bg-white border-b border-slate-100">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+      <div class="flex items-center justify-center gap-1">
+        <!-- Step 1: Detail Course — done -->
+        <div class="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <span class="hidden sm:block text-xs font-medium text-emerald-600 mx-1">Detail Course</span>
+        <div class="h-0.5 w-10 mx-1 bg-primary-500"></div>
+        <!-- Step 2: Checkout — active -->
+        <div class="w-7 h-7 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center">2</div>
+        <span class="hidden sm:block text-xs font-medium text-primary-600 mx-1">Checkout</span>
+        <div class="h-0.5 w-10 mx-1 bg-slate-200"></div>
+        <!-- Step 3: Payment — pending -->
+        <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-400 text-xs font-bold flex items-center justify-center">3</div>
+        <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Payment</span>
+        <div class="h-0.5 w-10 mx-1 bg-slate-200"></div>
+        <!-- Step 4: Done — pending -->
+        <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-400 text-xs font-bold flex items-center justify-center">4</div>
+        <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Done</span>
+      </div>
+    </div>
+  </div>
+
   <div class="max-w-4xl mx-auto px-4 py-10">
     <!-- Loading course -->
     <div v-if="coursePending && !course" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -173,28 +194,6 @@ function goToPayment() {
       cta-label="Browse Catalog"
       cta-to="/courses"
     />
-
-    <!-- Success state -->
-    <div v-else-if="orderCreated && createdOrder" class="text-center py-12">
-      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-      <h1 class="text-xl font-bold text-slate-800 mb-2">Order Created Successfully</h1>
-      <p class="text-slate-500 text-sm mb-1">
-        Order #: <span class="font-mono font-semibold text-slate-700">{{ createdOrder.order_number }}</span>
-      </p>
-      <p class="text-slate-500 text-sm mb-8">
-        Complete payment before
-        <span class="font-medium">{{ new Date(createdOrder.expires_at).toLocaleString('id-ID') }}</span>
-        to access this course.
-      </p>
-      <div class="flex flex-wrap gap-3 justify-center">
-        <BaseButton variant="primary" @click="goToPayment">Go to Order Details</BaseButton>
-        <BaseButton variant="secondary" to="/orders">View My Orders</BaseButton>
-      </div>
-    </div>
 
     <!-- Form -->
     <template v-else>
@@ -242,7 +241,7 @@ function goToPayment() {
                 v-model="form.full_name"
                 label="Full Name"
                 placeholder="As on your ID card"
-                :error="v$.full_name.$error ? 'Name must be at least 3 characters' : ''"
+                :error="fieldErrors.full_name || (v$.full_name.$error ? 'Name must be at least 3 characters' : '')"
                 required
                 @blur="v$.full_name.$touch"
               />
@@ -251,7 +250,7 @@ function goToPayment() {
                 type="email"
                 label="Email"
                 placeholder="Confirmation will be sent to this email"
-                :error="v$.email.$error ? 'Invalid email' : ''"
+                :error="fieldErrors.email || (v$.email.$error ? 'Invalid email' : '')"
                 required
                 @blur="v$.email.$touch"
               />
@@ -259,7 +258,7 @@ function goToPayment() {
                 v-model="form.phone"
                 label="No. HP"
                 placeholder="08123456789"
-                :error="v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : ''"
+                :error="fieldErrors.phone || (v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : '')"
                 hint="Used for payment confirmation"
                 required
                 @blur="v$.phone.$touch"

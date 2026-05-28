@@ -11,14 +11,18 @@ const auth = useAuthStore()
 const form = reactive({ email: '' })
 const isLoading = ref(false)
 const serverError = ref('')
+const fieldErrors = ref<Record<string, string>>({})
 const success = ref(false)
 const successMessage = ref('')
 
 const rules = { email: { required, email } }
 const v$ = useVuelidate(rules, form)
 
+watch(() => form.email, () => { if (Object.keys(fieldErrors.value).length) fieldErrors.value = {} })
+
 async function submit() {
   serverError.value = ''
+  fieldErrors.value = {}
   const ok = await v$.value.$validate()
   if (!ok) return
   isLoading.value = true
@@ -27,14 +31,13 @@ async function submit() {
     successMessage.value = res.message || 'If your email is registered, we have sent you a password reset link. Check your inbox.'
     success.value = true
   } catch (err: unknown) {
-    const e = err as { status?: number; message?: string }
-    if (e.status === 429) {
-      serverError.value = e.message || 'Too many password reset requests. Try again in 1 hour.'
-    } else if (e.status === 422) {
-      serverError.value = e.message || 'Invalid email.'
-    } else {
-      serverError.value = e.message || 'Something went wrong. Please try again.'
+    if ((err as { status?: number }).status === 429) {
+      serverError.value = (err as { message?: string }).message || 'Too many password reset requests. Try again in 1 hour.'
+      return
     }
+    const { global, perField } = mapApiError(err, ['email'])
+    fieldErrors.value = perField
+    serverError.value = global
   } finally {
     isLoading.value = false
   }
@@ -75,7 +78,7 @@ async function submit() {
             type="email"
             label="Email"
             placeholder="email@example.com"
-            :error="v$.email.$error ? 'Invalid email' : ''"
+            :error="fieldErrors.email || (v$.email.$error ? 'Invalid email' : '')"
             required
             @blur="v$.email.$touch"
           />

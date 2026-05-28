@@ -25,7 +25,19 @@ const phoneValidator = helpers.withMessage(
 )
 const isLoading = ref(false)
 const serverError = ref('')
+const fieldErrors = ref<Record<string, string>>({})
 const success = ref(false)
+
+// Known form field names — kept here so mapApiError can heuristically pin
+// "email already exists" → email input, etc.
+const FORM_FIELDS = ['full_name', 'username', 'email', 'phone', 'password']
+
+function clearServerErrors() {
+  serverError.value = ''
+  fieldErrors.value = {}
+}
+// Clear stale field errors as the user edits — feels less sticky.
+watch(() => ({ ...form }), () => { if (Object.keys(fieldErrors.value).length) fieldErrors.value = {} }, { deep: true })
 
 const passwordRef = computed(() => form.password)
 const usernameFormat = helpers.regex(/^[a-z0-9_.-]+$/i)
@@ -59,7 +71,7 @@ watch(() => form.email, (val) => {
 })
 
 async function submit() {
-  serverError.value = ''
+  clearServerErrors()
   const valid = await v$.value.$validate()
   if (!valid) return
 
@@ -87,19 +99,9 @@ async function submit() {
     }
     success.value = true
   } catch (err: unknown) {
-    const e = err as { status?: number; code?: string; reason?: string; message?: string; fields?: Record<string, string> }
-    const reason = (e.reason || '').toLowerCase()
-    if (e.status === 409 || reason.includes('duplicate') || reason.includes('sudah terdaftar') || reason.includes('uk_users')) {
-      serverError.value = 'Email or username already registered. Please sign in or use a different email.'
-    } else if (e.fields && Object.keys(e.fields).length > 0) {
-      serverError.value = Object.values(e.fields).join(' • ')
-    } else if (e.status === 400 || e.status === 422) {
-      serverError.value = 'Invalid data. Please review your inputs.'
-    } else if (e.status === 0) {
-      serverError.value = 'Unable to connect to server. Check your internet connection.'
-    } else {
-      serverError.value = e.message || 'Something went wrong. Please try again.'
-    }
+    const { global, perField } = mapApiError(err, FORM_FIELDS)
+    fieldErrors.value = perField
+    serverError.value = global
   } finally {
     isLoading.value = false
   }
@@ -141,7 +143,7 @@ async function submit() {
             v-model="form.full_name"
             label="Full Name"
             placeholder="As on your ID card"
-            :error="v$.full_name.$error ? 'Name must be at least 3 characters' : ''"
+            :error="fieldErrors.full_name || (v$.full_name.$error ? 'Name must be at least 3 characters' : '')"
             required
             @blur="v$.full_name.$touch"
           />
@@ -150,7 +152,7 @@ async function submit() {
             type="email"
             label="Email"
             placeholder="email@example.com"
-            :error="v$.email.$error ? 'Invalid email' : ''"
+            :error="fieldErrors.email || (v$.email.$error ? 'Invalid email' : '')"
             required
             @blur="v$.email.$touch"
           />
@@ -158,7 +160,7 @@ async function submit() {
             v-model="form.username"
             label="Username"
             placeholder="e.g. john_doe"
-            :error="v$.username.$error ? (v$.username.$errors[0]?.$message as string ?? 'Username must be at least 3 characters') : ''"
+            :error="fieldErrors.username || (v$.username.$error ? (v$.username.$errors[0]?.$message as string ?? 'Username must be at least 3 characters') : '')"
             required
             hint="Auto-filled from email, can be changed."
             @blur="v$.username.$touch"
@@ -168,7 +170,7 @@ async function submit() {
             type="tel"
             label="Phone Number"
             placeholder="08123456789 (optional)"
-            :error="v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : ''"
+            :error="fieldErrors.phone || (v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : '')"
             hint="Optional. Used for purchase confirmation."
             @blur="v$.phone.$touch"
           />
@@ -177,7 +179,7 @@ async function submit() {
             type="password"
             label="Password"
             placeholder="Min. 8 characters"
-            :error="v$.password.$error ? 'Password must be at least 8 characters' : ''"
+            :error="fieldErrors.password || (v$.password.$error ? 'Password must be at least 8 characters' : '')"
             required
             @blur="v$.password.$touch"
           />

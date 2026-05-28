@@ -14,7 +14,12 @@ const route = useRoute()
 const form = reactive({ email: '', password: '' })
 const isLoading = ref(false)
 const serverError = ref('')
+const fieldErrors = ref<Record<string, string>>({})
 const showActivationHint = ref(false)
+
+const FORM_FIELDS = ['email', 'password']
+
+watch(() => ({ ...form }), () => { if (Object.keys(fieldErrors.value).length) fieldErrors.value = {} }, { deep: true })
 
 const rules = {
   email: { required, email },
@@ -27,6 +32,7 @@ const redirectTo = computed(() => (route.query.redirect as string) ?? '/')
 
 async function submit() {
   serverError.value = ''
+  fieldErrors.value = {}
   showActivationHint.value = false
   const valid = await v$.value.$validate()
   if (!valid) return
@@ -40,23 +46,23 @@ async function submit() {
     })
     await router.push(redirectTo.value)
   } catch (err: unknown) {
-    const e = err as { status?: number; code?: string; reason?: string; message?: string; payload?: { redirect_to_activation?: boolean } }
+    const e = err as { status?: number; code?: string; reason?: string; payload?: { redirect_to_activation?: boolean } }
     const reason = (e.reason || '').toLowerCase()
     const code = e.code || ''
+    // Special cases that need a sticky banner + side effects (activation hint, lockout)
     if (code === 'ACCOUNT_NOT_ACTIVATED' || e.payload?.redirect_to_activation || reason.includes('not activated') || reason.includes('belum diaktivasi')) {
       serverError.value = 'Account not activated. Check your email for the activation link.'
       showActivationHint.value = true
-    } else if (e.status === 403) {
-      serverError.value = 'This is not a student account. Please use the admin portal.'
-    } else if (e.status === 423 || reason.includes('locked')) {
-      serverError.value = 'Account temporarily locked due to too many attempts. Try again in 15 minutes.'
-    } else if (e.status === 401 || e.status === 400 || e.status === 422) {
-      serverError.value = 'Incorrect email or password.'
-    } else if (e.status === 0) {
-      serverError.value = 'Unable to connect to server. Check your internet connection.'
-    } else {
-      serverError.value = e.message || 'Something went wrong. Please try again.'
+      return
     }
+    if (e.status === 423 || reason.includes('locked')) {
+      serverError.value = 'Account temporarily locked due to too many attempts. Try again in 15 minutes.'
+      return
+    }
+    // Generic mapping (per-field + global)
+    const { global, perField } = mapApiError(err, FORM_FIELDS)
+    fieldErrors.value = perField
+    serverError.value = global || 'Incorrect email or password.'
   } finally {
     isLoading.value = false
   }
@@ -106,7 +112,7 @@ async function resendActivation() {
             type="email"
             label="Email"
             placeholder="email@example.com"
-            :error="v$.email.$error ? 'Invalid email' : ''"
+            :error="fieldErrors.email || (v$.email.$error ? 'Invalid email' : '')"
             required
             @blur="v$.email.$touch"
           />
@@ -116,7 +122,7 @@ async function resendActivation() {
             type="password"
             label="Password"
             placeholder="Min. 8 characters"
-            :error="v$.password.$error ? 'Password must be at least 8 characters' : ''"
+            :error="fieldErrors.password || (v$.password.$error ? 'Password must be at least 8 characters' : '')"
             required
             @blur="v$.password.$touch"
           />
