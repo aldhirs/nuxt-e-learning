@@ -2,7 +2,7 @@
 import { useCoursesApi } from '~/composables/api/useCoursesApi'
 import { useEnrollmentApi } from '~/composables/api/useEnrollmentApi'
 import { useAuthStore } from '~/stores/auth'
-import type { Course } from '~/types'
+import type { Course, EnrollmentCheckResponse } from '~/types'
 
 definePageMeta({ layout: 'default' })
 
@@ -12,6 +12,7 @@ const auth = useAuthStore()
 const coursesApi = useCoursesApi()
 const enrollmentApi = useEnrollmentApi()
 const { formatCurrency, formatDuration } = useFormatters()
+const { learningUrl } = useLearningUrl()
 
 const slug = computed(() => route.params.slug as string)
 
@@ -74,6 +75,56 @@ const difficultyColor: Record<string, string> = {
 
 const isFree = computed(() => course.value?.is_free === true || (course.value?.price !== null && course.value?.price === 0))
 const hasPriceSet = computed(() => course.value?.price !== null && course.value?.price !== undefined)
+
+// ─── Enrollment check (purchased?) ──────────────────────────────────────────
+// Only run when authenticated — guests never have enrollment
+const { data: enrollmentCheck } = await useAsyncData<EnrollmentCheckResponse | null>(
+  () => `enrollment-check:${slug.value}:${auth.isAuthenticated}`,
+  async () => {
+    if (!auth.isAuthenticated || !course.value?.id) return null
+    try { return await enrollmentApi.checkEnrollment(course.value.id) }
+    catch { return null }
+  },
+  { watch: [slug] }
+)
+
+const isPurchased = computed(() => enrollmentCheck.value?.enrolled === true)
+const enrolledClientSlug = computed(() => enrollmentCheck.value?.client?.slug ?? null)
+
+// "Start Learning" URL: LMS login if client slug available, else course catalog
+const startLearningHref = computed<string>(() => {
+  if (enrolledClientSlug.value) return learningUrl(enrolledClientSlug.value)
+  return '#'
+})
+const startLearningExternal = computed(() => startLearningHref.value.startsWith('http'))
+
+// ─── Image lightbox ─────────────────────────────────────────────────────────
+const lightboxOpen = ref(false)
+function openLightbox() {
+  if (course.value?.thumbnail_url) lightboxOpen.value = true
+}
+function closeLightbox() { lightboxOpen.value = false }
+
+// Close on Esc key — only bound on client when modal is open.
+watch(lightboxOpen, (open) => {
+  if (!import.meta.client) return
+  if (open) {
+    document.body.style.overflow = 'hidden' // prevent background scroll
+    document.addEventListener('keydown', onLightboxKey)
+  } else {
+    document.body.style.overflow = ''
+    document.removeEventListener('keydown', onLightboxKey)
+  }
+})
+function onLightboxKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeLightbox()
+}
+onBeforeUnmount(() => {
+  if (import.meta.client) {
+    document.body.style.overflow = ''
+    document.removeEventListener('keydown', onLightboxKey)
+  }
+})
 
 // ─── Enrollment ─────────────────────────────────────────────────────────────
 const enrollLoading = ref(false)
@@ -249,7 +300,37 @@ onMounted(() => {
                 </span>
                 About this Course
               </h2>
-              <div class="text-slate-600 leading-relaxed text-sm whitespace-pre-line">{{ course.description }}</div>
+              <div class="relative bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+                <!-- Decorative gradient accent -->
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600"></div>
+                <!-- Soft corner gradient -->
+                <div class="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br from-primary-50 to-transparent opacity-60 pointer-events-none"></div>
+
+                <div class="relative p-6 sm:p-7">
+                  <div class="text-slate-700 leading-relaxed text-[15px] whitespace-pre-line">
+                    {{ course.description }}
+                  </div>
+
+                  <!-- Footer chip row — meta cues -->
+                  <div v-if="course.difficulty || totalLessons > 0 || totalDuration > 0" class="mt-5 pt-5 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                    <span
+                      v-if="course.difficulty"
+                      :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold', difficultyColor[course.difficulty] ?? 'bg-slate-100 text-slate-600']"
+                    >
+                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      {{ difficultyLabel[course.difficulty] ?? course.difficulty }}
+                    </span>
+                    <span v-if="totalLessons > 0" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                      {{ totalLessons }} lessons
+                    </span>
+                    <span v-if="totalDuration > 0" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      {{ formatDuration(totalDuration) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </section>
 
             <!-- What You'll Learn -->
@@ -388,25 +469,30 @@ onMounted(() => {
               <div class="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
 
                 <!-- Thumbnail -->
-                <div class="relative aspect-video bg-slate-200 overflow-hidden group cursor-pointer">
+                <button
+                  v-if="course.thumbnail_url"
+                  type="button"
+                  class="relative aspect-video bg-slate-200 overflow-hidden group cursor-zoom-in w-full block focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-300"
+                  aria-label="Preview course image"
+                  @click="openLightbox"
+                >
                   <img
-                    v-if="course.thumbnail_url"
                     :src="course.thumbnail_url"
                     :alt="course.title"
                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div v-else class="w-full h-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
-                    <svg class="w-16 h-16 text-primary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.069A1 1 0 0121 8.882V15.12a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-                    </svg>
-                  </div>
-                  <div class="absolute inset-0 bg-black/25 flex items-center justify-center">
+                  <div class="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors flex items-center justify-center">
                     <div class="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
                       <svg class="w-6 h-6 text-primary-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M8 5v14l11-7z"/>
                       </svg>
                     </div>
                   </div>
+                </button>
+                <div v-else class="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
+                  <svg class="w-16 h-16 text-primary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.069A1 1 0 0121 8.882V15.12a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                  </svg>
                 </div>
 
                 <div class="p-5">
@@ -437,26 +523,55 @@ onMounted(() => {
 
                   <!-- CTA -->
                   <div class="space-y-2">
-                    <BaseButton
-                      v-if="isFree"
-                      variant="primary"
-                      size="lg"
-                      block
-                      :loading="enrollLoading"
-                      :disabled="enrollLoading || !!enrollSuccess"
-                      @click="handleFreeEnroll"
-                    >
-                      {{ enrollSuccess ? 'Enrolled' : 'Enroll for Free' }}
-                    </BaseButton>
-                    <BaseButton v-else-if="hasPriceSet" variant="primary" size="lg" block @click="handlePurchase">
-                      Buy Now
-                    </BaseButton>
-                    <BaseButton v-else variant="ghost" size="lg" block disabled>
-                      Price not available
-                    </BaseButton>
-                    <BaseButton v-if="!auth.isAuthenticated" variant="ghost" size="md" block to="/login">
-                      Already have an account? Sign In
-                    </BaseButton>
+                    <!-- Already purchased → Start Learning (direct to LMS) -->
+                    <template v-if="isPurchased">
+                      <a
+                        v-if="startLearningExternal"
+                        :href="startLearningHref"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-center justify-center gap-2 w-full py-3 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all duration-200 active:scale-95"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Start Learning
+                        <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                      <div v-else class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                        You are enrolled in this course
+                      </div>
+                    </template>
+
+                    <!-- Not purchased: free or paid flow -->
+                    <template v-else>
+                      <BaseButton
+                        v-if="isFree"
+                        variant="primary"
+                        size="lg"
+                        block
+                        :loading="enrollLoading"
+                        :disabled="enrollLoading || !!enrollSuccess"
+                        @click="handleFreeEnroll"
+                      >
+                        {{ enrollSuccess ? 'Enrolled' : 'Enroll for Free' }}
+                      </BaseButton>
+                      <BaseButton v-else-if="hasPriceSet" variant="primary" size="lg" block @click="handlePurchase">
+                        Buy Now
+                      </BaseButton>
+                      <BaseButton v-else variant="ghost" size="lg" block disabled>
+                        Price not available
+                      </BaseButton>
+                      <BaseButton v-if="!auth.isAuthenticated" variant="ghost" size="md" block to="/login">
+                        Already have an account? Sign In
+                      </BaseButton>
+                    </template>
                   </div>
 
                   <p class="text-xs text-slate-400 text-center mt-3">Lifetime access · Digital certificate</p>
@@ -521,6 +636,50 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- ── Image lightbox (Teleport so it escapes any overflow clipping) ── -->
+    <Teleport to="body">
+      <Transition name="lb-fade">
+        <div
+          v-if="lightboxOpen && course?.thumbnail_url"
+          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 sm:p-8 cursor-zoom-out"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Course image preview"
+          @click.self="closeLightbox"
+        >
+          <!-- Close button -->
+          <button
+            type="button"
+            class="absolute top-4 right-4 sm:top-6 sm:right-6 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
+            aria-label="Close preview"
+            @click="closeLightbox"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <!-- Image — clicking inside should NOT close -->
+          <Transition name="lb-zoom" appear>
+            <figure
+              v-if="lightboxOpen"
+              class="relative max-w-5xl max-h-[88vh] cursor-default"
+              @click.stop
+            >
+              <img
+                :src="course.thumbnail_url"
+                :alt="course.title"
+                class="block max-h-[80vh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
+              />
+              <figcaption class="mt-3 text-center text-sm text-white/80 font-medium px-4 line-clamp-2">
+                {{ course.title }}
+              </figcaption>
+            </figure>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -563,5 +722,29 @@ onMounted(() => {
 }
 .page-enter {
   animation: pageEnter 0.35s ease both;
+}
+
+/* Lightbox backdrop fade */
+.lb-fade-enter-active, .lb-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.lb-fade-enter-from, .lb-fade-leave-to {
+  opacity: 0;
+}
+
+/* Lightbox image zoom-in */
+.lb-zoom-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lb-zoom-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease-in;
+}
+.lb-zoom-enter-from {
+  opacity: 0;
+  transform: scale(0.92);
+}
+.lb-zoom-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
 }
 </style>
