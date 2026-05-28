@@ -41,7 +41,7 @@ const reason = computed(() => route.query.reason as string || 'Payment was cance
 
       <p class="text-xs text-slate-400 mt-6">
         Need help?
-        <NuxtLink to="/kontak" class="text-primary-600 hover:underline">Contact our support</NuxtLink>
+        <NuxtLink to="/contact-us" class="text-primary-600 hover:underline">Contact our support</NuxtLink>
       </p>
 
     </div>

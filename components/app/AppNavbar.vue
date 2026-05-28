@@ -24,9 +24,10 @@ function submitSearch() {
 
 // Row 1 right-side links
 const quickLinks = [
-  { label: 'My Courses',    to: '/my/courses', authenticated: true },
+  { label: 'My Courses', to: '/my/courses', authenticated: true },
   { label: 'Orders',     to: '/orders', authenticated: true },
-  { label: 'Partners', to: '/partners', authenticated: false },
+  { label: 'Partners',   to: '/partners', authenticated: false },
+  { label: 'Contact',    to: '/contact-us', authenticated: false },
 ]
 
 // Row 2 category bar

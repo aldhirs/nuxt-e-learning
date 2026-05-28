@@ -129,7 +129,7 @@ async function checkStatus() {
         redirectCountdown.value--
         if (redirectCountdown.value <= 0) {
           if (redirectTimer) clearInterval(redirectTimer)
-          router.push(`/orders/${orderNumber.value}`)
+          router.push(`/orders/${orderNumber.value}/payment/done`)
         }
       }, 1000)
       return
@@ -171,7 +171,7 @@ async function manualCheck() {
         redirectCountdown.value--
         if (redirectCountdown.value <= 0) {
           if (redirectTimer) clearInterval(redirectTimer)
-          router.push(`/orders/${orderNumber.value}`)
+          router.push(`/orders/${orderNumber.value}/payment/done`)
         }
       }, 1000)
     } else {

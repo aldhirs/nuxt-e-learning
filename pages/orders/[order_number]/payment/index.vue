@@ -14,10 +14,8 @@ const ordersApi = useOrdersApi()
 const paymentStore = usePaymentStore()
 
 const orderNumber = computed(() => route.params.order_number as string)
-
 useSeoMeta({ title: () => `Select Payment Method — ${orderNumber.value}` })
 
-// Fetch order directly with useAsyncData for SSR-safe hydration
 const { data: order, pending: orderPending } = await useAsyncData(
   () => `payment-index-order:${orderNumber.value}`,
   () => ordersApi.getMyOrder(orderNumber.value).catch((e: { status?: number }) => {
@@ -27,56 +25,9 @@ const { data: order, pending: orderPending } = await useAsyncData(
   { watch: [orderNumber] }
 )
 
-// Tab state
-const activeTab = ref<'va' | 'qris' | 'ewallet'>('va')
-
 const selectedMethod = ref<PaymentMethod | ''>('')
 const isLoading = ref(false)
 const serverError = ref('')
-
-interface MethodGroup {
-  label: string
-  methods: { value: PaymentMethod; label: string; description: string }[]
-}
-
-const methodGroups: MethodGroup[] = [
-  {
-    label: 'Virtual Account',
-    methods: [
-      { value: 'va_bca',     label: 'BCA Virtual Account',     description: 'Transfer via ATM / mobile banking BCA' },
-      { value: 'va_mandiri', label: 'Mandiri Virtual Account', description: 'Transfer via ATM / mobile banking Mandiri' },
-      { value: 'va_bri',     label: 'BRI Virtual Account',     description: 'Transfer via ATM / mobile banking BRI' },
-      { value: 'va_bni',     label: 'BNI Virtual Account',     description: 'Transfer via ATM / mobile banking BNI' }
-    ]
-  },
-  {
-    label: 'QRIS',
-    methods: [
-      { value: 'qris', label: 'QRIS', description: 'Scan QR with any e-wallet app' }
-    ]
-  },
-  {
-    label: 'E-Wallet',
-    methods: [
-      { value: 'ewallet_ovo',       label: 'OVO',        description: 'Pay with OVO' },
-      { value: 'ewallet_dana',      label: 'DANA',       description: 'Pay with DANA' },
-      { value: 'ewallet_shopeepay', label: 'ShopeePay',  description: 'Pay with ShopeePay' }
-    ]
-  }
-]
-
-const vaCards = [
-  { value: 'va_bca' as PaymentMethod,     label: 'BCA',     colorClass: 'bg-blue-600',   description: 'BCA Virtual Account' },
-  { value: 'va_mandiri' as PaymentMethod, label: 'MANDIRI', colorClass: 'bg-amber-500',  description: 'Mandiri Virtual Account' },
-  { value: 'va_bri' as PaymentMethod,     label: 'BRI',     colorClass: 'bg-blue-800',   description: 'BRI Virtual Account' },
-  { value: 'va_bni' as PaymentMethod,     label: 'BNI',     colorClass: 'bg-orange-500', description: 'BNI Virtual Account' }
-]
-
-const ewalletCards = [
-  { value: 'ewallet_ovo' as PaymentMethod,       label: 'OVO',        icon: '💜', description: 'Pay with OVO' },
-  { value: 'ewallet_dana' as PaymentMethod,      label: 'DANA',       icon: '💙', description: 'Pay with DANA' },
-  { value: 'ewallet_shopeepay' as PaymentMethod, label: 'ShopeePay',  icon: '🧡', description: 'Pay with ShopeePay' }
-]
 
 const isExpired = computed(() => {
   if (!order.value?.expires_at) return false
@@ -86,32 +37,19 @@ const isExpired = computed(() => {
 async function selectAndProceed(method: PaymentMethod) {
   if (!order.value || isExpired.value) return
   selectedMethod.value = method
-  await proceed()
-}
-
-async function proceed() {
-  if (!selectedMethod.value || !order.value) return
   serverError.value = ''
   isLoading.value = true
   try {
-    const session = await paymentApi.initiate(orderNumber.value, {
-      payment_method: selectedMethod.value
-    })
+    const session = await paymentApi.initiate(orderNumber.value, { payment_method: method })
     const stored: StoredPaymentSession = { ...session, order_number: orderNumber.value }
     paymentStore.setSession(stored)
-
-    const method = selectedMethod.value
     const base = `/orders/${orderNumber.value}/payment`
-    if (method.startsWith('va_')) {
-      await router.push(`${base}/va`)
-    } else if (method === 'qris') {
-      await router.push(`${base}/qris`)
-    } else {
-      await router.push(`${base}/ewallet`)
-    }
+    if (method.startsWith('va_')) await router.push(`${base}/va`)
+    else if (method === 'qris') await router.push(`${base}/qris`)
+    else await router.push(`${base}/ewallet`)
   } catch (err: unknown) {
-    const e = err as { status?: number; code?: string; message?: string; reason?: string }
-    if (e.status === 502 || (e.code && String(e.code) === '502')) {
+    const e = err as { status?: number; code?: string; message?: string }
+    if (e.status === 502 || String(e.code) === '502') {
       serverError.value = e.message || 'Payment service is currently unavailable. Please try again in a moment.'
     } else if (e.status === 422) {
       serverError.value = e.message || 'This payment method is not available. Please choose another method.'
@@ -122,10 +60,68 @@ async function proceed() {
     } else {
       serverError.value = e.message || 'Failed to start payment. Please try again.'
     }
+    selectedMethod.value = ''
   } finally {
     isLoading.value = false
   }
 }
+
+// VA bank rows
+const vaBanks = [
+  {
+    value: 'va_bca' as PaymentMethod,
+    name: 'BCA',
+    logo: '/images/payment/bca.svg',
+    desc: 'BCA Virtual Account — ATM / BCA Mobile / KlikBCA',
+    accent: 'hover:border-blue-300 hover:shadow-blue-100',
+  },
+  {
+    value: 'va_mandiri' as PaymentMethod,
+    name: 'Mandiri',
+    logo: '/images/payment/mandiri.svg',
+    desc: 'Mandiri Virtual Account — ATM / Livin\' by Mandiri',
+    accent: 'hover:border-amber-300 hover:shadow-amber-100',
+  },
+  {
+    value: 'va_bri' as PaymentMethod,
+    name: 'BRI',
+    logo: '/images/payment/bri.png',
+    desc: 'BRI Virtual Account — ATM / BRImo',
+    accent: 'hover:border-sky-300 hover:shadow-sky-100',
+  },
+  {
+    value: 'va_bni' as PaymentMethod,
+    name: 'BNI',
+    logo: '/images/payment/bni.svg',
+    desc: 'BNI Virtual Account — ATM / BNI Mobile Banking',
+    accent: 'hover:border-orange-300 hover:shadow-orange-100',
+  },
+]
+
+// E-wallet rows
+const ewallets = [
+  {
+    value: 'ewallet_ovo' as PaymentMethod,
+    name: 'OVO',
+    logo: '/images/payment/ovo.svg',
+    desc: 'Pay directly from OVO balance',
+    accent: 'hover:border-purple-300 hover:shadow-purple-100',
+  },
+  {
+    value: 'ewallet_dana' as PaymentMethod,
+    name: 'DANA',
+    logo: '/images/payment/dana.svg',
+    desc: 'Pay directly from DANA balance',
+    accent: 'hover:border-blue-300 hover:shadow-blue-100',
+  },
+  {
+    value: 'ewallet_gopay' as PaymentMethod,
+    name: 'GoPay',
+    logo: '/images/payment/gopay.svg',
+    desc: 'Pay directly from GoPay balance',
+    accent: 'hover:border-teal-300 hover:shadow-teal-100',
+  },
+]
 </script>
 
 <template>
@@ -133,7 +129,6 @@ async function proceed() {
   <div class="bg-white border-b border-slate-100">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4">
       <div class="flex items-center justify-center gap-1">
-        <!-- Step 1: Detail Course — done -->
         <div class="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
@@ -141,7 +136,6 @@ async function proceed() {
         </div>
         <span class="hidden sm:block text-xs font-medium text-emerald-600 mx-1">Detail Course</span>
         <div class="h-0.5 w-10 mx-1 bg-emerald-500"></div>
-        <!-- Step 2: Checkout — done -->
         <div class="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
@@ -149,219 +143,227 @@ async function proceed() {
         </div>
         <span class="hidden sm:block text-xs font-medium text-emerald-600 mx-1">Checkout</span>
         <div class="h-0.5 w-10 mx-1 bg-primary-500"></div>
-        <!-- Step 3: Pembayaran — active -->
         <div class="w-7 h-7 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center">3</div>
         <span class="hidden sm:block text-xs font-medium text-primary-600 mx-1">Payment</span>
         <div class="h-0.5 w-10 mx-1 bg-slate-200"></div>
-        <!-- Step 4: Done — pending -->
         <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-400 text-xs font-bold flex items-center justify-center">4</div>
         <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Done</span>
       </div>
     </div>
   </div>
 
-  <!-- Loading skeleton -->
+  <!-- Loading -->
   <div v-if="orderPending" class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 space-y-4">
+      <div class="lg:col-span-2 space-y-3">
         <BaseSkeleton class="h-8 w-48" />
-        <BaseSkeleton class="h-10 w-full rounded-xl" />
-        <div class="grid grid-cols-2 gap-3">
-          <BaseSkeleton class="h-24 rounded-xl" />
-          <BaseSkeleton class="h-24 rounded-xl" />
-          <BaseSkeleton class="h-24 rounded-xl" />
-          <BaseSkeleton class="h-24 rounded-xl" />
-        </div>
+        <BaseSkeleton class="h-14 rounded-xl" />
+        <BaseSkeleton class="h-5 w-36 mt-4" />
+        <BaseSkeleton v-for="i in 4" :key="i" class="h-20 rounded-2xl" />
+        <BaseSkeleton class="h-5 w-24 mt-2" />
+        <BaseSkeleton class="h-20 rounded-2xl" />
+        <BaseSkeleton class="h-5 w-28 mt-2" />
+        <BaseSkeleton v-for="i in 3" :key="`ew-${i}`" class="h-20 rounded-2xl" />
       </div>
-      <div class="space-y-4">
-        <BaseSkeleton class="h-48 rounded-xl" />
-      </div>
+      <div><BaseSkeleton class="h-56 rounded-2xl" /></div>
     </div>
   </div>
 
-  <!-- Order not found -->
+  <!-- Not found -->
   <div v-else-if="!order" class="max-w-xl mx-auto px-4 py-20 text-center">
-    <BaseEmptyState
-      icon="alert"
-      title="Order not found"
-      description="This order doesn't exist or has already expired. Please go back to the order list."
-      cta-label="View My Orders"
-      cta-to="/orders"
-    />
+    <BaseEmptyState icon="alert" title="Order not found"
+      description="This order doesn't exist or has already expired."
+      cta-label="View My Orders" cta-to="/orders" />
   </div>
 
-  <!-- Already paid / expired / cancelled -->
+  <!-- Not payable -->
   <div v-else-if="order.status !== 'pending'" class="max-w-xl mx-auto px-4 py-20 text-center">
-    <BaseEmptyState
-      icon="alert"
-      title="Cannot pay"
+    <BaseEmptyState icon="alert" title="Cannot pay"
       :description="order.status === 'paid' ? 'This order has already been paid.' : 'This order is no longer active.'"
-      cta-label="View Order Details"
-      :cta-to="`/orders/${orderNumber}`"
-    />
+      cta-label="View Order Details" :cta-to="`/orders/${orderNumber}`" />
   </div>
 
   <!-- Payment method selection -->
   <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-      <!-- Left: method selection -->
-      <div class="lg:col-span-2 space-y-5">
+      <!-- ── Left: methods ───────────────────────────────────── -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Header -->
         <div>
-          <h1 class="text-xl font-bold text-slate-800 mb-1">Select Payment Method</h1>
+          <h1 class="text-xl font-bold text-slate-800 mb-0.5">Select Payment Method</h1>
           <p class="text-sm text-slate-500">Order <span class="font-mono font-semibold text-slate-700">{{ order.order_number }}</span></p>
         </div>
 
-        <!-- Expired alert -->
+        <!-- Timer / expired -->
         <div v-if="isExpired" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p class="text-sm font-semibold text-red-700">This order has expired. Please create a new order.</p>
         </div>
-
-        <!-- Countdown alert (amber) — only show if not expired -->
         <div v-else class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div class="flex-1">
             <p class="text-sm font-semibold text-amber-800">Complete payment within</p>
             <p class="text-xs text-amber-600">Order <span class="font-mono font-bold">{{ order.order_number }}</span></p>
           </div>
-          <div class="text-right">
-            <OrderCountdownTimer :expires-at="order.expires_at" />
-          </div>
+          <OrderCountdownTimer :expires-at="order.expires_at" />
         </div>
 
         <!-- Server error -->
-        <div v-if="serverError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        <div v-if="serverError" class="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-start gap-2">
+          <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {{ serverError }}
         </div>
 
-        <!-- Tab navigation -->
-        <div class="flex gap-1 bg-slate-100 rounded-xl p-1">
-          <button
-            type="button"
-            :class="[
-              'flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200',
-              activeTab === 'va'
-                ? 'bg-white text-primary-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            ]"
-            @click="activeTab = 'va'"
-          >
-            Virtual Account
-          </button>
-          <button
-            type="button"
-            :class="[
-              'flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200',
-              activeTab === 'qris'
-                ? 'bg-white text-primary-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            ]"
-            @click="activeTab = 'qris'"
-          >
-            QRIS
-          </button>
-          <button
-            type="button"
-            :class="[
-              'flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200',
-              activeTab === 'ewallet'
-                ? 'bg-white text-primary-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            ]"
-            @click="activeTab = 'ewallet'"
-          >
-            E-Wallet
-          </button>
-        </div>
+        <!-- ══════════════════════════════════════════════
+             SECTION 1 — Virtual Account
+        ══════════════════════════════════════════════ -->
+        <div :class="isExpired ? 'opacity-40 pointer-events-none select-none' : ''">
+          <!-- Section header -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="flex-1 h-px bg-slate-200"></div>
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest flex-shrink-0">Virtual Account</span>
+            <div class="flex-1 h-px bg-slate-200"></div>
+          </div>
 
-        <!-- VA Tab -->
-        <div v-show="activeTab === 'va'">
-          <div
-            :class="['grid grid-cols-2 gap-3', isExpired ? 'opacity-40 pointer-events-none' : '']"
-          >
+          <!-- Bank rows -->
+          <div class="space-y-2.5">
             <button
-              v-for="card in vaCards"
-              :key="card.value"
+              v-for="bank in vaBanks"
+              :key="bank.value"
               type="button"
               :disabled="isLoading"
-              class="flex flex-col items-center gap-3 p-5 bg-white rounded-xl border-2 border-slate-200 hover:border-primary-400 hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group"
-              @click="selectAndProceed(card.value)"
+              :class="[
+                'group w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-2xl border-2 border-slate-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+                'hover:shadow-md',
+                bank.accent
+              ]"
+              @click="selectAndProceed(bank.value)"
             >
-              <!-- Bank logo badge -->
-              <div :class="['px-4 py-2 rounded-xl text-white text-sm font-extrabold tracking-wider', card.colorClass]">
-                {{ card.label }}
+              <!-- Logo -->
+              <div class="w-24 h-10 flex items-center justify-center flex-shrink-0">
+                <img
+                  :src="bank.logo"
+                  :alt="bank.name"
+                  class="max-h-9 max-w-[88px] w-auto object-contain"
+                  loading="lazy"
+                />
               </div>
-              <p class="text-xs text-slate-500 group-hover:text-primary-600 transition-colors text-center leading-tight">
-                {{ card.description }}
-              </p>
-              <span
-                v-if="isLoading && selectedMethod === card.value"
-                class="inline-flex items-center gap-1.5 text-xs text-primary-600 font-semibold"
-              >
-                <span class="animate-spin w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full"></span>
-                Processing...
-              </span>
-              <span v-else class="text-xs font-semibold text-primary-600 group-hover:underline">Select</span>
+
+              <!-- Info -->
+              <div class="flex-1 text-left">
+                <p class="text-sm font-semibold text-slate-800 leading-tight">{{ bank.name }} Virtual Account</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ bank.desc }}</p>
+              </div>
+
+              <!-- Arrow / spinner -->
+              <div class="flex-shrink-0 w-7 flex items-center justify-center">
+                <span
+                  v-if="isLoading && selectedMethod === bank.value"
+                  class="animate-spin w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full block"
+                ></span>
+                <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-primary-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
             </button>
           </div>
         </div>
 
-        <!-- QRIS Tab -->
-        <div v-show="activeTab === 'qris'">
+        <!-- ══════════════════════════════════════════════
+             SECTION 2 — QRIS
+        ══════════════════════════════════════════════ -->
+        <div :class="isExpired ? 'opacity-40 pointer-events-none select-none' : ''">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="flex-1 h-px bg-slate-200"></div>
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest flex-shrink-0">QRIS</span>
+            <div class="flex-1 h-px bg-slate-200"></div>
+          </div>
+
           <button
             type="button"
-            :disabled="isLoading || isExpired"
-            :class="[
-              'w-full flex items-center gap-4 p-5 bg-white rounded-xl border-2 border-slate-200 hover:border-primary-400 hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group',
-              isExpired ? 'opacity-40 pointer-events-none' : ''
-            ]"
+            :disabled="isLoading"
+            class="group w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-2xl border-2 border-slate-100 hover:border-red-300 hover:shadow-md hover:shadow-red-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             @click="selectAndProceed('qris')"
           >
-            <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4H4v8h8V4zM20 4h-8v8h8V4zM12 12H4v8h8v-8zM20 16h-2v2h2v-2zM16 12v4h4v-4h-4z" />
+            <!-- QRIS logo -->
+            <div class="w-24 h-10 flex items-center justify-center flex-shrink-0">
+              <img
+                src="/images/payment/qris.svg"
+                alt="QRIS"
+                class="max-h-9 max-w-[88px] w-auto object-contain"
+                loading="lazy"
+              />
+            </div>
+
+            <div class="flex-1 text-left">
+              <p class="text-sm font-semibold text-slate-800">QRIS</p>
+              <p class="text-xs text-slate-400 mt-0.5">GoPay · OVO · DANA · LinkAja · mobile banking · & more</p>
+            </div>
+
+            <div class="flex-shrink-0 w-7 flex items-center justify-center">
+              <span v-if="isLoading && selectedMethod === 'qris'" class="animate-spin w-5 h-5 border-2 border-red-400 border-t-transparent rounded-full block"></span>
+              <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
             </div>
-            <div class="flex-1 text-left">
-              <p class="text-base font-bold text-slate-800 group-hover:text-primary-700 transition-colors">QRIS</p>
-              <p class="text-sm text-slate-500">Scan QR with any e-wallet app & mobile banking</p>
-            </div>
-            <span v-if="isLoading && selectedMethod === 'qris'" class="animate-spin w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full flex-shrink-0"></span>
-            <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-primary-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
           </button>
         </div>
 
-        <!-- E-Wallet Tab -->
-        <div v-show="activeTab === 'ewallet'">
-          <div
-            :class="['flex flex-col sm:flex-row gap-3', isExpired ? 'opacity-40 pointer-events-none' : '']"
-          >
+        <!-- ══════════════════════════════════════════════
+             SECTION 3 — E-Wallet
+        ══════════════════════════════════════════════ -->
+        <div :class="isExpired ? 'opacity-40 pointer-events-none select-none' : ''">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="flex-1 h-px bg-slate-200"></div>
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest flex-shrink-0">E-Wallet</span>
+            <div class="flex-1 h-px bg-slate-200"></div>
+          </div>
+
+          <div class="space-y-2.5">
             <button
-              v-for="card in ewalletCards"
-              :key="card.value"
+              v-for="wallet in ewallets"
+              :key="wallet.value"
               type="button"
               :disabled="isLoading"
-              class="flex-1 flex flex-col items-center gap-2 p-5 bg-white rounded-xl border-2 border-slate-200 hover:border-primary-400 hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group"
-              @click="selectAndProceed(card.value)"
+              :class="[
+                'group w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-2xl border-2 border-slate-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+                'hover:shadow-md',
+                wallet.accent
+              ]"
+              @click="selectAndProceed(wallet.value)"
             >
-              <span class="text-3xl" aria-hidden="true">{{ card.icon }}</span>
-              <p class="text-sm font-bold text-slate-700 group-hover:text-primary-700 transition-colors">{{ card.label }}</p>
-              <p class="text-xs text-slate-400 text-center">{{ card.description }}</p>
-              <span
-                v-if="isLoading && selectedMethod === card.value"
-                class="inline-flex items-center gap-1.5 text-xs text-primary-600 font-semibold"
-              >
-                <span class="animate-spin w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full"></span>
-                Processing...
-              </span>
-              <span v-else class="text-xs font-semibold text-primary-600 group-hover:underline">Select</span>
+              <!-- Logo -->
+              <div class="w-24 h-10 flex items-center justify-center flex-shrink-0">
+                <img
+                  :src="wallet.logo"
+                  :alt="wallet.name"
+                  class="max-h-9 max-w-[88px] w-auto object-contain"
+                  loading="lazy"
+                />
+              </div>
+
+              <div class="flex-1 text-left">
+                <p class="text-sm font-semibold text-slate-800">{{ wallet.name }}</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ wallet.desc }}</p>
+              </div>
+
+              <div class="flex-shrink-0 w-7 flex items-center justify-center">
+                <span
+                  v-if="isLoading && selectedMethod === wallet.value"
+                  class="animate-spin w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full block"
+                ></span>
+                <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-primary-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
             </button>
           </div>
         </div>
@@ -371,7 +373,7 @@ async function proceed() {
         </BaseButton>
       </div>
 
-      <!-- Right: sticky order summary -->
+      <!-- ── Right: sticky order summary ──────────────────────── -->
       <div class="lg:sticky lg:top-6">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div class="bg-gradient-to-br from-primary-600 to-primary-500 px-5 py-4">
@@ -379,12 +381,10 @@ async function proceed() {
             <p class="text-white font-mono text-sm font-bold">{{ order.order_number }}</p>
           </div>
           <div class="p-5 space-y-4">
-            <!-- Course info -->
             <div v-if="order.course?.title">
               <p class="text-xs text-slate-400 mb-1">Course</p>
               <p class="text-sm font-semibold text-slate-800 leading-snug">{{ order.course.title }}</p>
             </div>
-
             <div class="border-t border-slate-100 pt-4 space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="text-slate-500">Price</span>
@@ -399,9 +399,8 @@ async function proceed() {
                 <span class="text-lg font-black text-primary-600">{{ formatCurrency(order.total_amount) }}</span>
               </div>
             </div>
-
             <div class="flex items-center gap-1.5 text-xs text-slate-400">
-              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               Secure & SSL encrypted transaction

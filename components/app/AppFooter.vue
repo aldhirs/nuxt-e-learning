@@ -44,7 +44,7 @@ const quickLinks = [
   { label: 'Courses',  to: '/courses' },
   { label: 'Partners', to: '/partners' },
   { label: 'About Us', to: '/tentang' },
-  { label: 'Contact',  to: '/kontak' }
+  { label: 'Contact',  to: '/contact-us' }
 ]
 
 const socials = [

@@ -22,8 +22,8 @@
     <footer class="bg-white border-t border-slate-100 py-4">
       <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
         © 2026 DrillSpace. All rights reserved. ·
-        <NuxtLink to="/tentang" class="hover:text-primary-600 transition-colors">Tentang</NuxtLink> ·
-        <NuxtLink to="/kontak" class="hover:text-primary-600 transition-colors">Kontak</NuxtLink>
+        <NuxtLink to="/tentang" class="hover:text-primary-600 transition-colors">About</NuxtLink> ·
+        <NuxtLink to="/contact-us" class="hover:text-primary-600 transition-colors">Contact</NuxtLink>
       </div>
     </footer>
   </div>

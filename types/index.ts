@@ -183,6 +183,23 @@ export interface EnrollFreeResponse {
   activation_email?: string
 }
 
+// ─── Enrollment Check (GET /my/courses/:id/enrollment) ───────────────────────
+
+export interface EnrollmentCheckClient {
+  id: number
+  slug: string
+  name: string
+  logo: string | null
+}
+
+export interface EnrollmentCheckResponse {
+  enrolled: boolean
+  enrollment_id?: number
+  status?: 'active' | 'completed' | 'cancelled'
+  enrollment_source?: string
+  client?: EnrollmentCheckClient
+}
+
 // ─── My Purchased Courses ────────────────────────────────────────────────────
 
 export interface PurchasedCourseClient {
@@ -286,7 +303,7 @@ export interface CancelOrderRequest {
 //   POST /api/v1/orders/{order_number}/payment/cancel
 
 export type PaymentMethodVA = 'va_bca' | 'va_mandiri' | 'va_bri' | 'va_bni'
-export type PaymentMethodEwallet = 'ewallet_ovo' | 'ewallet_dana' | 'ewallet_shopeepay'
+export type PaymentMethodEwallet = 'ewallet_ovo' | 'ewallet_dana' | 'ewallet_gopay'
 export type PaymentMethodQRIS = 'qris'
 
 export type PaymentMethod = PaymentMethodVA | PaymentMethodQRIS | PaymentMethodEwallet

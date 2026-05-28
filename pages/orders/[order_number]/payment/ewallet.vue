@@ -21,9 +21,9 @@ const session = computed<PaymentSessionEwallet | null>(() => {
 // Visual styling per provider — fallback ke generic primary kalau provider
 // di luar map (mis. BE return provider baru di kemudian hari).
 const walletStyles: Record<PaymentMethodEwallet, { label: string; color: string }> = {
-  ewallet_ovo:       { label: 'OVO',        color: '#4C3494' },
-  ewallet_dana:      { label: 'DANA',       color: '#118EEA' },
-  ewallet_shopeepay: { label: 'ShopeePay',  color: '#EE4D2D' }
+  ewallet_ovo:   { label: 'OVO',    color: '#4C3494' },
+  ewallet_dana:  { label: 'DANA',   color: '#118EEA' },
+  ewallet_gopay: { label: 'GoPay',  color: '#00AED6' }
 }
 const walletStyle = computed(() => {
   const m = session.value?.payment_method

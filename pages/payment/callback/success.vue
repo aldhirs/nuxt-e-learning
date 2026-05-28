@@ -20,7 +20,7 @@ async function poll() {
   if (pollCount.value >= 2) {
     state.value = 'paid'
     setTimeout(() => {
-      router.push(orderNumber.value ? `/orders/${orderNumber.value}` : '/orders')
+      router.push(orderNumber.value ? `/orders/${orderNumber.value}/payment/done` : '/orders')
     }, 3000)
     return
   }

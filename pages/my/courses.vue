@@ -7,8 +7,8 @@ useSeoMeta({ title: 'My Courses' })
 
 const route  = useRoute()
 const router = useRouter()
-const config = useRuntimeConfig()
 const myCoursesApi = useMyCoursesApi()
+const { learningUrl } = useLearningUrl()
 const { formatDate } = useFormatters()
 
 const PAGE_SIZE = 10
@@ -95,12 +95,7 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Cancelled', cls: 'bg-slate-100 text-slate-500' },
 }
 
-// Build the "Continue Learning" URL for a purchased course:
-//   {clientBaseUrl}/{client_slug}/login?redirect_to=/courses/{course_slug}
-function learningUrl(clientSlug: string, courseSlug: string): string {
-  const base = (config.public.clientBaseUrl as string).replace(/\/$/, '')
-  return `${base}/${clientSlug}/login?redirect_to=/${clientSlug}/my-courses`
-}
+// learningUrl is provided by useLearningUrl() composable
 </script>
 
 <template>
@@ -319,7 +314,7 @@ function learningUrl(clientSlug: string, courseSlug: string): string {
                 <!-- CTA: active / completed → external learning URL -->
                 <a
                   v-if="item.course?.slug && item.course?.client?.slug && item.status !== 'cancelled'"
-                  :href="learningUrl(item.course.client.slug, item.course.slug)"
+                  :href="learningUrl(item.course.client.slug)"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all"
