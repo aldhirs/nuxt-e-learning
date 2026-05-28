@@ -15,6 +15,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.staging.drillspace.id/api/v1',
+      clientBaseUrl: process.env.NUXT_PUBLIC_CLIENT_BASE_URL || 'https://staging.lms.drillspace.id',
       analyticsEnabled: process.env.NUXT_PUBLIC_ANALYTICS_ENABLED || 'false',
       // Feature flag: storefront profile-edit page. Default ON now that BE
       // ships PUT /auth/storefront/me. Set NUXT_PUBLIC_ENABLE_PROFILE_EDIT=false

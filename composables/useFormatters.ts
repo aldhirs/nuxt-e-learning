@@ -12,18 +12,18 @@ export function useFormatters() {
     const h = Math.floor(minutes / 60)
     const m = minutes % 60
     if (h === 0) return `${m}m`
-    if (m === 0) return `${h}j`
-    return `${h}j ${m}m`
+    if (m === 0) return `${h}h`
+    return `${h}h ${m}m`
   }
 
   function formatDate(dateStr: string): string {
-    return new Intl.DateTimeFormat('id-ID', {
+    return new Intl.DateTimeFormat('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric'
     }).format(new Date(dateStr))
   }
 
   function formatDatetime(dateStr: string): string {
-    return new Intl.DateTimeFormat('id-ID', {
+    return new Intl.DateTimeFormat('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
       timeZone: 'Asia/Jakarta',

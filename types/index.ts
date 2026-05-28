@@ -183,6 +183,42 @@ export interface EnrollFreeResponse {
   activation_email?: string
 }
 
+// ─── My Purchased Courses ────────────────────────────────────────────────────
+
+export interface PurchasedCourseClient {
+  id: number
+  name: string
+  slug: string
+  logo: string | null
+}
+
+export interface PurchasedCourseSummary {
+  id: number
+  title: string
+  slug: string
+  thumbnail_url: string | null
+  difficulty: string | null
+  status: string
+  client?: PurchasedCourseClient
+}
+
+export interface PurchasedCourseItem {
+  enrollment_id: number
+  status: 'active' | 'completed' | 'cancelled'
+  enrollment_source: string
+  order_id: number | null  // numeric DB id — use /orders list, not a direct link
+  enrolled_at: string
+  completed_at: string | null
+  course: PurchasedCourseSummary | null
+}
+
+export interface PagedPaging {
+  page: number
+  page_size: number
+  total_items: number
+  total_pages: number
+}
+
 // ─── Order ───────────────────────────────────────────────────────────────────
 
 export type OrderStatus = 'pending' | 'paid' | 'expired' | 'cancelled' | 'refunded'

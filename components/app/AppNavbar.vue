@@ -24,9 +24,9 @@ function submitSearch() {
 
 // Row 1 right-side links
 const quickLinks = [
-  { label: 'About',    to: '/tentang' },
-  { label: 'Partners', to: '/partners' },
-  { label: 'Contact',  to: '/kontak' },
+  { label: 'My Courses',    to: '/my/courses', authenticated: true },
+  { label: 'Orders',     to: '/orders', authenticated: true },
+  { label: 'Partners', to: '/partners', authenticated: false },
 ]
 
 // Row 2 category bar
@@ -88,25 +88,16 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
       <!-- Right: notification + quick links + auth -->
       <div class="hidden md:flex items-center gap-1 ml-auto flex-shrink-0">
 
-        <!-- Orders bell -->
-        <NuxtLink
-          v-if="auth.isAuthenticated"
-          to="/orders"
-          class="relative w-10 h-10 flex items-center justify-center rounded-full text-slate-500 hover:text-primary-600 hover:bg-slate-100 transition-colors"
-          aria-label="My Orders"
-        >
-          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-        </NuxtLink>
-
         <!-- Quick text links -->
-        <NuxtLink
-          v-for="link in quickLinks"
-          :key="link.to"
-          :to="link.to"
-          class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors rounded-md hover:bg-slate-50"
-        >
-          {{ link.label }}
-        </NuxtLink>
+         <template v-for="link in quickLinks" :key="link.to">
+           <NuxtLink
+             v-if="link.authenticated ? auth.isAuthenticated : true"
+             :to="link.to"
+             class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors rounded-md hover:bg-slate-50"
+           >
+             {{ link.label }}
+           </NuxtLink>
+        </template>
 
         <div class="w-px h-5 bg-slate-200 mx-1"></div>
 
@@ -260,6 +251,7 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
               </div>
               <p class="text-sm font-semibold text-slate-800">{{ auth.user?.full_name || auth.user?.username }}</p>
             </div>
+            <NuxtLink to="/my/courses" class="flex items-center px-3 py-3 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">My Courses</NuxtLink>
             <NuxtLink to="/orders" class="flex items-center px-3 py-3 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">My Orders</NuxtLink>
             <NuxtLink to="/profile" class="flex items-center px-3 py-3 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">My Profile</NuxtLink>
             <button type="button" class="w-full px-3 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 text-left min-h-[44px]" @click="handleLogout">Sign Out</button>

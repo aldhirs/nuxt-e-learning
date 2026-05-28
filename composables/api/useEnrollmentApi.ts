@@ -7,7 +7,7 @@ export function useEnrollmentApi() {
     // Hybrid auth: kalau cookie token ada, BE pakai user; tanpa token, BE auto-create
     // pending_activation user dari body. PRD #1A Phase E.
     enrollFree(courseId: number, body: EnrollFreeRequest = {}) {
-      return api.post<EnrollFreeResponse>(`/courses/${courseId}/enroll-free`, body)
+      return api.post<EnrollFreeResponse>(`/public/courses/${courseId}/enroll-free`, body)
     }
   }
 }
