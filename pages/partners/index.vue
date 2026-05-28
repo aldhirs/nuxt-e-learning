@@ -4,8 +4,8 @@ import type { Paginated, Partner } from '~/types'
 
 definePageMeta({ layout: 'default' })
 useSeoMeta({
-  title: 'Partner Pelatihan',
-  description: 'Temukan lembaga pelatihan maritim terpercaya yang bermitra dengan DrillSpace.'
+  title: 'Training Partners',
+  description: 'Find trusted maritime training institutions partnering with DrillSpace.'
 })
 
 const route  = useRoute()
@@ -38,8 +38,8 @@ const hasPrev    = computed(() => currentPage.value > 1)
 const hasNext    = computed(() => currentPage.value < totalPages.value)
 
 const sortOptions = [
-  { value: '',             label: 'Urutan Default' },
-  { value: 'course_count', label: 'Banyak Course' },
+  { value: '',             label: 'Default' },
+  { value: 'course_count', label: 'Most Courses' },
   { value: 'alphabetical', label: 'A → Z' },
 ]
 
@@ -117,12 +117,12 @@ onMounted(() => {
     <div class="bg-white border-b border-slate-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav class="flex items-center gap-2 text-xs text-slate-400 mb-3" aria-label="Breadcrumb">
-          <NuxtLink to="/" class="hover:text-primary-500 transition-colors">Beranda</NuxtLink>
+          <NuxtLink to="/" class="hover:text-primary-500 transition-colors">Home</NuxtLink>
           <span aria-hidden="true">/</span>
-          <span class="text-slate-600 font-medium">Partner Pelatihan</span>
+          <span class="text-slate-600 font-medium">Training Partners</span>
         </nav>
-        <h1 class="text-3xl font-extrabold text-slate-900">Partner <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Pelatihan</span></h1>
-        <p class="text-slate-500 mt-1.5 text-sm">Lembaga pendidikan dan pelatihan maritim terpercaya mitra DrillSpace</p>
+        <h1 class="text-3xl font-extrabold text-slate-900">Training <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Partners</span></h1>
+        <p class="text-slate-500 mt-1.5 text-sm">Trusted maritime education & training institutions partnering with DrillSpace</p>
       </div>
     </div>
 
@@ -151,10 +151,10 @@ onMounted(() => {
 
         <!-- Total count (right side) -->
         <p class="text-sm text-slate-500 hidden sm:block">
-          <template v-if="pending && !page">Memuat...</template>
+          <template v-if="pending && !page">Loading...</template>
           <template v-else>
-            <span class="font-semibold text-slate-700">{{ totalCount }}</span> partner
-            <span v-if="hasActiveFilter" class="text-primary-500"> · filter aktif</span>
+            <span class="font-semibold text-slate-700">{{ totalCount }}</span> partners
+            <span v-if="hasActiveFilter" class="text-primary-500"> · filter active</span>
           </template>
         </p>
       </div>
@@ -169,11 +169,11 @@ onMounted(() => {
           class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
           "{{ filters.search }}"
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors" @click="searchInput = ''; updateQuery({ search: undefined })">
-            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Hapus pencarian"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Remove search"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </span>
         <button type="button" class="text-xs text-slate-400 hover:text-red-500 transition-colors underline underline-offset-2" @click="clearFilters">
-          Reset semua
+          Reset all
         </button>
       </div>
 
@@ -188,9 +188,9 @@ onMounted(() => {
 
       <!-- Error -->
       <BaseCard v-else-if="error" padding="lg" class="border border-red-200 bg-red-50">
-        <p class="text-sm text-red-700 mb-3">Gagal memuat partner. {{ (error as { message?: string }).message ?? '' }}</p>
+        <p class="text-sm text-red-700 mb-3">Failed to load partners. {{ (error as { message?: string }).message ?? '' }}</p>
         <div class="flex gap-2">
-          <BaseButton variant="primary" size="sm" @click="refresh()">Coba lagi</BaseButton>
+          <BaseButton variant="primary" size="sm" @click="refresh()">Try Again</BaseButton>
           <BaseButton v-if="hasActiveFilter" variant="ghost" size="sm" @click="clearFilters">Reset filter</BaseButton>
         </div>
       </BaseCard>
@@ -199,16 +199,16 @@ onMounted(() => {
       <BaseEmptyState
         v-else-if="partners.length === 0 && !hasActiveFilter"
         icon="building"
-        title="Belum ada partner"
-        description="Partner akan ditampilkan ketika mereka mempublikasikan course."
+        title="No partners yet"
+        description="Partners will appear once they publish courses."
       />
 
       <!-- Empty filtered -->
       <BaseEmptyState
         v-else-if="partners.length === 0"
         icon="search"
-        title="Partner tidak ditemukan"
-        description="Coba kata kunci lain."
+        title="No partners found"
+        description="Try a different search term."
         cta-label="Reset Filter"
         @cta-click="clearFilters"
       />
@@ -265,8 +265,8 @@ onMounted(() => {
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="mt-12 flex flex-col items-center gap-4">
           <p class="text-sm text-slate-400">
-            Halaman <span class="font-semibold text-slate-700">{{ currentPage }}</span> dari {{ totalPages }}
-            · {{ partners.length }} dari {{ totalCount }} partner
+            Page <span class="font-semibold text-slate-700">{{ currentPage }}</span> of {{ totalPages }}
+            · {{ partners.length }} of {{ totalCount }} partners
           </p>
           <div class="flex items-center gap-2">
             <button
@@ -276,7 +276,7 @@ onMounted(() => {
               @click="goPage(currentPage - 1)"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              Sebelumnya
+              Previous
             </button>
             <button
               type="button"
@@ -284,7 +284,7 @@ onMounted(() => {
               :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all', hasNext && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
               @click="goPage(currentPage + 1)"
             >
-              Berikutnya
+              Next
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
           </div>
@@ -323,12 +323,12 @@ onMounted(() => {
               </div>
               <h2 class="text-base font-bold text-slate-800">Filter</h2>
               <span v-if="localHasChanges" class="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                Belum diterapkan
+                Not applied yet
               </span>
             </div>
             <button type="button"
               class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              aria-label="Tutup filter"
+              aria-label="Close filter"
               @click="closeFilter">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -340,14 +340,14 @@ onMounted(() => {
           <div class="flex-1 overflow-y-auto px-6 py-5 space-y-7">
             <!-- Search -->
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Pencarian</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Search</label>
               <div class="relative">
                 <input
                   v-model="localSearch"
                   type="text"
-                  placeholder="Cari nama partner..."
+                  placeholder="Search partner name..."
                   class="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none transition-colors"
-                  aria-label="Cari partner"
+                  aria-label="Search partners"
                 />
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -357,7 +357,7 @@ onMounted(() => {
 
             <!-- Sort -->
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Urutkan</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Sort</label>
               <div class="space-y-2">
                 <label
                   v-for="opt in sortOptions"
@@ -381,12 +381,12 @@ onMounted(() => {
             <button type="button"
               class="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors active:scale-95"
               @click="resetDrawer">
-              Reset Semua
+              Reset All
             </button>
             <button type="button"
               class="flex-1 py-3 rounded-xl bg-primary-500 text-white text-sm font-bold hover:bg-primary-600 transition-colors shadow-md shadow-primary-500/20 active:scale-95"
               @click="applyFilters">
-              Terapkan Filter
+              Apply Filters
             </button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useAuthStore } from '~/stores/auth'
 import type { OrderListItem, Paginated } from '~/types'
 
 definePageMeta({ layout: 'profile', middleware: 'auth' })
-useSeoMeta({ title: 'Order Saya' })
+useSeoMeta({ title: 'My Orders' })
 
 const route = useRoute()
 const router = useRouter()
@@ -14,12 +14,12 @@ const auth = useAuthStore()
 const PAGE_SIZE = 10
 
 const statusTabs = [
-  { value: '',          label: 'Semua' },
-  { value: 'pending',   label: 'Menunggu Bayar' },
-  { value: 'paid',      label: 'Lunas' },
-  { value: 'expired',   label: 'Kedaluwarsa' },
-  { value: 'cancelled', label: 'Dibatalkan' },
-  { value: 'refunded',  label: 'Refund' }
+  { value: '',          label: 'All' },
+  { value: 'pending',   label: 'Awaiting Payment' },
+  { value: 'paid',      label: 'Paid' },
+  { value: 'expired',   label: 'Expired' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'refunded',  label: 'Refunded' }
 ]
 
 const filters = computed<OrderListFilters>(() => ({
@@ -37,7 +37,6 @@ const { data: page, pending, error, refresh } = await useAsyncData<Paginated<Ord
   { watch: [filters] }
 )
 
-// Course data is now nested directly in the order list response from BE.
 const orders = computed<OrderListItem[]>(() => page.value?.data ?? [])
 
 const totalCount  = computed(() => page.value?.meta?.total ?? 0)
@@ -66,17 +65,16 @@ async function doLogout() {
 </script>
 
 <template>
-  <!-- ── Main Content ──────────────────────────────────────────── -->
   <div class="flex-1 min-w-0">
 
     <!-- Header -->
     <div class="flex items-center justify-between mb-5">
       <div>
-        <h2 class="text-xl font-bold text-slate-800">Daftar Order</h2>
+        <h2 class="text-xl font-bold text-slate-800">My Orders</h2>
         <p class="text-sm text-slate-400 mt-0.5">
-          <template v-if="pending && !page">Memuat transaksi...</template>
-          <template v-else-if="totalCount > 0">{{ totalCount }} transaksi ditemukan</template>
-          <template v-else>Belum ada transaksi</template>
+          <template v-if="pending && !page">Loading transactions...</template>
+          <template v-else-if="totalCount > 0">{{ totalCount }} transactions found</template>
+          <template v-else>No transactions yet</template>
         </p>
       </div>
       <!-- Mobile logout -->
@@ -85,7 +83,7 @@ async function doLogout() {
         class="md:hidden text-sm text-slate-500 hover:text-red-500 transition-colors"
         @click="doLogout"
       >
-        Keluar
+        Sign Out
       </button>
     </div>
 
@@ -147,9 +145,9 @@ async function doLogout() {
         </svg>
       </div>
       <div class="flex-1">
-        <p class="text-sm font-semibold text-red-700 mb-1">Gagal memuat order</p>
-        <p class="text-xs text-red-600">{{ (error as { message?: string }).message ?? 'Terjadi kesalahan. Silakan coba lagi.' }}</p>
-        <BaseButton variant="primary" size="sm" class="mt-3" @click="refresh()">Coba lagi</BaseButton>
+        <p class="text-sm font-semibold text-red-700 mb-1">Failed to load orders</p>
+        <p class="text-xs text-red-600">{{ (error as { message?: string }).message ?? 'Something went wrong. Please try again.' }}</p>
+        <BaseButton variant="primary" size="sm" class="mt-3" @click="refresh()">Try Again</BaseButton>
       </div>
     </div>
 
@@ -157,9 +155,9 @@ async function doLogout() {
     <BaseEmptyState
       v-else-if="!pending && orders.length === 0 && !filters.status"
       icon="shopping-cart"
-      title="Belum ada order"
-      description="Anda belum pernah melakukan pembelian. Temukan course yang sesuai untuk Anda."
-      cta-label="Jelajahi Course"
+      title="No orders yet"
+      description="You haven't made any purchases yet. Find a course that's right for you."
+      cta-label="Browse Courses"
       cta-to="/courses"
     />
 
@@ -167,9 +165,9 @@ async function doLogout() {
     <BaseEmptyState
       v-else-if="!pending && orders.length === 0 && filters.status"
       icon="search"
-      title="Tidak ada order"
-      :description="`Tidak ada order dengan status ${statusTabs.find(t => t.value === filters.status)?.label ?? filters.status}.`"
-      cta-label="Lihat Semua"
+      title="No orders"
+      :description="`No orders with status: ${statusTabs.find(t => t.value === filters.status)?.label ?? filters.status}.`"
+      cta-label="View All"
       @cta-click="setStatus('')"
     />
 
@@ -188,17 +186,17 @@ async function doLogout() {
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="flex items-center justify-between pt-2 gap-4 flex-wrap">
           <p class="text-sm text-slate-400 tabular-nums">
-            Halaman {{ currentPage }} / {{ totalPages }} · {{ totalCount }} total
+            Page {{ currentPage }} / {{ totalPages }} · {{ totalCount }} total
           </p>
           <div class="flex items-center gap-2">
             <BaseButton variant="secondary" size="sm" :disabled="!hasPrev || pending" @click="goPage(currentPage - 1)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
-              Sebelumnya
+              Previous
             </BaseButton>
             <BaseButton variant="secondary" size="sm" :disabled="!hasNext || pending" @click="goPage(currentPage + 1)">
-              Berikutnya
+              Next
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>

@@ -15,7 +15,7 @@ const paymentStore = usePaymentStore()
 
 const orderNumber = computed(() => route.params.order_number as string)
 
-useSeoMeta({ title: () => `Status Pembayaran — ${orderNumber.value}` })
+useSeoMeta({ title: () => `Payment Status — ${orderNumber.value}` })
 
 // Fetch order directly with useAsyncData
 const { data: order, pending: orderPending } = await useAsyncData(
@@ -59,7 +59,7 @@ async function tickStatus() {
     if (snap.status === 'cancelled') { state.value = 'cancelled'; stopPolling(); return }
     if (snap.status === 'failed') { state.value = 'failed'; stopPolling(); return }
   } catch (err: unknown) {
-    pollError.value = (err as { message?: string }).message || 'Gagal cek status. Coba lagi.'
+    pollError.value = (err as { message?: string }).message || 'Failed to check status. Try again.'
   }
 
   if (pollCount.value >= MAX_POLLS) {
@@ -113,7 +113,7 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
           </svg>
           <span v-else>3</span>
         </div>
-        <span :class="['hidden sm:block text-xs font-medium mx-1', state === 'paid' ? 'text-emerald-600' : 'text-primary-600']">Pembayaran</span>
+        <span :class="['hidden sm:block text-xs font-medium mx-1', state === 'paid' ? 'text-emerald-600' : 'text-primary-600']">Payment</span>
         <div :class="['h-0.5 w-10 mx-1', state === 'paid' ? 'bg-emerald-500' : 'bg-slate-200']"></div>
         <div :class="['w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center', state === 'paid' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400']">
           <svg v-if="state === 'paid'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -121,7 +121,7 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
           </svg>
           <span v-else>4</span>
         </div>
-        <span :class="['hidden sm:block text-xs font-medium mx-1', state === 'paid' ? 'text-emerald-600' : 'text-slate-400']">Selesai</span>
+        <span :class="['hidden sm:block text-xs font-medium mx-1', state === 'paid' ? 'text-emerald-600' : 'text-slate-400']">Done</span>
       </div>
     </div>
   </div>
@@ -149,12 +149,12 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
               </svg>
             </div>
           </div>
-          <h1 class="text-xl font-bold text-slate-800 mb-2">Mengecek Status Pembayaran</h1>
-          <p class="text-slate-500 text-sm mb-4">Harap tunggu, kami sedang memverifikasi pembayaran Anda...</p>
+          <h1 class="text-xl font-bold text-slate-800 mb-2">Checking Payment Status</h1>
+          <p class="text-slate-500 text-sm mb-4">Please wait, we are verifying your payment...</p>
           <p v-if="pollError" class="text-xs text-red-600 mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{{ pollError }}</p>
           <div class="flex items-center justify-center gap-2 text-xs text-slate-400">
             <span class="animate-spin w-3 h-3 border-2 border-primary-300 border-t-transparent rounded-full" aria-hidden="true"></span>
-            Percobaan {{ pollCount }} / {{ MAX_POLLS }}
+            Attempt {{ pollCount }} / {{ MAX_POLLS }}
           </div>
         </div>
       </template>
@@ -169,9 +169,9 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 class="text-2xl font-black mb-1">Pembayaran Berhasil!</h1>
+            <h1 class="text-2xl font-black mb-1">Payment Successful!</h1>
             <p class="text-emerald-100 text-sm font-mono font-bold">{{ orderNumber }}</p>
-            <p class="text-emerald-100 text-xs mt-2">Course Anda telah aktif. Selamat belajar!</p>
+            <p class="text-emerald-100 text-xs mt-2">Your course is now active. Enjoy learning!</p>
           </div>
         </div>
 
@@ -186,7 +186,7 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
             <span class="font-mono font-semibold text-slate-700">{{ order.order_number }}</span>
           </div>
           <div class="flex justify-between text-sm border-t border-slate-100 pt-3">
-            <span class="text-slate-400">Dibayar</span>
+            <span class="text-slate-400">Paid</span>
             <span class="font-bold text-emerald-600">{{ formatCurrency(order.total_amount) }}</span>
           </div>
         </div>
@@ -197,12 +197,12 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Mulai Belajar
+            Start Learning
           </BaseButton>
           <BaseButton v-else variant="primary" size="lg" block to="/courses">
-            Lihat Course
+            View Courses
           </BaseButton>
-          <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">Lihat Detail Order</BaseButton>
+          <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">View Order Details</BaseButton>
         </div>
       </template>
 
@@ -214,17 +214,17 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 class="text-xl font-bold text-slate-800 mb-2">Menunggu Konfirmasi</h1>
+          <h1 class="text-xl font-bold text-slate-800 mb-2">Waiting for Confirmation</h1>
           <p class="text-slate-500 text-sm mb-2">
-            Pembayaran Anda sedang diproses. Enrollment akan aktif otomatis dalam beberapa menit.
+            Your payment is being processed. Enrollment will activate automatically in a few minutes.
           </p>
           <p v-if="order?.student_email" class="text-slate-500 text-sm mb-6">
-            Notifikasi dikirim ke <strong class="text-slate-700">{{ order.student_email }}</strong>.
+            Notification sent to <strong class="text-slate-700">{{ order.student_email }}</strong>.
           </p>
 
           <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-xs text-amber-700 text-left">
-            <p class="font-semibold mb-1">Sudah transfer tapi belum terkonfirmasi?</p>
-            <p>Pembayaran biasanya dikonfirmasi dalam 1-5 menit. Jika lebih dari 10 menit, hubungi CS kami.</p>
+            <p class="font-semibold mb-1">Transferred but not confirmed yet?</p>
+            <p>Payment is usually confirmed within 1-5 minutes. If it takes more than 10 minutes, please contact our support.</p>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -232,10 +232,10 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Cek Status Lagi
+              Check Status Again
             </BaseButton>
-            <BaseButton variant="secondary" size="lg" block :to="`/orders/${orderNumber}`">Lihat Status Order</BaseButton>
-            <BaseButton variant="ghost" size="lg" block to="/">Kembali ke Beranda</BaseButton>
+            <BaseButton variant="secondary" size="lg" block :to="`/orders/${orderNumber}`">View Order Status</BaseButton>
+            <BaseButton variant="ghost" size="lg" block to="/">Back to Home</BaseButton>
           </div>
         </div>
       </template>
@@ -248,15 +248,15 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 class="text-xl font-bold text-slate-800 mb-2">Order Kedaluwarsa</h1>
+          <h1 class="text-xl font-bold text-slate-800 mb-2">Order Expired</h1>
           <p class="text-slate-500 text-sm mb-6">
-            Waktu pembayaran habis. Order ini sudah tidak dapat dibayar lagi. Silakan buat order baru.
+            Payment time has passed. This order can no longer be paid. Please create a new order.
           </p>
           <div class="flex flex-col gap-2">
             <BaseButton v-if="courseSlug" variant="primary" size="lg" block :to="`/checkout?course=${courseSlug}`">
-              Buat Order Baru
+              Create New Order
             </BaseButton>
-            <BaseButton variant="ghost" size="lg" block to="/courses">Lihat Course</BaseButton>
+            <BaseButton variant="ghost" size="lg" block to="/courses">View Courses</BaseButton>
           </div>
         </div>
       </template>
@@ -269,10 +269,10 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 class="text-xl font-bold text-slate-800 mb-2">Order Dibatalkan</h1>
-          <p class="text-slate-500 text-sm mb-6">Order ini telah dibatalkan dan tidak dapat dibayar lagi.</p>
+          <h1 class="text-xl font-bold text-slate-800 mb-2">Order Cancelled</h1>
+          <p class="text-slate-500 text-sm mb-6">This order has been cancelled and can no longer be paid.</p>
           <div class="flex flex-col gap-2">
-            <BaseButton variant="primary" size="lg" block to="/courses">Cari Course Lain</BaseButton>
+            <BaseButton variant="primary" size="lg" block to="/courses">Find Another Course</BaseButton>
           </div>
         </div>
       </template>
@@ -285,11 +285,11 @@ const paymentMethod = computed(() => snapshot.value?.payment_method || order.val
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 class="text-xl font-bold text-slate-800 mb-2">Pembayaran Gagal</h1>
-          <p class="text-slate-500 text-sm mb-6">Pembayaran tidak berhasil. Silakan coba lagi atau pilih metode lain.</p>
+          <h1 class="text-xl font-bold text-slate-800 mb-2">Payment Failed</h1>
+          <p class="text-slate-500 text-sm mb-6">Payment was unsuccessful. Please try again or choose another method.</p>
           <div class="flex flex-col gap-2">
-            <BaseButton variant="primary" size="lg" block :to="`/orders/${orderNumber}/payment`">Pilih Metode Lain</BaseButton>
-            <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">Lihat Detail Order</BaseButton>
+            <BaseButton variant="primary" size="lg" block :to="`/orders/${orderNumber}/payment`">Choose Another Method</BaseButton>
+            <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">View Order Details</BaseButton>
           </div>
         </div>
       </template>

@@ -2,7 +2,7 @@
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'profile', middleware: 'auth' })
-useSeoMeta({ title: 'Profil Saya' })
+useSeoMeta({ title: 'My Profile' })
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -21,9 +21,9 @@ async function refresh() {
   loadError.value = ''
   try {
     const u = await auth.fetchMe()
-    if (!u) loadError.value = 'Sesi Anda sudah berakhir. Silakan login kembali.'
+    if (!u) loadError.value = 'Your session has expired. Please sign in again.'
   } catch (err: unknown) {
-    loadError.value = (err as { message?: string }).message || 'Gagal memuat profil.'
+    loadError.value = (err as { message?: string }).message || 'Failed to load profile.'
   } finally {
     refreshing.value = false
   }
@@ -40,9 +40,9 @@ function statusBadgeClass(status?: string) {
 
 function statusLabel(status?: string) {
   switch (status) {
-    case 'active': return 'Aktif'
-    case 'pending_activation': return 'Menunggu Aktivasi'
-    case 'suspended': return 'Diblokir'
+    case 'active': return 'Active'
+    case 'pending_activation': return 'Pending Activation'
+    case 'suspended': return 'Suspended'
     default: return status || '—'
   }
 }
@@ -50,7 +50,7 @@ function statusLabel(status?: string) {
 function formatDate(iso: string | undefined) {
   if (!iso) return '—'
   try {
-    return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   } catch {
     return iso
   }
@@ -66,21 +66,21 @@ async function doLogout() {
   <div class="flex-1 min-w-0">
     <div class="flex items-center justify-between mb-5">
       <div>
-        <h2 class="text-xl font-bold text-slate-800">Profil Saya</h2>
+        <h2 class="text-xl font-bold text-slate-800">My Profile</h2>
       </div>
     </div>
 
-    <!-- Loading state (first load, no cached user) -->
+    <!-- Loading state -->
     <BaseCard v-if="!auth.user && refreshing" padding="lg" class="border border-slate-200 text-center">
       <BaseSpinner size="lg" />
-      <p class="text-slate-500 text-sm mt-3">Memuat profil...</p>
+      <p class="text-slate-500 text-sm mt-3">Loading profile...</p>
     </BaseCard>
 
     <!-- Error state -->
     <BaseCard v-else-if="loadError && !auth.user" padding="lg" class="border border-red-200 bg-red-50">
       <p class="text-sm text-red-700">{{ loadError }}</p>
       <div class="mt-4">
-        <BaseButton variant="primary" to="/login">Login Ulang</BaseButton>
+        <BaseButton variant="primary" to="/login">Sign In Again</BaseButton>
       </div>
     </BaseCard>
 
@@ -92,7 +92,7 @@ async function doLogout() {
             {{ (auth.user.full_name || auth.user.username || auth.user.email).charAt(0).toUpperCase() }}
           </div>
           <div class="flex-1 min-w-0">
-            <h2 class="text-lg font-bold text-slate-800 truncate">{{ auth.user.full_name || auth.user.username || 'Pengguna' }}</h2>
+            <h2 class="text-lg font-bold text-slate-800 truncate">{{ auth.user.full_name || auth.user.username || 'User' }}</h2>
             <p class="text-sm text-slate-500 truncate">{{ auth.user.email }}</p>
             <span v-if="auth.user.status" :class="['inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-full', statusBadgeClass(auth.user.status)]">
               {{ statusLabel(auth.user.status) }}
@@ -102,10 +102,10 @@ async function doLogout() {
       </BaseCard>
 
       <BaseCard padding="lg" class="border border-slate-200">
-        <h3 class="font-semibold text-slate-700 mb-4">Detail Akun</h3>
+        <h3 class="font-semibold text-slate-700 mb-4">Account Details</h3>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
-            <dt class="text-slate-500">Nama Lengkap</dt>
+            <dt class="text-slate-500">Full Name</dt>
             <dd class="text-slate-800 font-medium mt-1">{{ auth.user.full_name || '—' }}</dd>
           </div>
           <div>
@@ -117,30 +117,22 @@ async function doLogout() {
             <dd class="text-slate-800 font-medium mt-1">{{ auth.user.email }}</dd>
           </div>
           <div>
-            <dt class="text-slate-500">Nomor HP</dt>
+            <dt class="text-slate-500">Phone Number</dt>
             <dd class="text-slate-800 font-medium mt-1">{{ auth.user.phone || '—' }}</dd>
           </div>
           <div>
-            <dt class="text-slate-500">Role</dt>
-            <dd class="text-slate-800 font-medium mt-1">{{ (auth.user.roles && auth.user.roles.length ? auth.user.roles.join(', ') : auth.user.role) || (auth.user.is_student ? 'STUDENT' : '—') }}</dd>
-          </div>
-          <div>
-            <dt class="text-slate-500">Login Terakhir</dt>
+            <dt class="text-slate-500">Last Login</dt>
             <dd class="text-slate-800 font-medium mt-1">{{ formatDate(auth.user.last_login || undefined) }}</dd>
           </div>
           <div>
-            <dt class="text-slate-500">Bergabung</dt>
+            <dt class="text-slate-500">Member Since</dt>
             <dd class="text-slate-800 font-medium mt-1">{{ formatDate(auth.user.created_at) }}</dd>
-          </div>
-          <div>
-            <dt class="text-slate-500">User ID</dt>
-            <dd class="text-slate-800 font-mono text-xs mt-1">#{{ auth.user.id }}</dd>
           </div>
         </dl>
       </BaseCard>
 
       <BaseCard padding="lg" class="border border-slate-200">
-        <h3 class="font-semibold text-slate-700 mb-4">Aktivitas</h3>
+        <h3 class="font-semibold text-slate-700 mb-4">Activity</h3>
         <NuxtLink
           to="/orders"
           class="flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50/40 transition-colors group"
@@ -152,8 +144,8 @@ async function doLogout() {
               </svg>
             </div>
             <div class="min-w-0">
-              <p class="text-sm font-semibold text-slate-800 group-hover:text-primary-700">Order Saya</p>
-              <p class="text-xs text-slate-500">Riwayat pembelian course Anda</p>
+              <p class="text-sm font-semibold text-slate-800 group-hover:text-primary-700">My Orders</p>
+              <p class="text-xs text-slate-500">Your course purchase history</p>
             </div>
           </div>
           <svg class="w-4 h-4 text-slate-400 group-hover:text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -163,11 +155,11 @@ async function doLogout() {
       </BaseCard>
 
       <BaseCard padding="lg" class="border border-slate-200">
-        <h3 class="font-semibold text-slate-700 mb-4">Pengaturan</h3>
+        <h3 class="font-semibold text-slate-700 mb-4">Settings</h3>
         <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
-          <BaseButton v-if="enableProfileEdit" variant="primary" to="/profile/edit">Edit Profil</BaseButton>
-          <BaseButton variant="secondary" to="/forgot-password">Ganti Kata Sandi</BaseButton>
-          <BaseButton variant="ghost" @click="doLogout">Keluar</BaseButton>
+          <BaseButton v-if="enableProfileEdit" variant="primary" to="/profile/edit">Edit Profile</BaseButton>
+          <BaseButton variant="secondary" to="/forgot-password">Change Password</BaseButton>
+          <BaseButton variant="ghost" @click="doLogout">Sign Out</BaseButton>
         </div>
       </BaseCard>
     </div>

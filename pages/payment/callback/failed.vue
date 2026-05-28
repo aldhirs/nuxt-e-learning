@@ -1,11 +1,11 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'minimal' })
 
-useSeoMeta({ title: 'Pembayaran Gagal' })
+useSeoMeta({ title: 'Payment Failed' })
 
 const route = useRoute()
 const orderNumber = computed(() => route.query.order_number as string)
-const reason = computed(() => route.query.reason as string || 'Pembayaran dibatalkan atau gagal diproses oleh penyedia e-wallet.')
+const reason = computed(() => route.query.reason as string || 'Payment was cancelled or could not be processed by the e-wallet provider.')
 </script>
 
 <template>
@@ -18,7 +18,7 @@ const reason = computed(() => route.query.reason as string || 'Pembayaran dibata
         </svg>
       </div>
 
-      <h1 class="text-xl font-bold text-slate-800 mb-2">Pembayaran Gagal</h1>
+      <h1 class="text-xl font-bold text-slate-800 mb-2">Payment Failed</h1>
       <p class="text-slate-500 text-sm mb-6">{{ reason }}</p>
 
       <div class="flex flex-col gap-2">
@@ -27,21 +27,21 @@ const reason = computed(() => route.query.reason as string || 'Pembayaran dibata
           variant="primary"
           :to="`/orders/${orderNumber}/payment`"
         >
-          Coba Metode Lain
+          Try Another Method
         </BaseButton>
         <BaseButton
           v-if="orderNumber"
           variant="secondary"
           :to="`/orders/${orderNumber}`"
         >
-          Lihat Detail Order
+          View Order Details
         </BaseButton>
-        <BaseButton variant="ghost" to="/courses">Jelajahi Course</BaseButton>
+        <BaseButton variant="ghost" to="/courses">Browse Courses</BaseButton>
       </div>
 
       <p class="text-xs text-slate-400 mt-6">
-        Butuh bantuan?
-        <NuxtLink to="/kontak" class="text-primary-600 hover:underline">Hubungi CS kami</NuxtLink>
+        Need help?
+        <NuxtLink to="/kontak" class="text-primary-600 hover:underline">Contact our support</NuxtLink>
       </p>
 
     </div>

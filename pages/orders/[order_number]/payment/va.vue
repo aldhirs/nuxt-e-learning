@@ -152,7 +152,7 @@ onBeforeUnmount(() => {
   if (redirectTimer) clearInterval(redirectTimer)
 })
 
-// --- Manual "Saya Sudah Transfer" check ---
+// --- Manual "I've Already Transferred" check ---
 const manualChecking = ref(false)
 const manualResult = ref<'' | 'pending' | 'paid'>('')
 
@@ -212,25 +212,25 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       name: 'BCA', color: 'bg-blue-600',
       methods: {
         atm: [
-          'Masukkan kartu ATM BCA dan PIN Anda',
-          'Pilih Transaksi Lainnya → Transfer → ke Rek BCA Virtual Account',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Selesai, simpan struk sebagai bukti'
+          'Insert your BCA ATM card and PIN',
+          'Select Other Transactions → Transfer → to BCA Virtual Account',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Done, save the receipt as proof'
         ],
         mobile: [
-          'Buka aplikasi BCA Mobile',
-          'Pilih m-BCA → m-Transfer → BCA Virtual Account',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Masukkan PIN m-BCA dan konfirmasi'
+          'Open the BCA Mobile app',
+          'Select m-BCA → m-Transfer → BCA Virtual Account',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Enter your m-BCA PIN and confirm'
         ],
         internet: [
-          'Login KlikBCA di klikbca.com',
-          'Pilih Transfer Dana → Transfer ke BCA Virtual Account',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Masukkan KeyBCA APPLI 1 dan konfirmasi'
+          'Log in to KlikBCA at klikbca.com',
+          'Select Fund Transfer → Transfer to BCA Virtual Account',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Enter your KeyBCA APPLI 1 and confirm'
         ]
       }
     },
@@ -238,25 +238,25 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       name: 'Mandiri', color: 'bg-amber-500',
       methods: {
         atm: [
-          'Masukkan kartu ATM Mandiri dan PIN Anda',
-          'Pilih Bayar/Beli → Lainnya → Multi Payment',
-          'Masukkan kode perusahaan: 70012',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a} dan selesaikan transaksi`
+          'Insert your Mandiri ATM card and PIN',
+          'Select Pay/Buy → Others → Multi Payment',
+          'Enter company code: 70012',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a} and complete the transaction`
         ],
         mobile: [
-          'Buka aplikasi Livin\' by Mandiri',
-          'Pilih Pembayaran → Multi Payment',
-          'Masukkan kode perusahaan: 70012',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a} dan masukkan PIN`
+          'Open the Livin\' by Mandiri app',
+          'Select Payments → Multi Payment',
+          'Enter company code: 70012',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a} and enter your PIN`
         ],
         internet: [
-          'Login Internet Banking Mandiri di ib.bankmandiri.co.id',
-          'Pilih Pembayaran → Multi Payment',
-          'Masukkan kode perusahaan: 70012',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a} dan masukkan token`
+          'Log in to Mandiri Internet Banking at ib.bankmandiri.co.id',
+          'Select Payments → Multi Payment',
+          'Enter company code: 70012',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a} and enter your token`
         ]
       }
     },
@@ -264,25 +264,25 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       name: 'BRI', color: 'bg-blue-800',
       methods: {
         atm: [
-          'Masukkan kartu ATM BRI dan PIN Anda',
-          'Pilih Transaksi Lain → Pembayaran → Lainnya → BRIVA',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Selesai, simpan struk sebagai bukti'
+          'Insert your BRI ATM card and PIN',
+          'Select Other Transactions → Payments → Others → BRIVA',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Done, save the receipt as proof'
         ],
         mobile: [
-          'Buka aplikasi BRImo',
-          'Pilih BRIVA',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Masukkan PIN BRImo dan konfirmasi'
+          'Open the BRImo app',
+          'Select BRIVA',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Enter your BRImo PIN and confirm'
         ],
         internet: [
-          'Login Internet Banking BRI di ib.bri.co.id',
-          'Pilih Pembayaran → BRIVA',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Masukkan password dan mToken BRI'
+          'Log in to BRI Internet Banking at ib.bri.co.id',
+          'Select Payments → BRIVA',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Enter your BRI password and mToken'
         ]
       }
     },
@@ -290,25 +290,25 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       name: 'BNI', color: 'bg-orange-500',
       methods: {
         atm: [
-          'Masukkan kartu ATM BNI dan PIN Anda',
-          'Pilih Menu Lainnya → Transfer → Rekening Tabungan → Virtual Account',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Selesai, simpan struk sebagai bukti'
+          'Insert your BNI ATM card and PIN',
+          'Select Other Menu → Transfer → Savings Account → Virtual Account',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Done, save the receipt as proof'
         ],
         mobile: [
-          'Buka aplikasi BNI Mobile Banking',
-          'Pilih Transfer → Virtual Account Billing',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Masukkan PIN BNI Mobile dan konfirmasi'
+          'Open the BNI Mobile Banking app',
+          'Select Transfer → Virtual Account Billing',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Enter your BNI Mobile PIN and confirm'
         ],
         internet: [
-          'Login BNI Internet Banking di ibank.bni.co.id',
-          'Pilih Transfer → Virtual Account Billing',
-          `Masukkan nomor VA: ${v}`,
-          `Konfirmasi nominal ${a}`,
-          'Masukkan password transaksi'
+          'Log in to BNI Internet Banking at ibank.bni.co.id',
+          'Select Transfer → Virtual Account Billing',
+          `Enter VA number: ${v}`,
+          `Confirm the amount ${a}`,
+          'Enter your transaction password'
         ]
       }
     }
@@ -337,10 +337,10 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         <span class="hidden sm:block text-xs font-medium text-emerald-600 mx-1">Checkout</span>
         <div class="h-0.5 w-10 mx-1 bg-primary-500"></div>
         <div class="w-7 h-7 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center">3</div>
-        <span class="hidden sm:block text-xs font-medium text-primary-600 mx-1">Pembayaran</span>
+        <span class="hidden sm:block text-xs font-medium text-primary-600 mx-1">Payment</span>
         <div class="h-0.5 w-10 mx-1 bg-slate-200"></div>
         <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-400 text-xs font-bold flex items-center justify-center">4</div>
-        <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Selesai</span>
+        <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Done</span>
       </div>
     </div>
   </div>
@@ -359,9 +359,9 @@ const bankInstructions = computed<BankInstruction | null>(() => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 class="text-xl font-black text-slate-800 mb-2">Pembayaran Berhasil!</h2>
+          <h2 class="text-xl font-black text-slate-800 mb-2">Payment Successful!</h2>
           <p class="text-slate-500 text-sm mb-1">Order <span class="font-mono font-bold text-slate-700">{{ orderNumber }}</span></p>
-          <p class="text-slate-400 text-xs mt-3">Mengalihkan dalam {{ redirectCountdown }} detik...</p>
+          <p class="text-slate-400 text-xs mt-3">Redirecting in {{ redirectCountdown }} seconds...</p>
           <div class="mt-4">
             <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
@@ -386,7 +386,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         <svg class="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        Pembayaran belum terkonfirmasi. Mohon tunggu beberapa saat.
+        Payment not yet confirmed. Please wait a moment.
       </div>
     </Transition>
   </Teleport>
@@ -405,9 +405,9 @@ const bankInstructions = computed<BankInstruction | null>(() => {
   <div v-else-if="!rawSession && !order" class="max-w-xl mx-auto px-4 py-20">
     <BaseEmptyState
       icon="alert"
-      title="Order tidak ditemukan"
-      description="Silakan kembali dan ulangi dari pilih metode pembayaran."
-      cta-label="Lihat Order Saya"
+      title="Order not found"
+      description="Please go back and start again from the payment method selection."
+      cta-label="View My Orders"
       cta-to="/orders"
     />
   </div>
@@ -416,9 +416,9 @@ const bankInstructions = computed<BankInstruction | null>(() => {
   <div v-else-if="!hasVaData" class="max-w-xl mx-auto px-4 py-20">
     <BaseEmptyState
       icon="alert"
-      title="Data Virtual Account tidak tersedia"
-      description="Silakan pilih metode pembayaran Virtual Account terlebih dahulu."
-      cta-label="Pilih Metode Bayar"
+      title="Virtual Account data not available"
+      description="Please select a Virtual Account payment method first."
+      cta-label="Select Payment Method"
       :cta-to="`/orders/${orderNumber}/payment`"
     />
   </div>
@@ -435,7 +435,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       <svg class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
-      Ganti metode pembayaran
+      Change payment method
     </NuxtLink>
 
     <!-- Expired alert -->
@@ -444,8 +444,8 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div class="flex-1">
-        <p class="text-sm font-bold text-red-700">Order Kedaluwarsa</p>
-        <p class="text-xs text-red-600 mt-0.5">Waktu pembayaran telah habis. Silakan buat order baru untuk melanjutkan.</p>
+        <p class="text-sm font-bold text-red-700">Order Expired</p>
+        <p class="text-xs text-red-600 mt-0.5">Payment time has expired. Please create a new order to continue.</p>
       </div>
     </div>
 
@@ -455,7 +455,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div class="flex-1">
-        <p class="text-sm font-semibold text-amber-800">Selesaikan pembayaran dalam</p>
+        <p class="text-sm font-semibold text-amber-800">Complete payment within</p>
         <p class="text-xs text-amber-600">Order <span class="font-mono font-bold">{{ orderNumber }}</span></p>
       </div>
       <div class="text-right">
@@ -482,7 +482,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
 
         <!-- VA Number -->
         <div class="mb-6">
-          <p class="text-xs text-white/60 mb-2 uppercase tracking-wider">Nomor Virtual Account</p>
+          <p class="text-xs text-white/60 mb-2 uppercase tracking-wider">Virtual Account Number</p>
           <p class="font-mono text-3xl md:text-4xl font-black tracking-wider break-all select-all">
             {{ vaNumber }}
           </p>
@@ -494,7 +494,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
           :disabled="isExpired || vaNumber === '—'"
           class="mb-6 flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/30 text-sm font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
           :style="copied ? 'background: rgba(16,185,129,.4);' : 'background: rgba(255,255,255,.15);'"
-          aria-label="Salin nomor VA"
+          aria-label="Copy VA number"
           @click="copyVA"
         >
           <svg v-if="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -503,17 +503,17 @@ const bankInstructions = computed<BankInstruction | null>(() => {
           <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          {{ copied ? 'Tersalin!' : 'Salin Nomor VA' }}
+          {{ copied ? 'Copied!' : 'Copy VA Number' }}
         </button>
 
         <!-- Bottom: account name + amount -->
         <div class="border-t border-white/20 pt-5 grid grid-cols-2 gap-4">
           <div>
-            <p class="text-xs text-white/60 mb-1">Atas Nama</p>
+            <p class="text-xs text-white/60 mb-1">Account Name</p>
             <p class="text-sm font-bold">DRILLSPACE</p>
           </div>
           <div class="text-right">
-            <p class="text-xs text-white/60 mb-1">Total Pembayaran</p>
+            <p class="text-xs text-white/60 mb-1">Total Payment</p>
             <p class="text-base font-black tabular-nums">{{ formatCurrency(vaAmount) }}</p>
           </div>
         </div>
@@ -526,8 +526,8 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
       </svg>
       <span>
-        Bayar dengan nominal <strong>tepat</strong> sesuai tagihan.
-        Lebih atau kurang 1 digit akan gagal diverifikasi otomatis.
+        Pay the <strong>exact</strong> amount as billed.
+        Paying more or less by even 1 digit will fail automatic verification.
       </span>
     </div>
 
@@ -536,16 +536,16 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       <div class="flex items-center justify-between gap-4">
         <div>
           <p class="text-sm font-bold text-slate-700 flex items-center gap-2">
-            Status Pembayaran
+            Payment Status
             <span class="animate-spin w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full" aria-hidden="true"></span>
           </p>
-          <p class="text-xs text-slate-400 mt-0.5">Status otomatis diperbarui setiap 10 detik</p>
+          <p class="text-xs text-slate-400 mt-0.5">Status automatically updated every 10 seconds</p>
         </div>
         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 flex-shrink-0">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Menunggu Pembayaran
+          Awaiting Payment
         </span>
       </div>
     </div>
@@ -557,7 +557,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
           <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          Cara Pembayaran {{ bankInstructions.name }}
+          How to Pay with {{ bankInstructions.name }}
         </h2>
       </div>
 
@@ -611,7 +611,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
             Mobile Banking
-            <span class="text-xs text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded-full">Populer</span>
+            <span class="text-xs text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded-full">Popular</span>
           </span>
           <svg
             :class="['w-4 h-4 text-slate-400 transition-transform duration-200', showMobile ? 'rotate-180' : '']"
@@ -688,7 +688,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         <svg v-if="!manualChecking" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
-        {{ manualChecking ? 'Memeriksa...' : 'Saya Sudah Transfer' }}
+        {{ manualChecking ? 'Checking...' : 'I\'ve Already Transferred' }}
       </BaseButton>
 
       <BaseButton
@@ -698,11 +698,11 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         block
         :to="`/checkout?course=${order.course.slug}`"
       >
-        Buat Order Baru
+        Create New Order
       </BaseButton>
 
       <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
-        Kembali ke Detail Order
+        Back to Order Details
       </BaseButton>
     </div>
 
@@ -710,7 +710,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
       </svg>
-      Transaksi aman &amp; terenkripsi SSL 256-bit
+      Secure &amp; SSL 256-bit encrypted transaction
     </p>
   </div>
 </template>

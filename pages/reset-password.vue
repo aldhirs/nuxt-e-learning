@@ -5,12 +5,12 @@ import { required, minLength, sameAs, helpers } from '@vuelidate/validators'
 
 // Mirrors BE isPasswordComplex: min 8 char, must contain letter AND digit.
 const passwordComplex = helpers.withMessage(
-  'Kata sandi minimal 8 karakter dan harus mengandung huruf dan angka',
+  'Password must be at least 8 characters and contain letters and numbers',
   (v: string) => /[a-zA-Z]/.test(v) && /[0-9]/.test(v) && v.length >= 8
 )
 
 definePageMeta({ layout: 'minimal' })
-useSeoMeta({ title: 'Reset Kata Sandi' })
+useSeoMeta({ title: 'Reset Password' })
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +28,7 @@ const rules = {
   password: { required, passwordComplex },
   password_confirm: {
     required,
-    sameAs: helpers.withMessage('Kata sandi tidak cocok', sameAs(passwordRef))
+    sameAs: helpers.withMessage('Passwords do not match', sameAs(passwordRef))
   }
 }
 const v$ = useVuelidate(rules, form)
@@ -36,7 +36,7 @@ const v$ = useVuelidate(rules, form)
 async function submit() {
   serverError.value = ''
   if (!tokenParam.value) {
-    serverError.value = 'Link reset tidak valid. Token tidak ditemukan.'
+    serverError.value = 'Invalid reset link. Token not found.'
     return
   }
   const ok = await v$.value.$validate()
@@ -52,11 +52,11 @@ async function submit() {
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string }
     if (e.status === 404) {
-      serverError.value = e.message || 'Link reset tidak valid atau sudah kadaluarsa. Minta link baru?'
+      serverError.value = e.message || 'Reset link is invalid or has expired. Request a new one?'
     } else if (e.status === 422) {
-      serverError.value = e.message || 'Kata sandi belum memenuhi syarat.'
+      serverError.value = e.message || 'Password does not meet requirements.'
     } else {
-      serverError.value = e.message || 'Gagal reset kata sandi.'
+      serverError.value = e.message || 'Failed to reset password.'
     }
   } finally {
     isLoading.value = false
@@ -68,8 +68,8 @@ async function submit() {
   <div class="min-h-[calc(100vh-112px)] flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-slate-800">Reset Kata Sandi</h1>
-        <p class="text-slate-500 text-sm mt-2">Buat kata sandi baru untuk akun Anda.</p>
+        <h1 class="text-2xl font-bold text-slate-800">Reset Password</h1>
+        <p class="text-slate-500 text-sm mt-2">Create a new password for your account.</p>
       </div>
 
       <!-- Invalid: no token -->
@@ -79,9 +79,9 @@ async function submit() {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
-        <h2 class="text-lg font-bold text-slate-800 mb-2">Link Tidak Valid</h2>
-        <p class="text-slate-500 text-sm mb-6">Token reset tidak ditemukan. Pastikan Anda membuka link dari email kami.</p>
-        <BaseButton variant="primary" to="/forgot-password">Minta Link Baru</BaseButton>
+        <h2 class="text-lg font-bold text-slate-800 mb-2">Invalid Link</h2>
+        <p class="text-slate-500 text-sm mb-6">Reset token not found. Make sure you opened the link from our email.</p>
+        <BaseButton variant="primary" to="/forgot-password">Request New Link</BaseButton>
       </div>
 
       <!-- Success -->
@@ -91,8 +91,8 @@ async function submit() {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 class="text-lg font-bold text-slate-800 mb-2">Kata sandi berhasil direset</h2>
-        <p class="text-slate-500 text-sm mb-6">Silakan login dengan kata sandi baru Anda. Mengalihkan…</p>
+        <h2 class="text-lg font-bold text-slate-800 mb-2">Password reset successful</h2>
+        <p class="text-slate-500 text-sm mb-6">Please sign in with your new password. Redirecting…</p>
       </div>
 
       <!-- Form -->
@@ -108,8 +108,8 @@ async function submit() {
           <BaseInput
             v-model="form.password"
             type="password"
-            label="Kata Sandi Baru"
-            placeholder="Minimal 8 karakter"
+            label="New Password"
+            placeholder="Min. 8 characters"
             :error="v$.password.$error ? (v$.password.$errors[0]?.$message as string) : ''"
             required
             @blur="v$.password.$touch"
@@ -117,8 +117,8 @@ async function submit() {
           <BaseInput
             v-model="form.password_confirm"
             type="password"
-            label="Konfirmasi Kata Sandi"
-            placeholder="Ulangi kata sandi"
+            label="Confirm Password"
+            placeholder="Repeat your password"
             :error="v$.password_confirm.$error ? (v$.password_confirm.$errors[0]?.$message as string) : ''"
             required
             @blur="v$.password_confirm.$touch"
@@ -132,7 +132,7 @@ async function submit() {
             :loading="isLoading"
             :disabled="isLoading || v$.$invalid"
           >
-            Reset Kata Sandi
+            Reset Password
           </BaseButton>
         </form>
       </BaseCard>

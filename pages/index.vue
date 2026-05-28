@@ -4,8 +4,8 @@ import type { FeaturedHomepage, Testimonial } from '~/types'
 
 definePageMeta({ layout: 'default' })
 useSeoMeta({
-  title: 'Platform Pelatihan Maritim Terpercaya',
-  description: 'DrillSpace — tingkatkan kompetensi maritim Anda bersama instruktur bersertifikat STCW dan para ahli industri.'
+  title: 'Trusted Maritime Training Platform',
+  description: 'DrillSpace — enhance your maritime competency with STCW-certified instructors and industry experts.'
 })
 
 const homepage = useHomepageApi()
@@ -29,10 +29,10 @@ const revealed = reactive<Record<string, boolean>>({})
 
 // ── Stats count-up ────────────────────────────────────────────────────────────
 const statsData = [
-  { end: 200,   suffix: '+',  label: 'Course Tersedia',  icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-  { end: 50,    suffix: '+',  label: 'Instruktur Ahli',   icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-  { end: 15000, suffix: '+',  label: 'Pelajar Aktif',     icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-  { end: 98,    suffix: '%',  label: 'Tingkat Kepuasan',  icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+  { end: 200,   suffix: '+',  label: 'Courses Available',  icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+  { end: 50,    suffix: '+',  label: 'Expert Instructors', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+  { end: 15000, suffix: '+',  label: 'Active Learners',    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
+  { end: 98,    suffix: '%',  label: 'Satisfaction Rate',  icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
 ]
 const displayStats = ref(statsData.map(s => ({ ...s, current: 0 })))
 let countersStarted = false
@@ -76,10 +76,10 @@ function startCarousel() {
 
 // ── Feature items ─────────────────────────────────────────────────────────────
 const features = [
-  { num: '01', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', title: 'Bersertifikat STCW', desc: 'Semua course memenuhi standar internasional STCW yang diakui secara global.' },
-  { num: '02', icon: 'M15 10l4.553-2.069A1 1 0 0121 8.882V15.12a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z', title: 'Video HD Premium', desc: 'Materi video kualitas tinggi, bisa diputar ulang kapan saja dan dapat diunduh.' },
-  { num: '03', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Belajar Fleksibel', desc: 'Akses seumur hidup tanpa batas waktu. Belajar sesuai jadwal dan ritme Anda.' },
-  { num: '04', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', title: 'Komunitas Aktif', desc: 'Bergabung bersama ribuan profesional maritim dan bangun koneksi karier.' },
+  { num: '01', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', title: 'STCW Certified', desc: 'All courses meet international STCW standards recognized globally.' },
+  { num: '02', icon: 'M15 10l4.553-2.069A1 1 0 0121 8.882V15.12a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z', title: 'Premium HD Video', desc: 'High-quality video content, replayable anytime and downloadable.' },
+  { num: '03', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Flexible Learning', desc: 'Lifetime access with no time limit. Learn at your own pace and schedule.' },
+  { num: '04', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', title: 'Active Community', desc: 'Join thousands of maritime professionals and build your career connections.' },
 ]
 
 // ── Section refs ──────────────────────────────────────────────────────────────
@@ -138,19 +138,19 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
             <!-- Eyebrow badge -->
             <div class="inline-flex items-center gap-2 bg-white border border-slate-200 shadow-sm text-primary-600 text-xs font-bold px-4 py-2 rounded-full mb-6 animate-fade-in-up">
               <span class="w-2 h-2 rounded-full bg-primary-500 animate-pulse-dot"></span>
-              Platform Pelatihan Maritim #1 di Indonesia
+              #1 Maritime Training Platform in Indonesia
             </div>
 
             <!-- Headline -->
             <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] text-slate-900 mb-5 animate-fade-in-up stagger-1">
-              Kuasai<br>
-              <span class="text-primary-500">Keahlian Maritim</span><br>
-              Bersama Para Ahli!
+              Master Your<br>
+              <span class="text-primary-500">Maritime Skills</span><br>
+              With Industry Experts!
             </h1>
 
             <!-- Subtitle -->
             <p class="text-slate-500 text-base sm:text-lg mb-10 max-w-md leading-relaxed animate-fade-in-up stagger-2">
-              Akses ratusan course bersertifikat STCW dari instruktur berpengalaman dan buktikan keahlian Anda.
+              Access hundreds of STCW-certified courses from experienced instructors and prove your expertise.
             </p>
 
             <!-- Promo cards row (like reference) -->
@@ -159,23 +159,23 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
               <!-- Card 1: STCW featured -->
               <div class="bg-accent rounded-2xl p-5 w-48 flex-shrink-0 shadow-md shadow-amber-200/50 relative overflow-hidden">
                 <div class="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/20"></div>
-                <p class="text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Populer</p>
+                <p class="text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Popular</p>
                 <p class="text-sm font-black text-slate-900 leading-snug mb-1">Basic Safety Training</p>
-                <p class="text-xs text-slate-700 mb-4">STCW VI/1 tersertifikasi</p>
+                <p class="text-xs text-slate-700 mb-4">STCW VI/1 certified</p>
                 <NuxtLink to="/courses"
                   class="inline-flex items-center gap-1 bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors active:scale-95">
-                  Mulai Belajar
+                  Start Learning
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                 </NuxtLink>
               </div>
 
               <!-- Card 2: Free courses -->
               <div class="bg-white rounded-2xl p-5 w-48 flex-shrink-0 shadow-md shadow-slate-200/80">
-                <span class="inline-block bg-green-100 text-green-700 text-[10px] font-black px-2.5 py-1 rounded-md mb-3 uppercase tracking-wide">100+ Gratis</span>
-                <p class="text-sm font-black text-primary-600 leading-snug mb-4">Akses Course Gratis Sekarang</p>
+                <span class="inline-block bg-green-100 text-green-700 text-[10px] font-black px-2.5 py-1 rounded-md mb-3 uppercase tracking-wide">100+ Free</span>
+                <p class="text-sm font-black text-primary-600 leading-snug mb-4">Access Free Courses Now</p>
                 <NuxtLink to="/courses?is_free=true"
                   class="inline-flex items-center gap-1 bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors active:scale-95">
-                  Lihat Sekarang
+                  View Now
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                 </NuxtLink>
               </div>
@@ -200,7 +200,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
                     </svg>
                   </div>
                   <div>
-                    <p class="text-xs text-slate-400 font-medium">Sedang Dipelajari</p>
+                    <p class="text-xs text-slate-400 font-medium">Currently Learning</p>
                     <p class="text-sm font-bold text-slate-800">Basic Safety Training</p>
                   </div>
                   <span class="ml-auto text-xs font-bold text-primary-500 bg-primary-50 px-2 py-0.5 rounded-full">STCW</span>
@@ -238,8 +238,8 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
                   </div>
                 </div>
                 <div>
-                  <p class="text-xs font-black text-slate-800">15.000+</p>
-                  <p class="text-[10px] text-slate-400 leading-none">Pelajar</p>
+                  <p class="text-xs font-black text-slate-800">15,000+</p>
+                  <p class="text-[10px] text-slate-400 leading-none">Learners</p>
                 </div>
               </div>
 
@@ -251,8 +251,8 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
                   </svg>
                 </div>
                 <div>
-                  <p class="text-xs font-black text-slate-800">Sertifikat STCW</p>
-                  <p class="text-[10px] text-green-500 font-semibold">Diakui Internasional</p>
+                  <p class="text-xs font-black text-slate-800">STCW Certificate</p>
+                  <p class="text-[10px] text-green-500 font-semibold">Internationally Recognized</p>
                 </div>
               </div>
             </div>
@@ -283,7 +283,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
             </div>
             <div>
               <p class="text-2xl font-extrabold text-slate-800 tabular-nums leading-none">
-                {{ stat.current.toLocaleString('id-ID') }}<span class="text-primary-500">{{ stat.suffix }}</span>
+                {{ stat.current.toLocaleString('en-US') }}<span class="text-primary-500">{{ stat.suffix }}</span>
               </p>
               <p class="text-xs text-slate-500 mt-1">{{ stat.label }}</p>
             </div>
@@ -302,12 +302,12 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
           :class="['flex items-end justify-between mb-4 transition-all duration-700', revealed.courses ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
         >
           <div>
-            <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-2">Kurikulum Terbaik</p>
-            <h2 class="text-3xl font-extrabold text-slate-800">Course <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Pilihan</span></h2>
-            <p class="text-slate-500 text-sm mt-1.5">Course terpopuler minggu ini, dikurasi oleh instruktur ahli</p>
+            <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-2">Best Curriculum</p>
+            <h2 class="text-3xl font-extrabold text-slate-800">Featured <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Courses</span></h2>
+            <p class="text-slate-500 text-sm mt-1.5">Most popular courses this week, curated by expert instructors</p>
           </div>
           <BaseButton variant="ghost" to="/courses" size="sm" class="hidden sm:flex !text-primary-600 !font-semibold gap-1">
-            Lihat semua
+            View all
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
@@ -321,16 +321,16 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
 
         <!-- Error -->
         <BaseCard v-else-if="featuredError" padding="lg" class="border border-red-200 bg-red-50">
-          <p class="text-sm text-red-700 mb-3">Gagal memuat course pilihan.</p>
-          <BaseButton variant="secondary" size="sm" @click="refreshFeatured()">Coba lagi</BaseButton>
+          <p class="text-sm text-red-700 mb-3">Failed to load featured courses.</p>
+          <BaseButton variant="secondary" size="sm" @click="refreshFeatured()">Try Again</BaseButton>
         </BaseCard>
 
         <!-- Empty -->
         <BaseEmptyState
           v-else-if="featuredCourses.length === 0"
-          title="Belum ada course pilihan"
-          description="Course akan ditampilkan di sini segera."
-          cta-label="Jelajahi semua course"
+          title="No featured courses yet"
+          description="Courses will be displayed here soon."
+          cta-label="Explore all courses"
           cta-to="/courses"
         />
 
@@ -339,6 +339,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
           <div
             v-for="(course, i) in featuredCourses"
             :key="course.id"
+            class="h-full"
             :class="['transition-all duration-700', revealed.courses ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10']"
             :style="{ transitionDelay: `${80 + i * 70}ms` }"
           >
@@ -348,7 +349,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
 
         <!-- Mobile see all -->
         <div class="mt-8 flex justify-center sm:hidden">
-          <BaseButton variant="secondary" to="/courses">Lihat Semua Course</BaseButton>
+          <BaseButton variant="secondary" to="/courses">View All Courses</BaseButton>
         </div>
       </div>
     </section>
@@ -362,9 +363,9 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
         <div
           :class="['text-center mb-16 transition-all duration-700', revealed.why ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
         >
-          <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-2">Keunggulan Kami</p>
-          <h2 class="text-3xl font-extrabold text-slate-800">Mengapa <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">DrillSpace?</span></h2>
-          <p class="text-slate-500 mt-3 max-w-xl mx-auto">Dirancang khusus untuk profesional maritim Indonesia yang ingin naik kelas di industri global</p>
+          <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-2">Why Choose Us</p>
+          <h2 class="text-3xl font-extrabold text-slate-800">Why <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">DrillSpace?</span></h2>
+          <p class="text-slate-500 mt-3 max-w-xl mx-auto">Designed specifically for maritime professionals who want to excel in the global industry</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -407,9 +408,9 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div :class="['text-center mb-12 transition-all duration-700', revealed.testimonials ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']">
-          <p class="text-xs font-semibold tracking-widest text-primary-200 uppercase mb-2">Cerita Sukses</p>
-          <h2 class="text-3xl font-extrabold text-white">Apa Kata Mereka?</h2>
-          <p class="text-primary-200 mt-2">Ribuan profesional maritim sudah membuktikannya</p>
+          <p class="text-xs font-semibold tracking-widest text-primary-200 uppercase mb-2">Success Stories</p>
+          <h2 class="text-3xl font-extrabold text-white">What They Say</h2>
+          <p class="text-primary-200 mt-2">Thousands of maritime professionals have proven it</p>
         </div>
 
         <!-- Loading -->
@@ -419,8 +420,8 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
 
         <!-- Error -->
         <div v-else-if="testimonialsError" class="text-center">
-          <p class="text-sm text-primary-200 mb-3">Gagal memuat testimoni.</p>
-          <BaseButton variant="secondary" size="sm" @click="refreshTestimonials()">Coba lagi</BaseButton>
+          <p class="text-sm text-primary-200 mb-3">Failed to load testimonials.</p>
+          <BaseButton variant="secondary" size="sm" @click="refreshTestimonials()">Try Again</BaseButton>
         </div>
 
         <!-- Carousel -->
@@ -439,7 +440,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
                 </svg>
 
                 <!-- Stars -->
-                <div v-if="t.rating" class="flex gap-1" :aria-label="`Rating ${t.rating} dari 5`">
+                <div v-if="t.rating" class="flex gap-1" :aria-label="`Rating ${t.rating} out of 5`">
                   <svg v-for="n in 5" :key="n" :class="['w-4 h-4', n <= t.rating ? 'text-accent' : 'text-white/20']" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                   </svg>
@@ -466,7 +467,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
             <button
               type="button"
               class="w-9 h-9 rounded-full border border-white/30 text-white hover:bg-white/10 flex items-center justify-center transition-colors"
-              aria-label="Sebelumnya"
+              aria-label="Previous"
               @click="prevSlide"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -486,7 +487,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
             <button
               type="button"
               class="w-9 h-9 rounded-full border border-white/30 text-white hover:bg-white/10 flex items-center justify-center transition-colors"
-              aria-label="Berikutnya"
+              aria-label="Next"
               @click="nextSlide"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -507,12 +508,12 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
           :class="['flex items-end justify-between mb-4 transition-all duration-700', revealed.partners ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
         >
           <div>
-            <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-2">Mitra Terpercaya</p>
-            <h2 class="text-3xl font-extrabold text-slate-800">Partner <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Pelatihan</span></h2>
-            <p class="text-slate-500 text-sm mt-1.5">Lembaga pendidikan dan pelatihan maritim terkemuka</p>
+            <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-2">Trusted Partners</p>
+            <h2 class="text-3xl font-extrabold text-slate-800">Training <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Partners</span></h2>
+            <p class="text-slate-500 text-sm mt-1.5">Leading maritime education and training institutions</p>
           </div>
           <BaseButton variant="ghost" to="/partners" size="sm" class="hidden sm:flex !text-primary-600 !font-semibold gap-1">
-            Lihat semua
+            View all
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
@@ -526,8 +527,8 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
 
         <!-- Error -->
         <BaseCard v-else-if="featuredError" padding="lg" class="border border-red-200 bg-red-50">
-          <p class="text-sm text-red-700 mb-3">Gagal memuat partner.</p>
-          <BaseButton variant="secondary" size="sm" @click="refreshFeatured()">Coba lagi</BaseButton>
+          <p class="text-sm text-red-700 mb-3">Failed to load partners.</p>
+          <BaseButton variant="secondary" size="sm" @click="refreshFeatured()">Try Again</BaseButton>
         </BaseCard>
 
         <!-- Marquee for many partners -->
@@ -561,8 +562,8 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
         <!-- Empty -->
         <BaseEmptyState
           v-else
-          title="Belum ada partner"
-          description="Partner akan tampil di sini ketika mereka publikasikan course."
+          title="No partners yet"
+          description="Partners will appear here when they publish their courses."
         />
       </div>
     </section>
@@ -597,20 +598,20 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
         </div>
 
         <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4 leading-tight">
-          Siap Tingkatkan Karier<br>
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-300 to-accent">Maritim</span> Anda?
+          Ready to Advance Your<br>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-300 to-accent">Maritime</span> Career?
         </h2>
         <p class="text-slate-400 text-lg mb-10 leading-relaxed">
-          Bergabung dengan 15.000+ profesional maritim yang sudah mempercayai DrillSpace sebagai platform pelatihan utama mereka.
+          Join 15,000+ maritime professionals who already trust DrillSpace as their primary training platform.
         </p>
         <div class="flex flex-wrap gap-4 justify-center">
           <BaseButton variant="primary" size="lg" to="/register"
             class="!bg-accent hover:!bg-amber-400 !text-slate-900 !font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all">
-            Daftar Gratis Sekarang
+            Register for Free
           </BaseButton>
           <BaseButton variant="ghost" size="lg" to="/courses"
             class="!text-white !border !border-white/20 hover:!bg-white/10">
-            Jelajahi Course
+            Explore Courses
           </BaseButton>
         </div>
 
@@ -620,19 +621,19 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
             <svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
             </svg>
-            Tanpa biaya pendaftaran
+            No registration fee
           </div>
           <div class="flex items-center gap-2">
             <svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
             </svg>
-            Batalkan kapan saja
+            Cancel anytime
           </div>
           <div class="flex items-center gap-2">
             <svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
             </svg>
-            Akses seumur hidup
+            Lifetime access
           </div>
         </div>
       </div>

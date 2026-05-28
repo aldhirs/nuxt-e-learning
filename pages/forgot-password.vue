@@ -4,7 +4,7 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, email } from '@vuelidate/validators'
 
 definePageMeta({ layout: 'default' })
-useSeoMeta({ title: 'Lupa Kata Sandi' })
+useSeoMeta({ title: 'Forgot Password' })
 
 const auth = useAuthStore()
 
@@ -24,16 +24,16 @@ async function submit() {
   isLoading.value = true
   try {
     const res = await auth.forgotPassword(form.email.trim().toLowerCase())
-    successMessage.value = res.message || 'Jika email Anda terdaftar, kami sudah mengirim link reset password. Cek inbox Anda.'
+    successMessage.value = res.message || 'If your email is registered, we have sent you a password reset link. Check your inbox.'
     success.value = true
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string }
     if (e.status === 429) {
-      serverError.value = e.message || 'Terlalu banyak permintaan reset password. Coba lagi dalam 1 jam.'
+      serverError.value = e.message || 'Too many password reset requests. Try again in 1 hour.'
     } else if (e.status === 422) {
-      serverError.value = e.message || 'Email tidak valid.'
+      serverError.value = e.message || 'Invalid email.'
     } else {
-      serverError.value = e.message || 'Terjadi kesalahan. Silakan coba lagi.'
+      serverError.value = e.message || 'Something went wrong. Please try again.'
     }
   } finally {
     isLoading.value = false
@@ -45,8 +45,8 @@ async function submit() {
   <div class="min-h-[calc(100vh-112px)] flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-slate-800">Lupa Kata Sandi</h1>
-        <p class="text-slate-500 text-sm mt-2">Masukkan email Anda dan kami akan kirim link reset password.</p>
+        <h1 class="text-2xl font-bold text-slate-800">Forgot Password</h1>
+        <p class="text-slate-500 text-sm mt-2">Enter your email and we will send you a password reset link.</p>
       </div>
 
       <div v-if="success" class="text-center py-8">
@@ -55,10 +55,10 @@ async function submit() {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 class="text-lg font-bold text-slate-800 mb-2">Cek inbox Anda</h2>
+        <h2 class="text-lg font-bold text-slate-800 mb-2">Check your inbox</h2>
         <p class="text-slate-500 text-sm mb-6">{{ successMessage }}</p>
-        <p class="text-xs text-slate-400 mb-6">Link akan kadaluarsa dalam 1 jam.</p>
-        <BaseButton variant="ghost" to="/login">Kembali ke Login</BaseButton>
+        <p class="text-xs text-slate-400 mb-6">The link will expire in 1 hour.</p>
+        <BaseButton variant="ghost" to="/login">Back to Login</BaseButton>
       </div>
 
       <BaseCard v-else shadow="md" padding="lg" class="border border-slate-200">
@@ -75,7 +75,7 @@ async function submit() {
             type="email"
             label="Email"
             placeholder="email@example.com"
-            :error="v$.email.$error ? 'Email tidak valid' : ''"
+            :error="v$.email.$error ? 'Invalid email' : ''"
             required
             @blur="v$.email.$touch"
           />
@@ -88,11 +88,11 @@ async function submit() {
             :loading="isLoading"
             :disabled="isLoading || v$.$invalid"
           >
-            Kirim Link Reset
+            Send Reset Link
           </BaseButton>
 
           <div class="text-center">
-            <NuxtLink to="/login" class="text-xs text-slate-500 hover:text-primary-600">← Kembali ke login</NuxtLink>
+            <NuxtLink to="/login" class="text-xs text-slate-500 hover:text-primary-600">← Back to login</NuxtLink>
           </div>
         </form>
       </BaseCard>

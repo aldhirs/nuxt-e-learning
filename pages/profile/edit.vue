@@ -4,18 +4,17 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, email, minLength, helpers } from '@vuelidate/validators'
 
 const phoneValidator = helpers.withMessage(
-  'Nomor HP tidak valid (contoh: 08123456789 atau +628123456789)',
+  'Invalid phone number (e.g. 08123456789 or +628123456789)',
   (v: string) => !v || /^(\+62|62|0)8[1-9][0-9]{7,11}$/.test(v.replace(/[\s\-().]/g, ''))
 )
 
 definePageMeta({ layout: 'profile', middleware: 'auth' })
-useSeoMeta({ title: 'Edit Profil' })
+useSeoMeta({ title: 'Edit Profile' })
 
 const auth = useAuthStore()
 const router = useRouter()
 const config = useRuntimeConfig()
 
-// Kill-switch: kalau env flag eksplisit false, page tetap di-disable.
 if (!config.public.enableProfileEdit) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found', fatal: true })
 }
@@ -40,7 +39,7 @@ const rules = {
     required,
     minLength: minLength(3),
     usernameFormat: helpers.withMessage(
-      'Username hanya boleh huruf, angka, titik, underscore, atau dash',
+      'Username may only contain letters, numbers, dots, underscores, or dashes',
       usernameFormat
     )
   },
@@ -71,9 +70,6 @@ async function submit() {
 
   isLoading.value = true
   try {
-    // Kirim hanya field yang berubah dibanding nilai server saat ini. BE juga
-    // toleran ke no-op (kirim nilai sama = 200 tanpa write), tapi diff-based
-    // payload lebih hemat + mengurangi false-conflict trigger di future.
     const payload: Record<string, string> = {}
     const fullName = form.full_name.trim()
     const username = form.username.trim().toLowerCase()
@@ -82,42 +78,41 @@ async function submit() {
     if (fullName !== (auth.user?.full_name || '')) payload.full_name = fullName
     if (username !== (auth.user?.username || '')) payload.username = username
     if (emailNew !== (auth.user?.email || '').toLowerCase()) payload.email = emailNew
-    // Kirim phone jika berubah. "" = hapus nomor (BE set NULL). Non-empty = update.
     if (phone !== (auth.user?.phone || '')) payload.phone = phone
 
     if (Object.keys(payload).length === 0) {
-      successMessage.value = 'Tidak ada perubahan.'
+      successMessage.value = 'No changes to save.'
       setTimeout(() => router.push('/profile'), 800)
       return
     }
 
     await auth.updateProfile(payload)
-    successMessage.value = 'Profil berhasil diperbarui.'
+    successMessage.value = 'Profile updated successfully.'
     setTimeout(() => router.push('/profile'), 1200)
   } catch (err: unknown) {
     const e = err as { status?: number; code?: string; reason?: string; message?: string; fields?: Record<string, string> }
     if (e.fields && Object.keys(e.fields).length > 0) fieldErrors.value = e.fields
     if (e.status === 401) {
-      serverError.value = 'Sesi sudah berakhir. Silakan login ulang.'
+      serverError.value = 'Your session has expired. Please sign in again.'
       auth.logout()
       router.push('/login?redirect=/profile/edit')
     } else if (e.status === 409) {
       const code = (e.code || '').toUpperCase()
       if (code.includes('EMAIL') || code === '3102') {
-        serverError.value = 'Email sudah digunakan oleh pengguna lain.'
-        fieldErrors.value.email = 'Email sudah digunakan oleh pengguna lain.'
+        serverError.value = 'Email is already in use by another user.'
+        fieldErrors.value.email = 'Email is already in use by another user.'
       } else if (code.includes('USERNAME') || code === '3103') {
-        serverError.value = 'Username sudah digunakan oleh pengguna lain.'
-        fieldErrors.value.username = 'Username sudah digunakan oleh pengguna lain.'
+        serverError.value = 'Username is already taken.'
+        fieldErrors.value.username = 'Username is already taken.'
       } else {
-        serverError.value = e.message || 'Email atau username sudah dipakai pengguna lain.'
+        serverError.value = e.message || 'Email or username is already taken.'
       }
     } else if (e.status === 422 || e.status === 400) {
-      serverError.value = e.message || 'Data tidak valid. Periksa kembali isian Anda.'
+      serverError.value = e.message || 'Invalid data. Please review your inputs.'
     } else if (e.status === 0) {
-      serverError.value = 'Tidak bisa terhubung ke server. Cek koneksi internet Anda.'
+      serverError.value = 'Unable to connect to server. Check your internet connection.'
     } else {
-      serverError.value = e.message || 'Gagal memperbarui profil.'
+      serverError.value = e.message || 'Failed to update profile.'
     }
   } finally {
     isLoading.value = false
@@ -129,15 +124,15 @@ async function submit() {
   <div class="flex-1 min-w-0">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h2 class="text-xl font-bold text-slate-800">Edit Profil</h2>
-        <p class="text-sm text-slate-500 mt-1">Perbarui informasi akun Anda.</p>
+        <h2 class="text-xl font-bold text-slate-800">Edit Profile</h2>
+        <p class="text-sm text-slate-500 mt-1">Update your account information.</p>
       </div>
-      <BaseButton variant="ghost" size="sm" to="/profile">← Kembali</BaseButton>
+      <BaseButton variant="ghost" size="sm" to="/profile">← Back</BaseButton>
     </div>
 
     <BaseCard v-if="!initialReady" padding="lg" class="border border-slate-200 text-center">
       <BaseSpinner size="lg" />
-      <p class="text-slate-500 text-sm mt-3">Memuat profil...</p>
+      <p class="text-slate-500 text-sm mt-3">Loading profile...</p>
     </BaseCard>
 
     <BaseCard v-else padding="lg" class="border border-slate-200">
@@ -158,9 +153,9 @@ async function submit() {
       <form class="space-y-4" @submit.prevent="submit">
         <BaseInput
           v-model="form.full_name"
-          label="Nama Lengkap"
-          placeholder="Nama sesuai KTP"
-          :error="fieldErrors.full_name || (v$.full_name.$error ? 'Nama minimal 3 karakter' : '')"
+          label="Full Name"
+          placeholder="As on your ID card"
+          :error="fieldErrors.full_name || (v$.full_name.$error ? 'Name must be at least 3 characters' : '')"
           required
           @blur="v$.full_name.$touch"
         />
@@ -177,15 +172,15 @@ async function submit() {
           type="email"
           label="Email"
           placeholder="email@example.com"
-          :error="fieldErrors.email || (v$.email.$error ? 'Email tidak valid' : '')"
+          :error="fieldErrors.email || (v$.email.$error ? 'Invalid email' : '')"
           required
           @blur="v$.email.$touch"
         />
         <BaseInput
           v-model="form.phone"
           type="tel"
-          label="Nomor HP"
-          placeholder="08123456789 atau +628123456789"
+          label="Phone Number"
+          placeholder="08123456789 or +628123456789"
           :error="fieldErrors.phone || (v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : '')"
           @blur="v$.phone.$touch"
         />
@@ -198,10 +193,10 @@ async function submit() {
             :loading="isLoading"
             :disabled="isLoading || v$.$invalid"
           >
-            Simpan Perubahan
+            Save Changes
           </BaseButton>
           <BaseButton type="button" variant="ghost" size="lg" :disabled="isLoading" to="/profile">
-            Batal
+            Cancel
           </BaseButton>
         </div>
       </form>

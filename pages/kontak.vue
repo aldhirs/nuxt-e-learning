@@ -1,12 +1,12 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
-useSeoMeta({ title: 'Kontak' })
+useSeoMeta({ title: 'Contact' })
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-    <h1 class="text-3xl font-bold text-slate-800 mb-4">Hubungi Kami</h1>
-    <p class="text-slate-600 leading-relaxed mb-6">Butuh bantuan? Tim kami siap membantu Anda.</p>
+    <h1 class="text-3xl font-bold text-slate-800 mb-4">Contact Us</h1>
+    <p class="text-slate-600 leading-relaxed mb-6">Need help? Our team is ready to assist you.</p>
     <div class="space-y-4 text-sm text-slate-600">
       <div class="flex items-center gap-3">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -21,6 +21,6 @@ useSeoMeta({ title: 'Kontak' })
         <span>+62 21 1234 5678</span>
       </div>
     </div>
-    <p class="text-slate-500 text-sm italic mt-8">Halaman ini sedang dikembangkan.</p>
+    <p class="text-slate-500 text-sm italic mt-8">This page is currently under development.</p>
   </div>
 </template>

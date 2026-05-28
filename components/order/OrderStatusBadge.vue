@@ -8,11 +8,11 @@ interface Props {
 defineProps<Props>()
 
 const statusMap: Record<OrderStatus, { label: string; severity: 'success' | 'warn' | 'danger' | 'info' | 'default' }> = {
-  pending: { label: 'Menunggu Pembayaran', severity: 'warn' },
-  paid: { label: 'Lunas', severity: 'success' },
-  expired: { label: 'Kedaluwarsa', severity: 'danger' },
-  cancelled: { label: 'Dibatalkan', severity: 'default' },
-  refunded: { label: 'Dikembalikan', severity: 'info' }
+  pending:   { label: 'Awaiting Payment', severity: 'warn' },
+  paid:      { label: 'Paid',             severity: 'success' },
+  expired:   { label: 'Expired',          severity: 'danger' },
+  cancelled: { label: 'Cancelled',        severity: 'default' },
+  refunded:  { label: 'Refunded',         severity: 'info' }
 }
 </script>
 

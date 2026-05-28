@@ -55,28 +55,28 @@ const statusInfo = computed(() => {
   const courseFallback = courseSlug ? `/checkout?course=${courseSlug}` : '/courses'
   const map: Record<string, { desc: string; nextAction?: string; nextTo?: string }> = {
     pending: {
-      desc: 'Menunggu pembayaran. Selesaikan sebelum batas waktu di bawah.',
-      nextAction: 'Bayar Sekarang',
+      desc: 'Awaiting payment. Please complete before the deadline below.',
+      nextAction: 'Pay Now',
       nextTo: payTo.value
     },
     paid: {
-      desc: 'Pembayaran telah diterima. Anda dapat mulai belajar sekarang.',
-      nextAction: 'Mulai Belajar',
+      desc: 'Payment received. You can start learning now.',
+      nextAction: 'Start Learning',
       nextTo: courseSlug ? `/courses/${courseSlug}` : '/courses'
     },
     expired: {
-      desc: 'Order kedaluwarsa karena tidak dibayar dalam 24 jam. Buat order baru jika masih ingin enroll.',
-      nextAction: 'Buat Order Baru',
+      desc: 'Order expired as it was not paid within 24 hours. Create a new order if you still want to enroll.',
+      nextAction: 'Create New Order',
       nextTo: courseFallback
     },
     cancelled: {
-      desc: 'Order telah dibatalkan.',
-      nextAction: 'Jelajahi Course',
+      desc: 'This order has been cancelled.',
+      nextAction: 'Browse Courses',
       nextTo: '/courses'
     },
     refunded: {
-      desc: 'Dana telah dikembalikan ke akun Anda.',
-      nextAction: 'Jelajahi Course',
+      desc: 'Funds have been returned to your account.',
+      nextAction: 'Browse Courses',
       nextTo: '/courses'
     }
   }
@@ -109,9 +109,9 @@ async function confirmCancel() {
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string }
     if (e.status === 422 || e.status === 400) {
-      cancelError.value = e.message || 'Order ini tidak bisa dibatalkan dari status sekarang.'
+      cancelError.value = e.message || 'This order cannot be cancelled from its current status.'
     } else {
-      cancelError.value = e.message || 'Gagal membatalkan order.'
+      cancelError.value = e.message || 'Failed to cancel order.'
     }
   } finally {
     cancelLoading.value = false
@@ -125,7 +125,7 @@ async function confirmCancel() {
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
-      Kembali ke Order Saya
+      Back to My Orders
     </NuxtLink>
 
     <!-- Loading -->
@@ -142,10 +142,10 @@ async function confirmCancel() {
       padding="lg"
       class="border border-red-200 bg-red-50"
     >
-      <p class="text-sm text-red-700 mb-3">Gagal memuat order. {{ (error as { message?: string }).message ?? '' }}</p>
+      <p class="text-sm text-red-700 mb-3">Failed to load order. {{ (error as { message?: string }).message ?? '' }}</p>
       <div class="flex gap-2">
-        <BaseButton variant="primary" size="sm" @click="refresh()">Coba lagi</BaseButton>
-        <BaseButton variant="ghost" size="sm" to="/orders">Kembali ke daftar</BaseButton>
+        <BaseButton variant="primary" size="sm" @click="refresh()">Try Again</BaseButton>
+        <BaseButton variant="ghost" size="sm" to="/orders">Back to list</BaseButton>
       </div>
     </BaseCard>
 
@@ -153,9 +153,9 @@ async function confirmCancel() {
     <BaseEmptyState
       v-else-if="!order"
       icon="file-x"
-      title="Order tidak ditemukan"
-      description="Order ini tidak ada atau Anda tidak memiliki akses."
-      cta-label="Lihat Order Saya"
+      title="Order not found"
+      description="This order doesn't exist or you don't have access."
+      cta-label="View My Orders"
       cta-to="/orders"
     />
 
@@ -164,7 +164,7 @@ async function confirmCancel() {
       <div class="flex items-start justify-between flex-wrap gap-3 mb-6">
         <div>
           <p class="text-xs text-slate-500 font-mono">{{ order.order_number }}</p>
-          <h1 class="text-xl font-bold text-slate-800 mt-1">Detail Order</h1>
+          <h1 class="text-xl font-bold text-slate-800 mt-1">Order Details</h1>
         </div>
         <OrderStatusBadge :status="order.status" />
       </div>
@@ -178,7 +178,7 @@ async function confirmCancel() {
           <svg class="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
           </svg>
-          <span>Metode: <strong class="text-slate-800 uppercase">{{ order.payment_method!.replace(/_/g, ' ') }}</strong></span>
+          <span>Method: <strong class="text-slate-800 uppercase">{{ order.payment_method!.replace(/_/g, ' ') }}</strong></span>
         </div>
 
         <OrderCountdownTimer
@@ -197,7 +197,7 @@ async function confirmCancel() {
             size="sm"
             :to="`/orders/${order.order_number}/payment`"
           >
-            Ganti Metode
+            Change Method
           </BaseButton>
           <BaseButton
             v-if="order.status === 'pending'"
@@ -206,14 +206,14 @@ async function confirmCancel() {
             :disabled="cancelLoading"
             @click="openCancel"
           >
-            Batalkan Order
+            Cancel Order
           </BaseButton>
         </div>
       </div>
 
       <!-- Course -->
       <BaseCard shadow="sm" padding="md" class="border border-slate-200 mb-4">
-        <h2 class="text-sm font-semibold text-slate-700 mb-4">Course yang Dipesan</h2>
+        <h2 class="text-sm font-semibold text-slate-700 mb-4">Ordered Course</h2>
         <div class="flex gap-3">
           <div class="w-16 h-12 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
             <img
@@ -231,10 +231,10 @@ async function confirmCancel() {
               v-if="order.course?.slug"
               :to="`/courses/${order.course.slug}`"
               class="text-xs text-primary-600 hover:underline"
-            >Lihat Course</NuxtLink>
+            >View Course</NuxtLink>
           </div>
           <div class="flex-shrink-0 text-sm font-semibold">
-            <span v-if="order.unit_price === 0" class="text-green-600">Gratis</span>
+            <span v-if="order.unit_price === 0" class="text-green-600">Free</span>
             <span v-else class="text-slate-700">{{ formatCurrency(order.unit_price) }}</span>
           </div>
         </div>
@@ -242,40 +242,40 @@ async function confirmCancel() {
 
       <!-- Payment summary -->
       <BaseCard shadow="sm" padding="md" class="border border-slate-200 mb-4">
-        <h2 class="text-sm font-semibold text-slate-700 mb-4">Ringkasan Pembayaran</h2>
+        <h2 class="text-sm font-semibold text-slate-700 mb-4">Payment Summary</h2>
         <CheckoutPriceBreakdown :subtotal="order.unit_price" :tax="order.tax_amount" :total="order.total_amount" />
       </BaseCard>
 
       <!-- Meta -->
       <BaseCard shadow="sm" padding="md" class="border border-slate-200">
-        <h2 class="text-sm font-semibold text-slate-700 mb-4">Informasi Order</h2>
+        <h2 class="text-sm font-semibold text-slate-700 mb-4">Order Information</h2>
         <dl class="space-y-2 text-sm">
           <div class="flex justify-between">
-            <dt class="text-slate-500">Tanggal Order</dt>
+            <dt class="text-slate-500">Order Date</dt>
             <dd class="text-slate-800">{{ formatDatetime(order.created_at) }}</dd>
           </div>
           <div class="flex justify-between">
-            <dt class="text-slate-500">Batas Bayar</dt>
+            <dt class="text-slate-500">Payment Deadline</dt>
             <dd class="text-slate-800">{{ formatDatetime(order.expires_at) }}</dd>
           </div>
           <div v-if="order.paid_at" class="flex justify-between">
-            <dt class="text-slate-500">Tanggal Bayar</dt>
+            <dt class="text-slate-500">Payment Date</dt>
             <dd class="text-slate-800">{{ formatDatetime(order.paid_at) }}</dd>
           </div>
           <div v-if="order.payment_method" class="flex justify-between">
-            <dt class="text-slate-500">Metode Bayar</dt>
+            <dt class="text-slate-500">Payment Method</dt>
             <dd class="text-slate-800 uppercase">{{ order.payment_method.replace(/_/g, ' ') }}</dd>
           </div>
           <div v-if="order.cancelled_at" class="flex justify-between">
-            <dt class="text-slate-500">Tanggal Dibatalkan</dt>
+            <dt class="text-slate-500">Cancellation Date</dt>
             <dd class="text-slate-800">{{ formatDatetime(order.cancelled_at) }}</dd>
           </div>
           <div v-if="order.cancellation_reason" class="flex justify-between">
-            <dt class="text-slate-500">Alasan Pembatalan</dt>
+            <dt class="text-slate-500">Cancellation Reason</dt>
             <dd class="text-slate-800">{{ order.cancellation_reason }}</dd>
           </div>
           <div class="flex justify-between">
-            <dt class="text-slate-500">Nama Pemesan</dt>
+            <dt class="text-slate-500">Customer Name</dt>
             <dd class="text-slate-800">{{ order.student_full_name }}</dd>
           </div>
           <div class="flex justify-between">
@@ -283,7 +283,7 @@ async function confirmCancel() {
             <dd class="text-slate-800">{{ order.student_email }}</dd>
           </div>
           <div v-if="order.student_phone" class="flex justify-between">
-            <dt class="text-slate-500">No. HP</dt>
+            <dt class="text-slate-500">Phone</dt>
             <dd class="text-slate-800">{{ order.student_phone }}</dd>
           </div>
         </dl>
@@ -291,21 +291,21 @@ async function confirmCancel() {
     </div>
 
     <!-- Cancel confirm modal -->
-    <BaseModal v-model="cancelOpen" title="Batalkan Order?">
+    <BaseModal v-model="cancelOpen" title="Cancel Order?">
       <p class="text-sm text-slate-600 mb-4">
-        Order <span class="font-mono font-semibold">{{ order?.order_number }}</span> akan dibatalkan dan tidak bisa dibayar lagi. Tindakan ini tidak dapat dibatalkan.
+        Order <span class="font-mono font-semibold">{{ order?.order_number }}</span> will be cancelled and can no longer be paid. This action cannot be undone.
       </p>
       <BaseInput
         v-model="cancelReason"
-        label="Alasan (opsional)"
-        placeholder="mis. Pilih course lain"
+        label="Reason (optional)"
+        placeholder="e.g. Chose another course"
       />
       <div v-if="cancelError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
         {{ cancelError }}
       </div>
       <template #footer>
-        <BaseButton variant="ghost" :disabled="cancelLoading" @click="cancelOpen = false">Tutup</BaseButton>
-        <BaseButton variant="danger" :loading="cancelLoading" :disabled="cancelLoading" @click="confirmCancel">Batalkan Order</BaseButton>
+        <BaseButton variant="ghost" :disabled="cancelLoading" @click="cancelOpen = false">Close</BaseButton>
+        <BaseButton variant="danger" :loading="cancelLoading" :disabled="cancelLoading" @click="confirmCancel">Cancel Order</BaseButton>
       </template>
     </BaseModal>
   </div>

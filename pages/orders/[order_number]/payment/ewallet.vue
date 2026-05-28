@@ -39,10 +39,10 @@ const steps = computed(() => {
   if (session.value?.instructions?.length) return session.value.instructions
   const name = walletStyle.value.label
   return [
-    `Klik tombol "Buka ${name}" di bawah.`,
-    `Anda akan diarahkan ke aplikasi ${name}.`,
-    `Konfirmasi pembayaran di aplikasi ${name}.`,
-    'Kembali ke halaman ini dan klik "Saya Sudah Bayar".'
+    `Tap the "Open ${name}" button below.`,
+    `You will be redirected to the ${name} app.`,
+    `Confirm the payment in the ${name} app.`,
+    'Return to this page and tap "I\'ve Already Paid".'
   ]
 })
 
@@ -54,7 +54,7 @@ async function openWallet() {
     // Prefer deeplink kalau ada (mobile); fallback ke redirect_url universal.
     const target = s.deeplink_url || s.redirect_url
     if (target) {
-      // Buka tab baru supaya halaman ini tetap ada untuk klik "Saya Sudah Bayar".
+      // Open in new tab so this page stays open for the "I've Already Paid" button.
       window.open(target, '_blank', 'noopener,noreferrer')
     }
   } finally {
@@ -67,9 +67,9 @@ async function openWallet() {
   <div v-if="!order" class="max-w-xl mx-auto px-4 py-20">
     <BaseEmptyState
       icon="alert"
-      title="Order tidak ditemukan"
-      description="Silakan kembali dan ulangi dari pilih metode pembayaran."
-      cta-label="Pilih Metode Bayar"
+      title="Order not found"
+      description="Please go back and start again from the payment method selection."
+      cta-label="Select Payment Method"
       :cta-to="`/orders/${orderNumber}/payment`"
     />
   </div>
@@ -77,9 +77,9 @@ async function openWallet() {
   <div v-else-if="!session" class="max-w-xl mx-auto px-4 py-20">
     <BaseEmptyState
       icon="alert"
-      title="Sesi e-wallet tidak ditemukan"
-      description="Silakan pilih metode pembayaran terlebih dahulu."
-      cta-label="Pilih Metode Bayar"
+      title="E-wallet session not found"
+      description="Please select a payment method first."
+      cta-label="Select Payment Method"
       :cta-to="`/orders/${orderNumber}/payment`"
     />
   </div>
@@ -90,7 +90,7 @@ async function openWallet() {
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
-      Ganti metode
+      Change method
     </NuxtLink>
 
     <div
@@ -100,13 +100,13 @@ async function openWallet() {
       {{ walletStyle.label[0] }}
     </div>
 
-    <h1 class="text-xl font-bold text-slate-800 mb-1">Bayar dengan {{ walletStyle.label }}</h1>
+    <h1 class="text-xl font-bold text-slate-800 mb-1">Pay with {{ walletStyle.label }}</h1>
     <p class="text-sm text-slate-500 mb-2">Order <span class="font-mono font-semibold">{{ order.order_number }}</span></p>
     <p class="text-2xl font-bold text-primary-600 mb-2">{{ formatCurrency(session.amount) }}</p>
     <OrderCountdownTimer :expires-at="session.expires_at" class="mb-6" />
 
     <BaseCard shadow="sm" padding="md" class="border border-slate-200 w-full mb-6 text-left">
-      <p class="text-xs font-semibold text-slate-700 mb-3">Cara pembayaran:</p>
+      <p class="text-xs font-semibold text-slate-700 mb-3">How to pay:</p>
       <ol class="space-y-2">
         <li v-for="(step, i) in steps" :key="i" class="flex gap-2.5 text-sm text-slate-600">
           <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0">{{ i + 1 }}</span>
@@ -117,13 +117,13 @@ async function openWallet() {
 
     <div class="w-full space-y-2">
       <BaseButton variant="primary" size="lg" block :loading="isRedirecting" :disabled="!session.redirect_url" @click="openWallet">
-        Buka {{ walletStyle.label }}
+        Open {{ walletStyle.label }}
       </BaseButton>
       <BaseButton variant="secondary" size="lg" block :to="`/orders/${orderNumber}/payment/status`">
-        Saya Sudah Bayar
+        I've Already Paid
       </BaseButton>
       <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
-        Kembali ke Detail Order
+        Back to Order Details
       </BaseButton>
     </div>
   </div>

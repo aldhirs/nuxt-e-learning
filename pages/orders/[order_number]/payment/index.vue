@@ -15,7 +15,7 @@ const paymentStore = usePaymentStore()
 
 const orderNumber = computed(() => route.params.order_number as string)
 
-useSeoMeta({ title: () => `Pilih Metode Bayar — ${orderNumber.value}` })
+useSeoMeta({ title: () => `Select Payment Method — ${orderNumber.value}` })
 
 // Fetch order directly with useAsyncData for SSR-safe hydration
 const { data: order, pending: orderPending } = await useAsyncData(
@@ -52,15 +52,15 @@ const methodGroups: MethodGroup[] = [
   {
     label: 'QRIS',
     methods: [
-      { value: 'qris', label: 'QRIS', description: 'Scan QR dengan semua aplikasi e-wallet' }
+      { value: 'qris', label: 'QRIS', description: 'Scan QR with any e-wallet app' }
     ]
   },
   {
     label: 'E-Wallet',
     methods: [
-      { value: 'ewallet_ovo',       label: 'OVO',        description: 'Bayar dengan OVO' },
-      { value: 'ewallet_dana',      label: 'DANA',       description: 'Bayar dengan DANA' },
-      { value: 'ewallet_shopeepay', label: 'ShopeePay',  description: 'Bayar dengan ShopeePay' }
+      { value: 'ewallet_ovo',       label: 'OVO',        description: 'Pay with OVO' },
+      { value: 'ewallet_dana',      label: 'DANA',       description: 'Pay with DANA' },
+      { value: 'ewallet_shopeepay', label: 'ShopeePay',  description: 'Pay with ShopeePay' }
     ]
   }
 ]
@@ -73,9 +73,9 @@ const vaCards = [
 ]
 
 const ewalletCards = [
-  { value: 'ewallet_ovo' as PaymentMethod,       label: 'OVO',        icon: '💜', description: 'Bayar dengan OVO' },
-  { value: 'ewallet_dana' as PaymentMethod,      label: 'DANA',       icon: '💙', description: 'Bayar dengan DANA' },
-  { value: 'ewallet_shopeepay' as PaymentMethod, label: 'ShopeePay',  icon: '🧡', description: 'Bayar dengan ShopeePay' }
+  { value: 'ewallet_ovo' as PaymentMethod,       label: 'OVO',        icon: '💜', description: 'Pay with OVO' },
+  { value: 'ewallet_dana' as PaymentMethod,      label: 'DANA',       icon: '💙', description: 'Pay with DANA' },
+  { value: 'ewallet_shopeepay' as PaymentMethod, label: 'ShopeePay',  icon: '🧡', description: 'Pay with ShopeePay' }
 ]
 
 const isExpired = computed(() => {
@@ -112,15 +112,15 @@ async function proceed() {
   } catch (err: unknown) {
     const e = err as { status?: number; code?: string; message?: string; reason?: string }
     if (e.status === 502 || (e.code && String(e.code) === '502')) {
-      serverError.value = e.message || 'Layanan pembayaran sedang tidak tersedia. Silakan coba beberapa saat lagi.'
+      serverError.value = e.message || 'Payment service is currently unavailable. Please try again in a moment.'
     } else if (e.status === 422) {
-      serverError.value = e.message || 'Metode pembayaran ini belum tersedia. Pilih metode lain.'
+      serverError.value = e.message || 'This payment method is not available. Please choose another method.'
     } else if (e.status === 401) {
       router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
     } else if (e.status === 0) {
-      serverError.value = 'Tidak bisa terhubung ke server. Cek koneksi internet Anda.'
+      serverError.value = 'Cannot connect to server. Please check your internet connection.'
     } else {
-      serverError.value = e.message || 'Gagal memulai pembayaran. Silakan coba lagi.'
+      serverError.value = e.message || 'Failed to start payment. Please try again.'
     }
   } finally {
     isLoading.value = false
@@ -151,11 +151,11 @@ async function proceed() {
         <div class="h-0.5 w-10 mx-1 bg-primary-500"></div>
         <!-- Step 3: Pembayaran — active -->
         <div class="w-7 h-7 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center">3</div>
-        <span class="hidden sm:block text-xs font-medium text-primary-600 mx-1">Pembayaran</span>
+        <span class="hidden sm:block text-xs font-medium text-primary-600 mx-1">Payment</span>
         <div class="h-0.5 w-10 mx-1 bg-slate-200"></div>
-        <!-- Step 4: Selesai — pending -->
+        <!-- Step 4: Done — pending -->
         <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-400 text-xs font-bold flex items-center justify-center">4</div>
-        <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Selesai</span>
+        <span class="hidden sm:block text-xs font-medium text-slate-400 mx-1">Done</span>
       </div>
     </div>
   </div>
@@ -183,9 +183,9 @@ async function proceed() {
   <div v-else-if="!order" class="max-w-xl mx-auto px-4 py-20 text-center">
     <BaseEmptyState
       icon="alert"
-      title="Order tidak ditemukan"
-      description="Order ini tidak ada atau sudah kedaluwarsa. Silakan kembali ke daftar order."
-      cta-label="Lihat Order Saya"
+      title="Order not found"
+      description="This order doesn't exist or has already expired. Please go back to the order list."
+      cta-label="View My Orders"
       cta-to="/orders"
     />
   </div>
@@ -194,9 +194,9 @@ async function proceed() {
   <div v-else-if="order.status !== 'pending'" class="max-w-xl mx-auto px-4 py-20 text-center">
     <BaseEmptyState
       icon="alert"
-      title="Tidak bisa membayar"
-      :description="order.status === 'paid' ? 'Order ini sudah dibayar.' : 'Order ini sudah tidak aktif.'"
-      cta-label="Lihat Detail Order"
+      title="Cannot pay"
+      :description="order.status === 'paid' ? 'This order has already been paid.' : 'This order is no longer active.'"
+      cta-label="View Order Details"
       :cta-to="`/orders/${orderNumber}`"
     />
   </div>
@@ -208,7 +208,7 @@ async function proceed() {
       <!-- Left: method selection -->
       <div class="lg:col-span-2 space-y-5">
         <div>
-          <h1 class="text-xl font-bold text-slate-800 mb-1">Pilih Metode Pembayaran</h1>
+          <h1 class="text-xl font-bold text-slate-800 mb-1">Select Payment Method</h1>
           <p class="text-sm text-slate-500">Order <span class="font-mono font-semibold text-slate-700">{{ order.order_number }}</span></p>
         </div>
 
@@ -217,7 +217,7 @@ async function proceed() {
           <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p class="text-sm font-semibold text-red-700">Order ini sudah kedaluwarsa. Silakan buat order baru.</p>
+          <p class="text-sm font-semibold text-red-700">This order has expired. Please create a new order.</p>
         </div>
 
         <!-- Countdown alert (amber) — only show if not expired -->
@@ -226,7 +226,7 @@ async function proceed() {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div class="flex-1">
-            <p class="text-sm font-semibold text-amber-800">Selesaikan pembayaran dalam</p>
+            <p class="text-sm font-semibold text-amber-800">Complete payment within</p>
             <p class="text-xs text-amber-600">Order <span class="font-mono font-bold">{{ order.order_number }}</span></p>
           </div>
           <div class="text-right">
@@ -304,9 +304,9 @@ async function proceed() {
                 class="inline-flex items-center gap-1.5 text-xs text-primary-600 font-semibold"
               >
                 <span class="animate-spin w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full"></span>
-                Memproses...
+                Processing...
               </span>
-              <span v-else class="text-xs font-semibold text-primary-600 group-hover:underline">Pilih</span>
+              <span v-else class="text-xs font-semibold text-primary-600 group-hover:underline">Select</span>
             </button>
           </div>
         </div>
@@ -329,7 +329,7 @@ async function proceed() {
             </div>
             <div class="flex-1 text-left">
               <p class="text-base font-bold text-slate-800 group-hover:text-primary-700 transition-colors">QRIS</p>
-              <p class="text-sm text-slate-500">Scan QR dengan semua aplikasi e-wallet & mobile banking</p>
+              <p class="text-sm text-slate-500">Scan QR with any e-wallet app & mobile banking</p>
             </div>
             <span v-if="isLoading && selectedMethod === 'qris'" class="animate-spin w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full flex-shrink-0"></span>
             <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-primary-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -359,15 +359,15 @@ async function proceed() {
                 class="inline-flex items-center gap-1.5 text-xs text-primary-600 font-semibold"
               >
                 <span class="animate-spin w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full"></span>
-                Memproses...
+                Processing...
               </span>
-              <span v-else class="text-xs font-semibold text-primary-600 group-hover:underline">Pilih</span>
+              <span v-else class="text-xs font-semibold text-primary-600 group-hover:underline">Select</span>
             </button>
           </div>
         </div>
 
         <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
-          Kembali ke Detail Order
+          Back to Order Details
         </BaseButton>
       </div>
 
@@ -375,7 +375,7 @@ async function proceed() {
       <div class="lg:sticky lg:top-6">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div class="bg-gradient-to-br from-primary-600 to-primary-500 px-5 py-4">
-            <p class="text-xs font-semibold text-primary-100 uppercase tracking-wider mb-1">Ringkasan Order</p>
+            <p class="text-xs font-semibold text-primary-100 uppercase tracking-wider mb-1">Order Summary</p>
             <p class="text-white font-mono text-sm font-bold">{{ order.order_number }}</p>
           </div>
           <div class="p-5 space-y-4">
@@ -387,7 +387,7 @@ async function proceed() {
 
             <div class="border-t border-slate-100 pt-4 space-y-2">
               <div class="flex justify-between text-sm">
-                <span class="text-slate-500">Harga</span>
+                <span class="text-slate-500">Price</span>
                 <span class="font-medium text-slate-700">{{ formatCurrency(order.unit_price) }}</span>
               </div>
               <div v-if="order.tax_amount" class="flex justify-between text-sm">
@@ -404,7 +404,7 @@ async function proceed() {
               <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              Transaksi aman & terenkripsi SSL
+              Secure & SSL encrypted transaction
             </div>
           </div>
         </div>

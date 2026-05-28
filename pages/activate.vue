@@ -20,7 +20,7 @@ const mode = computed<Mode>(() => {
 })
 
 useSeoMeta({
-  title: () => (mode.value === 'account' ? 'Aktivasi Akun' : mode.value === 'order' ? 'Aktivasi Course' : 'Aktivasi')
+  title: () => (mode.value === 'account' ? 'Account Activation' : mode.value === 'order' ? 'Course Activation' : 'Activation')
 })
 
 // ───── Account activation flow (?token=...) ─────
@@ -34,7 +34,7 @@ const rules = {
   password: { required, minLength: minLength(8) },
   password_confirm: {
     required,
-    sameAs: helpers.withMessage('Kata sandi tidak cocok', sameAs(passwordRef))
+    sameAs: helpers.withMessage('Passwords do not match', sameAs(passwordRef))
   }
 }
 const v$ = useVuelidate(rules, form)
@@ -55,13 +55,13 @@ async function submitActivate() {
   } catch (err: unknown) {
     const e = err as { status?: number; code?: string; message?: string; payload?: { redirect_to_login?: boolean } }
     if (e.status === 404) {
-      accountError.value = e.message || 'Link aktivasi tidak valid atau sudah kadaluarsa.'
+      accountError.value = e.message || 'Activation link is invalid or has expired.'
     } else if (e.status === 409) {
-      accountError.value = e.message || 'Akun sudah aktif. Silakan login.'
+      accountError.value = e.message || 'Account is already active. Please sign in.'
     } else if (e.status === 422) {
-      accountError.value = e.message || 'Kata sandi belum memenuhi syarat.'
+      accountError.value = e.message || 'Password does not meet requirements.'
     } else {
-      accountError.value = e.message || 'Gagal mengaktifkan akun.'
+      accountError.value = e.message || 'Failed to activate account.'
     }
   } finally {
     accountSubmitting.value = false
@@ -79,7 +79,6 @@ onMounted(async () => {
     return
   }
   // Placeholder: PRD #2 enrollment confirm endpoint not yet wired here.
-  // Treat presence of order_number as success for now (UI-only flow).
   await new Promise(r => setTimeout(r, 800))
   orderLoading.value = false
   orderSuccess.value = true
@@ -91,8 +90,8 @@ onMounted(async () => {
     <!-- ──────────── ACCOUNT ACTIVATION ──────────── -->
     <div v-if="mode === 'account'" class="w-full max-w-md">
       <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-slate-800">Aktivasi Akun</h1>
-        <p class="text-slate-500 text-sm mt-2">Buat kata sandi untuk menyelesaikan registrasi.</p>
+        <h1 class="text-2xl font-bold text-slate-800">Account Activation</h1>
+        <p class="text-slate-500 text-sm mt-2">Create a password to complete your registration.</p>
       </div>
 
       <BaseCard v-if="!accountSuccess" shadow="md" padding="lg" class="border border-slate-200">
@@ -107,17 +106,17 @@ onMounted(async () => {
           <BaseInput
             v-model="form.password"
             type="password"
-            label="Kata Sandi Baru"
-            placeholder="Minimal 8 karakter"
-            :error="v$.password.$error ? 'Kata sandi minimal 8 karakter' : ''"
+            label="New Password"
+            placeholder="Min. 8 characters"
+            :error="v$.password.$error ? 'Password must be at least 8 characters' : ''"
             required
             @blur="v$.password.$touch"
           />
           <BaseInput
             v-model="form.password_confirm"
             type="password"
-            label="Konfirmasi Kata Sandi"
-            placeholder="Ulangi kata sandi"
+            label="Confirm Password"
+            placeholder="Repeat your password"
             :error="v$.password_confirm.$error ? (v$.password_confirm.$errors[0]?.$message as string) : ''"
             required
             @blur="v$.password_confirm.$touch"
@@ -131,7 +130,7 @@ onMounted(async () => {
             :loading="accountSubmitting"
             :disabled="accountSubmitting || v$.$invalid"
           >
-            Aktifkan & Masuk
+            Activate & Sign In
           </BaseButton>
         </form>
       </BaseCard>
@@ -142,8 +141,8 @@ onMounted(async () => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 class="text-lg font-bold text-slate-800 mb-2">Akun berhasil diaktifkan!</h2>
-        <p class="text-slate-500 text-sm mb-6">Selamat datang di DrillSpace. Mengalihkan…</p>
+        <h2 class="text-lg font-bold text-slate-800 mb-2">Account activated!</h2>
+        <p class="text-slate-500 text-sm mb-6">Welcome to DrillSpace. Redirecting…</p>
       </div>
     </div>
 
@@ -151,7 +150,7 @@ onMounted(async () => {
     <div v-else-if="mode === 'order'" class="text-center max-w-sm w-full">
       <div v-if="orderLoading" class="flex flex-col items-center gap-4">
         <BaseSpinner size="lg" />
-        <p class="text-slate-500 text-sm">Mengaktifkan course Anda...</p>
+        <p class="text-slate-500 text-sm">Activating your course...</p>
       </div>
 
       <div v-else-if="orderSuccess">
@@ -160,13 +159,13 @@ onMounted(async () => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 class="text-xl font-bold text-slate-800 mb-2">Course Berhasil Diaktifkan!</h1>
+        <h1 class="text-xl font-bold text-slate-800 mb-2">Course Activated!</h1>
         <p class="text-slate-500 text-sm mb-6">
-          Order <span class="font-mono font-semibold">{{ orderParam }}</span> telah dikonfirmasi. Selamat belajar!
+          Order <span class="font-mono font-semibold">{{ orderParam }}</span> has been confirmed. Happy learning!
         </p>
         <div class="flex flex-col gap-2">
-          <BaseButton variant="primary" to="/courses">Mulai Belajar Sekarang</BaseButton>
-          <BaseButton variant="ghost" to="/orders">Lihat Order Saya</BaseButton>
+          <BaseButton variant="primary" to="/courses">Start Learning Now</BaseButton>
+          <BaseButton variant="ghost" to="/orders">View My Orders</BaseButton>
         </div>
       </div>
 
@@ -176,9 +175,9 @@ onMounted(async () => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
-        <h1 class="text-xl font-bold text-slate-800 mb-2">Aktivasi Gagal</h1>
-        <p class="text-slate-500 text-sm mb-6">{{ orderError || 'Terjadi kesalahan saat mengaktifkan course.' }}</p>
-        <BaseButton variant="secondary" to="/orders">Kembali ke Order</BaseButton>
+        <h1 class="text-xl font-bold text-slate-800 mb-2">Activation Failed</h1>
+        <p class="text-slate-500 text-sm mb-6">{{ orderError || 'An error occurred while activating the course.' }}</p>
+        <BaseButton variant="secondary" to="/orders">Back to Orders</BaseButton>
       </div>
     </div>
 
@@ -189,9 +188,9 @@ onMounted(async () => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </div>
-      <h1 class="text-xl font-bold text-slate-800 mb-2">Link Tidak Valid</h1>
-      <p class="text-slate-500 text-sm mb-6">Link aktivasi tidak lengkap. Pastikan Anda membuka link dari email kami.</p>
-      <BaseButton variant="secondary" to="/login">Ke Halaman Login</BaseButton>
+      <h1 class="text-xl font-bold text-slate-800 mb-2">Invalid Link</h1>
+      <p class="text-slate-500 text-sm mb-6">Activation link is incomplete. Make sure you opened the link from our email.</p>
+      <BaseButton variant="secondary" to="/login">Go to Login</BaseButton>
     </div>
   </div>
 </template>

@@ -5,7 +5,7 @@ import { required, email, minLength } from '@vuelidate/validators'
 
 definePageMeta({ layout: 'default' })
 
-useSeoMeta({ title: 'Masuk' })
+useSeoMeta({ title: 'Sign In' })
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -44,19 +44,18 @@ async function submit() {
     const reason = (e.reason || '').toLowerCase()
     const code = e.code || ''
     if (code === 'ACCOUNT_NOT_ACTIVATED' || e.payload?.redirect_to_activation || reason.includes('not activated') || reason.includes('belum diaktivasi')) {
-      serverError.value = 'Akun belum diaktivasi. Cek email Anda untuk link aktivasi.'
+      serverError.value = 'Account not activated. Check your email for the activation link.'
       showActivationHint.value = true
     } else if (e.status === 403) {
-      serverError.value = 'Akun ini bukan akun student. Silakan gunakan portal admin.'
+      serverError.value = 'This is not a student account. Please use the admin portal.'
     } else if (e.status === 423 || reason.includes('locked')) {
-      serverError.value = 'Akun terkunci sementara karena terlalu banyak percobaan. Coba lagi dalam 15 menit.'
+      serverError.value = 'Account temporarily locked due to too many attempts. Try again in 15 minutes.'
     } else if (e.status === 401 || e.status === 400 || e.status === 422) {
-      // BE deployed sekarang return 400 untuk wrong creds, contract minta 401 — generic friendly message.
-      serverError.value = 'Email atau kata sandi salah.'
+      serverError.value = 'Incorrect email or password.'
     } else if (e.status === 0) {
-      serverError.value = 'Tidak bisa terhubung ke server. Cek koneksi internet Anda.'
+      serverError.value = 'Unable to connect to server. Check your internet connection.'
     } else {
-      serverError.value = e.message || 'Terjadi kesalahan. Silakan coba lagi.'
+      serverError.value = e.message || 'Something went wrong. Please try again.'
     }
   } finally {
     isLoading.value = false
@@ -66,10 +65,10 @@ async function submit() {
 async function resendActivation() {
   try {
     await auth.resendActivation(form.email.trim().toLowerCase())
-    serverError.value = 'Link aktivasi sudah dikirim ulang. Cek inbox Anda.'
+    serverError.value = 'Activation link has been resent. Check your inbox.'
     showActivationHint.value = false
   } catch (err: unknown) {
-    serverError.value = (err as { message?: string }).message || 'Gagal mengirim ulang link aktivasi.'
+    serverError.value = (err as { message?: string }).message || 'Failed to resend activation link.'
   }
 }
 </script>
@@ -78,9 +77,9 @@ async function resendActivation() {
   <div class="min-h-[calc(100vh-112px)] flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-slate-800">Masuk ke DrillSpace</h1>
-        <p class="text-slate-500 text-sm mt-2">Belum punya akun?
-          <NuxtLink to="/register" class="text-primary-600 font-medium hover:underline">Daftar gratis</NuxtLink>
+        <h1 class="text-2xl font-bold text-slate-800">Sign In to DrillSpace</h1>
+        <p class="text-slate-500 text-sm mt-2">Don't have an account?
+          <NuxtLink to="/register" class="text-primary-600 font-medium hover:underline">Sign up for free</NuxtLink>
         </p>
       </div>
 
@@ -98,7 +97,7 @@ async function resendActivation() {
             type="button"
             class="self-start text-xs underline text-red-800 hover:text-red-900"
             @click="resendActivation"
-          >Kirim ulang link aktivasi</button>
+          >Resend activation link</button>
         </div>
 
         <form class="space-y-4" @submit.prevent="submit">
@@ -107,7 +106,7 @@ async function resendActivation() {
             type="email"
             label="Email"
             placeholder="email@example.com"
-            :error="v$.email.$error ? 'Email tidak valid' : ''"
+            :error="v$.email.$error ? 'Invalid email' : ''"
             required
             @blur="v$.email.$touch"
           />
@@ -115,15 +114,15 @@ async function resendActivation() {
           <BaseInput
             v-model="form.password"
             type="password"
-            label="Kata Sandi"
-            placeholder="Minimal 8 karakter"
-            :error="v$.password.$error ? 'Kata sandi minimal 8 karakter' : ''"
+            label="Password"
+            placeholder="Min. 8 characters"
+            :error="v$.password.$error ? 'Password must be at least 8 characters' : ''"
             required
             @blur="v$.password.$touch"
           />
 
           <div class="flex items-center justify-end">
-            <NuxtLink to="/forgot-password" class="text-xs text-primary-600 hover:underline">Lupa kata sandi?</NuxtLink>
+            <NuxtLink to="/forgot-password" class="text-xs text-primary-600 hover:underline">Forgot password?</NuxtLink>
           </div>
 
           <BaseButton
@@ -134,7 +133,7 @@ async function resendActivation() {
             :loading="isLoading"
             :disabled="isLoading"
           >
-            Masuk
+            Sign In
           </BaseButton>
         </form>
       </BaseCard>

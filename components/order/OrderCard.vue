@@ -9,11 +9,11 @@ const props = defineProps<Props>()
 const { formatCurrency, formatDate } = useFormatters()
 
 const statusConfig: Record<string, { label: string; dotClass: string; badgeClass: string }> = {
-  pending:   { label: 'Menunggu Bayar',  dotClass: 'bg-amber-400',  badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
-  paid:      { label: 'Lunas',           dotClass: 'bg-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  expired:   { label: 'Kedaluwarsa',    dotClass: 'bg-red-400',     badgeClass: 'bg-red-50 text-red-600 border-red-200' },
-  cancelled: { label: 'Dibatalkan',     dotClass: 'bg-slate-400',   badgeClass: 'bg-slate-50 text-slate-600 border-slate-200' },
-  refunded:  { label: 'Direfund',       dotClass: 'bg-blue-400',    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' }
+  pending:   { label: 'Awaiting Payment', dotClass: 'bg-amber-400',   badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+  paid:      { label: 'Paid',             dotClass: 'bg-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  expired:   { label: 'Expired',          dotClass: 'bg-red-400',     badgeClass: 'bg-red-50 text-red-600 border-red-200' },
+  cancelled: { label: 'Cancelled',        dotClass: 'bg-slate-400',   badgeClass: 'bg-slate-50 text-slate-600 border-slate-200' },
+  refunded:  { label: 'Refunded',         dotClass: 'bg-blue-400',    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' }
 }
 
 const statusInfo = computed(() =>
@@ -28,21 +28,21 @@ const action = computed(() => {
     case 'pending': {
       const m = o.payment_method
       let to = `/orders/${o.order_number}/payment`
-      if (m?.startsWith('va_'))       to = `/orders/${o.order_number}/payment/va`
-      else if (m === 'qris')          to = `/orders/${o.order_number}/payment/qris`
+      if (m?.startsWith('va_'))           to = `/orders/${o.order_number}/payment/va`
+      else if (m === 'qris')              to = `/orders/${o.order_number}/payment/qris`
       else if (m?.startsWith('ewallet_')) to = `/orders/${o.order_number}/payment/ewallet`
-      return { label: 'Bayar Sekarang', to, primary: true }
+      return { label: 'Pay Now', to, primary: true }
     }
     case 'paid':
       return o.course?.slug
-        ? { label: 'Mulai Belajar', to: `/courses/${o.course.slug}`, primary: true }
-        : { label: 'Lihat Detail', to: detailTo, primary: false }
+        ? { label: 'Start Learning', to: `/courses/${o.course.slug}`, primary: true }
+        : { label: 'View Details', to: detailTo, primary: false }
     case 'expired':
       return o.course?.slug
-        ? { label: 'Beli Lagi', to: `/checkout?course=${o.course.slug}`, primary: false }
-        : { label: 'Lihat Detail', to: detailTo, primary: false }
+        ? { label: 'Buy Again', to: `/checkout?course=${o.course.slug}`, primary: false }
+        : { label: 'View Details', to: detailTo, primary: false }
     default:
-      return { label: 'Lihat Detail', to: detailTo, primary: false }
+      return { label: 'View Details', to: detailTo, primary: false }
   }
 })
 
@@ -118,19 +118,19 @@ const courseTitle = computed(() =>
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <p class="text-base sm:text-lg font-black tabular-nums" :class="order.total_amount === 0 ? 'text-emerald-600' : 'text-primary-600'">
-              {{ order.total_amount === 0 ? 'Gratis' : formatCurrency(order.total_amount) }}
+              {{ order.total_amount === 0 ? 'Free' : formatCurrency(order.total_amount) }}
             </p>
             <p class="text-xs text-slate-400 mt-0.5">{{ formatDate(order.created_at) }}</p>
           </div>
 
           <div class="flex items-center gap-2 flex-shrink-0">
-            <!-- Secondary: always show "Lihat Detail" when primary action goes elsewhere -->
+            <!-- Secondary: always show "View Details" when primary action goes elsewhere -->
             <NuxtLink
               v-if="action.to !== `/orders/${order.order_number}`"
               :to="`/orders/${order.order_number}`"
               class="text-xs font-semibold text-slate-400 hover:text-primary-600 transition-colors whitespace-nowrap"
             >
-              Lihat Detail
+              View Details
             </NuxtLink>
 
             <!-- Primary action -->

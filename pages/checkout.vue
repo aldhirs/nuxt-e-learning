@@ -86,11 +86,11 @@ async function placeOrder() {
   serverError.value = ''
   if (!course.value) return
   if (isFreeCourse.value) {
-    serverError.value = 'Course ini gratis. Silakan klik "Daftar Gratis" di halaman course.'
+    serverError.value = 'This course is free. Please click "Enroll Free" on the course page.'
     return
   }
   if (isPriceUnset.value) {
-    serverError.value = 'Harga course belum di-set oleh partner. Coba lagi nanti.'
+    serverError.value = 'Course price has not been set by the partner. Please try again later.'
     return
   }
   const valid = await v$.value.$validate()
@@ -123,19 +123,19 @@ async function placeOrder() {
     const e = err as { status?: number; code?: string; reason?: string; message?: string; fields?: Record<string, string> }
     const reason = (e.reason || '').toLowerCase()
     if (e.status === 409 || reason.includes('sudah enrolled') || reason.includes('already')) {
-      serverError.value = 'Anda sudah terdaftar atau punya order aktif untuk course ini.'
+      serverError.value = 'You are already enrolled or have an active order for this course.'
     } else if (e.fields && Object.keys(e.fields).length > 0) {
       serverError.value = Object.values(e.fields).join(' • ')
     } else if (e.status === 422) {
-      serverError.value = e.message || 'Course tidak bisa di-checkout. Periksa status course atau coba course lain.'
+      serverError.value = e.message || 'Course cannot be checked out. Check the course status or try another course.'
     } else if (e.status === 401) {
       auth.logout()
       router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
       return
     } else if (e.status === 0) {
-      serverError.value = 'Tidak bisa terhubung ke server. Cek koneksi internet Anda.'
+      serverError.value = 'Unable to connect to server. Check your internet connection.'
     } else {
-      serverError.value = e.message || 'Gagal membuat order. Silakan coba lagi.'
+      serverError.value = e.message || 'Failed to create order. Please try again.'
     }
   } finally {
     isLoading.value = false
@@ -168,9 +168,9 @@ function goToPayment() {
     <BaseEmptyState
       v-else-if="!course"
       icon="search"
-      title="Course tidak ditemukan"
-      :description="courseError ? 'Gagal memuat course. Coba ulangi.' : 'Course dengan link checkout ini tidak tersedia.'"
-      cta-label="Jelajahi Katalog"
+      title="Course not found"
+      :description="courseError ? 'Failed to load course. Please try again.' : 'This course is not available.'"
+      cta-label="Browse Catalog"
       cta-to="/courses"
     />
 
@@ -181,18 +181,18 @@ function goToPayment() {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <h1 class="text-xl font-bold text-slate-800 mb-2">Order Berhasil Dibuat</h1>
+      <h1 class="text-xl font-bold text-slate-800 mb-2">Order Created Successfully</h1>
       <p class="text-slate-500 text-sm mb-1">
-        No. Order: <span class="font-mono font-semibold text-slate-700">{{ createdOrder.order_number }}</span>
+        Order #: <span class="font-mono font-semibold text-slate-700">{{ createdOrder.order_number }}</span>
       </p>
       <p class="text-slate-500 text-sm mb-8">
-        Selesaikan pembayaran sebelum
+        Complete payment before
         <span class="font-medium">{{ new Date(createdOrder.expires_at).toLocaleString('id-ID') }}</span>
-        untuk mengakses course.
+        to access this course.
       </p>
       <div class="flex flex-wrap gap-3 justify-center">
-        <BaseButton variant="primary" @click="goToPayment">Lanjut ke Detail Order</BaseButton>
-        <BaseButton variant="secondary" to="/orders">Lihat Order Saya</BaseButton>
+        <BaseButton variant="primary" @click="goToPayment">Go to Order Details</BaseButton>
+        <BaseButton variant="secondary" to="/orders">View My Orders</BaseButton>
       </div>
     </div>
 
@@ -204,13 +204,13 @@ function goToPayment() {
         <div class="lg:col-span-2 space-y-5">
           <!-- Free course notice -->
           <div v-if="isFreeCourse" class="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-            Course ini <strong>gratis</strong>. Kembali ke halaman course dan klik "Daftar Gratis" untuk langsung enroll.
-            <NuxtLink :to="`/courses/${course.slug}`" class="underline font-medium ml-1">Buka course →</NuxtLink>
+            This course is <strong>free</strong>. Go back to the course page and click "Enroll Free" to sign up instantly.
+            <NuxtLink :to="`/courses/${course.slug}`" class="underline font-medium ml-1">Open course →</NuxtLink>
           </div>
 
           <!-- Price unset notice -->
           <div v-else-if="isPriceUnset" class="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-            Harga course belum di-set oleh partner. Silakan coba lagi nanti atau pilih course lain.
+            Course price has not been set by the partner. Please try again later or choose another course.
           </div>
 
           <!-- Server error banner -->
@@ -220,7 +220,7 @@ function goToPayment() {
 
           <!-- Course summary -->
           <BaseCard shadow="sm" padding="md" class="border border-slate-200">
-            <h2 class="text-sm font-semibold text-slate-700 mb-3">Course yang dipesan</h2>
+            <h2 class="text-sm font-semibold text-slate-700 mb-3">Ordered Course</h2>
             <div class="flex gap-3">
               <div class="w-16 h-12 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
                 <img v-if="course?.thumbnail_url" :src="course.thumbnail_url" :alt="course.title" class="w-full h-full object-cover" />
@@ -236,13 +236,13 @@ function goToPayment() {
 
           <!-- Buyer info -->
           <BaseCard shadow="sm" padding="md" class="border border-slate-200">
-            <h2 class="text-sm font-semibold text-slate-700 mb-4">Informasi Pemesan</h2>
+            <h2 class="text-sm font-semibold text-slate-700 mb-4">Buyer Information</h2>
             <div class="space-y-4">
               <BaseInput
                 v-model="form.full_name"
-                label="Nama Lengkap"
-                placeholder="Nama sesuai KTP"
-                :error="v$.full_name.$error ? 'Nama minimal 3 karakter' : ''"
+                label="Full Name"
+                placeholder="As on your ID card"
+                :error="v$.full_name.$error ? 'Name must be at least 3 characters' : ''"
                 required
                 @blur="v$.full_name.$touch"
               />
@@ -250,8 +250,8 @@ function goToPayment() {
                 v-model="form.email"
                 type="email"
                 label="Email"
-                placeholder="Konfirmasi akan dikirim ke email ini"
-                :error="v$.email.$error ? 'Email tidak valid' : ''"
+                placeholder="Confirmation will be sent to this email"
+                :error="v$.email.$error ? 'Invalid email' : ''"
                 required
                 @blur="v$.email.$touch"
               />
@@ -260,7 +260,7 @@ function goToPayment() {
                 label="No. HP"
                 placeholder="08123456789"
                 :error="v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : ''"
-                hint="Digunakan untuk konfirmasi pembayaran"
+                hint="Used for payment confirmation"
                 required
                 @blur="v$.phone.$touch"
               />
@@ -272,7 +272,7 @@ function goToPayment() {
         <div class="lg:col-span-1">
           <div class="sticky top-20">
             <BaseCard shadow="sm" padding="md" class="border border-slate-200">
-              <h2 class="text-sm font-semibold text-slate-700 mb-4">Ringkasan Pesanan</h2>
+              <h2 class="text-sm font-semibold text-slate-700 mb-4">Order Summary</h2>
               <CheckoutPriceBreakdown :subtotal="subtotal" :tax="tax" :total="total" />
 
               <div class="mt-5">
@@ -292,7 +292,7 @@ function goToPayment() {
                 <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Pembayaran aman & terenkripsi
+                Secure & encrypted payment
               </p>
             </BaseCard>
           </div>

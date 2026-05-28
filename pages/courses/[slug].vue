@@ -29,7 +29,7 @@ const { data: course, pending, error, refresh } = await useAsyncData<Course | nu
 )
 
 useSeoMeta({
-  title: () => course.value?.title ?? 'Course tidak ditemukan',
+  title: () => course.value?.title ?? 'Course not found',
   description: () => course.value?.description?.slice(0, 160) ?? ''
 })
 
@@ -65,7 +65,7 @@ const discountPct = computed(() => {
   return Math.round((1 - p / cp) * 100)
 })
 
-const difficultyLabel: Record<string, string> = { beginner: 'Pemula', intermediate: 'Menengah', advanced: 'Mahir' }
+const difficultyLabel: Record<string, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' }
 const difficultyColor: Record<string, string> = {
   beginner: 'bg-emerald-100 text-emerald-700',
   intermediate: 'bg-amber-100 text-amber-700',
@@ -88,18 +88,18 @@ async function handleFreeEnroll() {
   enrollLoading.value = true
   try {
     await enrollmentApi.enrollFree(course.value.id)
-    enrollSuccess.value = 'Anda berhasil terdaftar ke course ini. Selamat belajar!'
+    enrollSuccess.value = 'You have successfully enrolled in this course. Enjoy learning!'
   } catch (err: unknown) {
     const e = err as { status?: number; reason?: string; message?: string }
     const reason = (e.reason || '').toLowerCase()
     if (reason.includes('already') || reason.includes('sudah enrolled') || e.status === 409) {
-      enrollSuccess.value = 'Anda sudah terdaftar di course ini.'
+      enrollSuccess.value = 'You are already enrolled in this course.'
     } else if (e.status === 401) {
       router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
     } else if (e.status === 422) {
-      enrollError.value = e.message || 'Course tidak bisa di-enroll. Periksa status course.'
+      enrollError.value = e.message || 'Cannot enroll in this course. Check the course status.'
     } else {
-      enrollError.value = e.message || 'Gagal mendaftar course. Coba lagi.'
+      enrollError.value = e.message || 'Failed to enroll in course. Please try again.'
     }
   } finally {
     enrollLoading.value = false
@@ -151,11 +151,11 @@ onMounted(() => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
       </div>
-      <p class="text-slate-700 font-semibold mb-2">Gagal memuat course</p>
+      <p class="text-slate-700 font-semibold mb-2">Failed to load course</p>
       <p class="text-sm text-slate-500 mb-6">{{ (error as { message?: string }).message ?? '' }}</p>
       <div class="flex justify-center gap-3">
-        <BaseButton variant="primary" size="sm" @click="refresh()">Coba lagi</BaseButton>
-        <BaseButton variant="ghost" size="sm" to="/courses">Kembali ke katalog</BaseButton>
+        <BaseButton variant="primary" size="sm" @click="refresh()">Try Again</BaseButton>
+        <BaseButton variant="ghost" size="sm" to="/courses">Back to catalog</BaseButton>
       </div>
     </div>
 
@@ -166,9 +166,9 @@ onMounted(() => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
       </div>
-      <h1 class="text-2xl font-bold text-slate-800 mb-3">Course tidak ditemukan</h1>
-      <p class="text-sm text-slate-500 mb-8">Course dengan link ini sudah tidak tersedia atau belum dipublikasikan.</p>
-      <BaseButton variant="primary" to="/courses">Jelajahi Katalog</BaseButton>
+      <h1 class="text-2xl font-bold text-slate-800 mb-3">Course not found</h1>
+      <p class="text-sm text-slate-500 mb-8">This course is no longer available or has not been published.</p>
+      <BaseButton variant="primary" to="/courses">Browse Catalog</BaseButton>
     </div>
 
     <!-- ── Main ────────────────────────────────────────────────────────────── -->
@@ -182,7 +182,7 @@ onMounted(() => {
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
           <!-- Breadcrumb -->
           <nav class="flex items-center gap-1.5 text-sm text-slate-500 mb-6 flex-wrap" aria-label="Breadcrumb">
-            <NuxtLink to="/" class="hover:text-primary-600 transition-colors">Beranda</NuxtLink>
+            <NuxtLink to="/" class="hover:text-primary-600 transition-colors">Home</NuxtLink>
             <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
             <NuxtLink to="/courses" class="hover:text-primary-600 transition-colors">Course</NuxtLink>
             <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
@@ -217,7 +217,7 @@ onMounted(() => {
             </span>
             <span v-if="totalLessons > 0" class="inline-flex items-center gap-1.5 text-sm text-slate-600 bg-white/80 px-3 py-1.5 rounded-full border border-slate-200">
               <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-              {{ totalLessons }} pelajaran
+              {{ totalLessons }} lessons
             </span>
             <span v-if="totalDuration > 0" class="inline-flex items-center gap-1.5 text-sm text-slate-600 bg-white/80 px-3 py-1.5 rounded-full border border-slate-200">
               <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -225,10 +225,10 @@ onMounted(() => {
             </span>
             <span v-if="isFree" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-              Gratis
+              Free
             </span>
             <span v-if="course.published_at" class="text-xs text-slate-400">
-              {{ new Date(course.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }}
+              {{ new Date(course.published_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) }}
             </span>
           </div>
         </div>
@@ -247,7 +247,7 @@ onMounted(() => {
                 <span class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
                   <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
-                Tentang Course
+                About this Course
               </h2>
               <div class="text-slate-600 leading-relaxed text-sm whitespace-pre-line">{{ course.description }}</div>
             </section>
@@ -258,7 +258,7 @@ onMounted(() => {
                 <span class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
                   <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
-                Yang Akan Dipelajari
+                What You'll Learn
               </h2>
               <div class="bg-gradient-to-br from-primary-50/60 to-slate-50 rounded-2xl p-6 border border-primary-100/70">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-3.5 gap-x-8">
@@ -278,7 +278,7 @@ onMounted(() => {
                 <span class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
                   <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                 </span>
-                Penyelenggara
+                Provider
               </h2>
               <NuxtLink
                 :to="`/partners/${partner.slug}`"
@@ -290,9 +290,9 @@ onMounted(() => {
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-lg font-bold text-slate-800 group-hover:text-primary-600 transition-colors">{{ partner.name }}</p>
-                  <p class="text-sm text-slate-500 mt-1">Penyelenggara pelatihan maritim profesional</p>
+                  <p class="text-sm text-slate-500 mt-1">Professional maritime training provider</p>
                   <p class="text-xs text-primary-600 font-semibold mt-2.5 flex items-center gap-1">
-                    Lihat semua kursus
+                    View all courses
                     <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                   </p>
                 </div>
@@ -307,10 +307,10 @@ onMounted(() => {
                   <span class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
                     <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                   </span>
-                  Silabus Course
+                  Course Syllabus
                 </h2>
                 <div v-if="totalLessons > 0" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
-                  {{ chapters.length }} bab &middot; {{ totalLessons }} pelajaran
+                  {{ chapters.length }} chapters &middot; {{ totalLessons }} lessons
                   <span v-if="totalDuration > 0"> &middot; {{ formatDuration(totalDuration) }}</span>
                 </div>
               </div>
@@ -336,7 +336,7 @@ onMounted(() => {
                     </div>
                     <div class="flex-1 min-w-0">
                       <span class="font-semibold text-slate-800 text-sm sm:text-base">{{ chapter.title }}</span>
-                      <span class="text-xs text-slate-400 ml-2">{{ chapter.lessons?.length ?? 0 }} pelajaran</span>
+                      <span class="text-xs text-slate-400 ml-2">{{ chapter.lessons?.length ?? 0 }} lessons</span>
                     </div>
                     <svg
                       class="w-4 h-4 transition-transform duration-200 flex-shrink-0"
@@ -374,8 +374,8 @@ onMounted(() => {
               <BaseEmptyState
                 v-else
                 icon="inbox"
-                title="Silabus belum tersedia"
-                description="Partner belum melengkapi materi course ini."
+                title="Syllabus not yet available"
+                description="The partner has not completed this course content yet."
               />
             </section>
           </div>
@@ -422,17 +422,17 @@ onMounted(() => {
                   <!-- Price -->
                   <div class="mb-5">
                     <div v-if="isFree" class="flex items-center gap-2">
-                      <span class="text-3xl font-extrabold text-green-600">Gratis</span>
-                      <span class="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold">Tanpa biaya</span>
+                      <span class="text-3xl font-extrabold text-green-600">Free</span>
+                      <span class="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold">No charge</span>
                     </div>
                     <div v-else-if="hasPriceSet">
                       <span class="text-3xl font-extrabold text-primary-600">{{ formatCurrency(course.price ?? 0) }}</span>
                       <div v-if="discountPct > 0" class="flex items-center gap-2 mt-1.5">
                         <span class="text-slate-400 line-through text-sm">{{ formatCurrency(course.compare_at_price ?? 0) }}</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold">Hemat {{ discountPct }}%</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold">Save {{ discountPct }}%</span>
                       </div>
                     </div>
-                    <div v-else class="text-slate-400 text-sm italic">Harga belum diset</div>
+                    <div v-else class="text-slate-400 text-sm italic">Price not set</div>
                   </div>
 
                   <!-- CTA -->
@@ -446,54 +446,54 @@ onMounted(() => {
                       :disabled="enrollLoading || !!enrollSuccess"
                       @click="handleFreeEnroll"
                     >
-                      {{ enrollSuccess ? 'Sudah Terdaftar' : 'Daftar Gratis' }}
+                      {{ enrollSuccess ? 'Enrolled' : 'Enroll for Free' }}
                     </BaseButton>
                     <BaseButton v-else-if="hasPriceSet" variant="primary" size="lg" block @click="handlePurchase">
-                      Beli Sekarang
+                      Buy Now
                     </BaseButton>
                     <BaseButton v-else variant="ghost" size="lg" block disabled>
-                      Harga belum tersedia
+                      Price not available
                     </BaseButton>
                     <BaseButton v-if="!auth.isAuthenticated" variant="ghost" size="md" block to="/login">
-                      Sudah punya akun? Masuk
+                      Already have an account? Sign In
                     </BaseButton>
                   </div>
 
-                  <p class="text-xs text-slate-400 text-center mt-3">Akses seumur hidup · Sertifikat digital</p>
+                  <p class="text-xs text-slate-400 text-center mt-3">Lifetime access · Digital certificate</p>
 
                   <!-- Course includes -->
                   <div class="mt-5 pt-5 border-t border-slate-100">
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Course ini termasuk:</p>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">This course includes:</p>
                     <div class="space-y-3">
                       <div v-if="totalLessons > 0" class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
                           <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882V15.12a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
                         </div>
-                        <span class="text-sm text-slate-600">{{ totalLessons }} video pelajaran</span>
+                        <span class="text-sm text-slate-600">{{ totalLessons }} video lessons</span>
                       </div>
                       <div v-if="totalDuration > 0" class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
                           <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
-                        <span class="text-sm text-slate-600">{{ formatDuration(totalDuration) }} konten</span>
+                        <span class="text-sm text-slate-600">{{ formatDuration(totalDuration) }} of content</span>
                       </div>
                       <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
                           <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         </div>
-                        <span class="text-sm text-slate-600">Akses di semua perangkat</span>
+                        <span class="text-sm text-slate-600">Access on all devices</span>
                       </div>
                       <div v-if="course.enable_completion_cert" class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
                           <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                         </div>
-                        <span class="text-sm text-slate-600">Sertifikat penyelesaian</span>
+                        <span class="text-sm text-slate-600">Completion certificate</span>
                       </div>
                       <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
                           <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                         </div>
-                        <span class="text-sm text-slate-600">Akses seumur hidup</span>
+                        <span class="text-sm text-slate-600">Lifetime access</span>
                       </div>
                     </div>
                   </div>
@@ -504,8 +504,8 @@ onMounted(() => {
               <div class="rounded-2xl p-5 bg-gradient-to-br from-primary-600 to-primary-800 text-white relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-28 h-28 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/3 pointer-events-none" aria-hidden="true" />
                 <div class="absolute bottom-0 left-0 w-20 h-20 rounded-full bg-white/5 translate-y-1/2 -translate-x-1/3 pointer-events-none" aria-hidden="true" />
-                <h3 class="font-bold text-lg mb-1.5 relative">Ada Pertanyaan?</h3>
-                <p class="text-sm text-primary-100 mb-4 relative">Tim kami siap membantu Anda menemukan course yang tepat.</p>
+                <h3 class="font-bold text-lg mb-1.5 relative">Have Questions?</h3>
+                <p class="text-sm text-primary-100 mb-4 relative">Our team is ready to help you find the right course.</p>
                 <a
                   href="mailto:support@drillspace.id"
                   class="relative flex items-center gap-2.5 text-sm text-white/90 hover:text-white transition-colors"

@@ -3,7 +3,7 @@
     <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         <NuxtLink to="/" class="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md" aria-label="DrillSpace — Halaman Utama">
-          <img src="/images/logo.png" alt="DrillSpace" class="h-8 w-auto" />
+          <img src="/images/logo-square.png" alt="DrillSpace" class="h-8 w-auto" />
         </NuxtLink>
 
         <div class="flex items-center gap-3 text-sm text-slate-500">

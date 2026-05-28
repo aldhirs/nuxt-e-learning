@@ -5,8 +5,8 @@ import type { Paginated, CourseListItem, Partner } from '~/types'
 
 definePageMeta({ layout: 'default' })
 useSeoMeta({
-  title: 'Katalog Course',
-  description: 'Temukan ratusan course maritim bersertifikat dari instruktur terbaik Indonesia.'
+  title: 'Course Catalog',
+  description: 'Find hundreds of certified maritime courses from the best instructors.'
 })
 
 const route  = useRoute()
@@ -153,17 +153,17 @@ onMounted(() => {
 
 // Sort / difficulty label helpers
 const sortOptions = [
-  { value: '',               label: 'Urutan Default' },
-  { value: 'newest',         label: 'Terbaru' },
-  { value: 'cheapest',       label: 'Harga Terendah' },
-  { value: 'most_expensive', label: 'Harga Tertinggi' },
+  { value: '',               label: 'Default' },
+  { value: 'newest',         label: 'Latest' },
+  { value: 'cheapest',       label: 'Lowest Price' },
+  { value: 'most_expensive', label: 'Highest Price' },
   { value: 'alphabetical',   label: 'A → Z' },
 ]
 
 const difficultyOptions = [
-  { value: 'beginner',     label: 'Pemula',    icon: '🟢' },
-  { value: 'intermediate', label: 'Menengah',  icon: '🟡' },
-  { value: 'advanced',     label: 'Mahir',     icon: '🔴' },
+  { value: 'beginner',     label: 'Beginner',      icon: '🟢' },
+  { value: 'intermediate', label: 'Intermediate',  icon: '🟡' },
+  { value: 'advanced',     label: 'Advanced',      icon: '🔴' },
 ]
 </script>
 
@@ -174,12 +174,12 @@ const difficultyOptions = [
     <div class="bg-white border-b border-slate-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav class="flex items-center gap-2 text-xs text-slate-400 mb-3" aria-label="Breadcrumb">
-          <NuxtLink to="/" class="hover:text-primary-500 transition-colors">Beranda</NuxtLink>
+          <NuxtLink to="/" class="hover:text-primary-500 transition-colors">Home</NuxtLink>
           <span aria-hidden="true">/</span>
-          <span class="text-slate-600 font-medium">Katalog Course</span>
+          <span class="text-slate-600 font-medium">Course Catalog</span>
         </nav>
-        <h1 class="text-3xl font-extrabold text-slate-900">Katalog Course</h1>
-        <p class="text-slate-500 mt-1.5 text-sm">Tingkatkan kompetensi maritim Anda dari instruktur bersertifikat STCW</p>
+        <h1 class="text-3xl font-extrabold text-slate-900">Course Catalog</h1>
+        <p class="text-slate-500 mt-1.5 text-sm">Enhance your maritime skills with STCW-certified instructors</p>
       </div>
     </div>
 
@@ -210,17 +210,17 @@ const difficultyOptions = [
           </button>
 
           <p class="text-sm text-slate-500 hidden sm:block">
-            <template v-if="pending && !page">Memuat...</template>
+            <template v-if="pending && !page">Loading...</template>
             <template v-else>
-              <span class="font-semibold text-slate-700">{{ totalCount.toLocaleString('id-ID') }}</span> course
-              <span v-if="hasActiveFilter" class="text-primary-500"> · filter aktif</span>
+              <span class="font-semibold text-slate-700">{{ totalCount.toLocaleString('id-ID') }}</span> courses
+              <span v-if="hasActiveFilter" class="text-primary-500"> · filter active</span>
             </template>
           </p>
         </div>
 
         <!-- Sort (immediate) -->
         <div class="flex items-center gap-2">
-          <span class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">Urutkan:</span>
+          <span class="text-xs text-slate-500 hidden sm:block whitespace-nowrap">Sort:</span>
           <div class="relative">
             <select
               :value="selectedSort"
@@ -246,7 +246,7 @@ const difficultyOptions = [
           class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
           "{{ filters.search }}"
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
-            aria-label="Hapus filter pencarian"
+            aria-label="Remove search filter"
             @click="updateQuery({ search: undefined, offset: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
@@ -255,7 +255,7 @@ const difficultyOptions = [
           class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
           {{ difficultyOptions.find(d => d.value === filters.difficulty)?.label }}
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
-            aria-label="Hapus filter level"
+            aria-label="Remove level filter"
             @click="updateQuery({ difficulty: undefined, offset: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
@@ -264,16 +264,16 @@ const difficultyOptions = [
           class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
           {{ partnerList.find(p => p.slug === filters.partner_slug)?.name ?? filters.partner_slug }}
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
-            aria-label="Hapus filter partner"
+            aria-label="Remove partner filter"
             @click="updateQuery({ partner_slug: undefined, offset: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </span>
         <span v-if="filters.is_free"
           class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
-          Gratis saja
+          Free only
           <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-green-200 transition-colors"
-            aria-label="Hapus filter gratis"
+            aria-label="Remove free filter"
             @click="updateQuery({ is_free: undefined, offset: undefined })">
             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
@@ -281,7 +281,7 @@ const difficultyOptions = [
         <button type="button"
           class="text-xs text-slate-400 hover:text-red-500 transition-colors ml-1 underline underline-offset-2"
           @click="clearFilters">
-          Reset semua
+          Reset all
         </button>
       </div>
 
@@ -300,9 +300,9 @@ const difficultyOptions = [
 
       <!-- Error -->
       <BaseCard v-else-if="error" padding="lg" class="border border-red-200 bg-red-50">
-        <p class="text-sm text-red-700 mb-3">Gagal memuat course. {{ (error as { message?: string }).message ?? '' }}</p>
+        <p class="text-sm text-red-700 mb-3">Failed to load courses. {{ (error as { message?: string }).message ?? '' }}</p>
         <div class="flex gap-2">
-          <BaseButton variant="primary" size="sm" @click="refresh()">Coba lagi</BaseButton>
+          <BaseButton variant="primary" size="sm" @click="refresh()">Try Again</BaseButton>
           <BaseButton v-if="hasActiveFilter" variant="ghost" size="sm" @click="clearFilters">Reset filter</BaseButton>
         </div>
       </BaseCard>
@@ -311,16 +311,16 @@ const difficultyOptions = [
       <BaseEmptyState
         v-else-if="courses.length === 0 && !hasActiveFilter"
         icon="inbox"
-        title="Belum ada course"
-        description="Course akan ditampilkan ketika partner mempublikasikan materi."
+        title="No courses yet"
+        description="Courses will appear once partners publish their content."
       />
 
       <!-- Empty: filtered -->
       <BaseEmptyState
         v-else-if="courses.length === 0"
         icon="search"
-        title="Course tidak ditemukan"
-        description="Coba kata kunci lain atau ubah filter."
+        title="No courses found"
+        description="Try a different keyword or change filters."
         cta-label="Reset Filter"
         @cta-click="clearFilters"
       />
@@ -332,7 +332,7 @@ const difficultyOptions = [
             <div
               v-for="(course, i) in courses"
               :key="course.id"
-              class="animate-fade-in-up"
+              class="animate-fade-in-up h-full"
               :style="{ animationDelay: `${i * 45}ms` }"
             >
               <CourseCard :course="course"/>
@@ -343,8 +343,8 @@ const difficultyOptions = [
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="mt-12 flex flex-col items-center gap-4">
           <p class="text-sm text-slate-400">
-            Halaman <span class="font-semibold text-slate-700">{{ currentPage }}</span> dari {{ totalPages }}
-            · <span class="font-semibold text-slate-700">{{ courses.length }}</span> dari {{ totalCount }} course
+            Page <span class="font-semibold text-slate-700">{{ currentPage }}</span> of {{ totalPages }}
+            · <span class="font-semibold text-slate-700">{{ courses.length }}</span> of {{ totalCount }} courses
           </p>
           <div class="flex items-center gap-2">
             <button type="button"
@@ -353,7 +353,7 @@ const difficultyOptions = [
                 hasPrev && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
               @click="goPage(currentPage - 1)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              Sebelumnya
+              Previous
             </button>
 
             <div class="hidden sm:flex items-center gap-1">
@@ -376,7 +376,7 @@ const difficultyOptions = [
               :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
                 hasNext && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
               @click="goPage(currentPage + 1)">
-              Berikutnya
+              Next
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
           </div>
@@ -410,12 +410,12 @@ const difficultyOptions = [
               <h2 class="text-base font-bold text-slate-800">Filter</h2>
               <!-- Pending changes indicator -->
               <span v-if="localHasChanges" class="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                Belum diterapkan
+                Not applied yet
               </span>
             </div>
             <button type="button"
               class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              aria-label="Tutup filter"
+              aria-label="Close filter"
               @click="closeFilter">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -428,14 +428,14 @@ const difficultyOptions = [
 
             <!-- Search -->
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Pencarian</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Search</label>
               <div class="relative">
                 <input
                   v-model="localSearch"
                   type="text"
-                  placeholder="Cari nama course..."
+                  placeholder="Search course name..."
                   class="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none transition-colors"
-                  aria-label="Cari course"
+                  aria-label="Search courses"
                 />
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -465,14 +465,14 @@ const difficultyOptions = [
                 <button v-if="localDifficulty" type="button"
                   class="text-xs text-slate-400 hover:text-slate-600 transition-colors ml-1"
                   @click="localDifficulty = ''">
-                  Hapus pilihan
+                  Clear selection
                 </button>
               </div>
             </div>
 
             <!-- Free only -->
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Ketersediaan</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Availability</label>
               <label
                 :class="['flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all select-none',
                   localIsFree ? 'border-green-300 bg-green-50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50']"
@@ -480,8 +480,8 @@ const difficultyOptions = [
                 <div class="flex items-center gap-3">
                   <span class="text-lg" aria-hidden="true">🎁</span>
                   <div>
-                    <p class="text-sm font-medium text-slate-700">Gratis saja</p>
-                    <p class="text-xs text-slate-400">Hanya course gratis</p>
+                    <p class="text-sm font-medium text-slate-700">Free only</p>
+                    <p class="text-xs text-slate-400">Only free courses</p>
                   </div>
                 </div>
                 <div :class="['relative w-10 h-6 rounded-full transition-colors duration-200 flex-shrink-0', localIsFree ? 'bg-green-500' : 'bg-slate-200']"
@@ -524,7 +524,7 @@ const difficultyOptions = [
             <button type="button"
               class="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors active:scale-95"
               @click="resetDrawer">
-              Reset Semua
+              Reset All
             </button>
             <button type="button"
               :class="['flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95',
@@ -532,7 +532,7 @@ const difficultyOptions = [
                   ? 'bg-primary-500 text-white hover:bg-primary-600 shadow-md shadow-primary-500/20'
                   : 'bg-primary-500 text-white hover:bg-primary-600 shadow-md shadow-primary-500/20']"
               @click="applyFilters">
-              Terapkan Filter
+              Apply Filters
             </button>
           </div>
         </div>

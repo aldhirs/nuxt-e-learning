@@ -5,7 +5,7 @@ import { required, email, minLength, sameAs, helpers } from '@vuelidate/validato
 
 definePageMeta({ layout: 'default' })
 
-useSeoMeta({ title: 'Daftar Akun' })
+useSeoMeta({ title: 'Create Account' })
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -20,7 +20,7 @@ const form = reactive({
 })
 
 const phoneValidator = helpers.withMessage(
-  'Nomor HP tidak valid (contoh: 08123456789 atau +628123456789)',
+  'Invalid phone number (e.g. 08123456789 or +628123456789)',
   (v: string) => !v || /^(\+62|62|0)8[1-9][0-9]{7,11}$/.test(v.replace(/[\s\-().]/g, ''))
 )
 const isLoading = ref(false)
@@ -36,7 +36,7 @@ const rules = {
     required,
     minLength: minLength(3),
     usernameFormat: helpers.withMessage(
-      'Username hanya boleh huruf, angka, titik, underscore, atau dash',
+      'Username may only contain letters, numbers, dots, underscores, or dashes',
       usernameFormat
     )
   },
@@ -45,7 +45,7 @@ const rules = {
   password: { required, minLength: minLength(8) },
   password_confirm: {
     required,
-    sameAs: helpers.withMessage('Kata sandi tidak cocok', sameAs(passwordRef))
+    sameAs: helpers.withMessage('Passwords do not match', sameAs(passwordRef))
   }
 }
 
@@ -73,7 +73,7 @@ async function submit() {
     }
     if (form.phone.trim()) registerPayload.phone = form.phone.trim()
     await auth.register(registerPayload)
-    // BE saat ini set akun aktif langsung — coba auto-login agar UX seamless.
+    // BE currently sets account active directly — attempt auto-login for seamless UX.
     try {
       await auth.login({
         email: form.email.trim().toLowerCase(),
@@ -83,22 +83,22 @@ async function submit() {
       await router.push('/')
       return
     } catch {
-      // fallthrough: tampilkan success screen + arahkan ke login
+      // fallthrough: show success screen + redirect to login
     }
     success.value = true
   } catch (err: unknown) {
     const e = err as { status?: number; code?: string; reason?: string; message?: string; fields?: Record<string, string> }
     const reason = (e.reason || '').toLowerCase()
     if (e.status === 409 || reason.includes('duplicate') || reason.includes('sudah terdaftar') || reason.includes('uk_users')) {
-      serverError.value = 'Email atau username sudah terdaftar. Silakan login atau gunakan email lain.'
+      serverError.value = 'Email or username already registered. Please sign in or use a different email.'
     } else if (e.fields && Object.keys(e.fields).length > 0) {
       serverError.value = Object.values(e.fields).join(' • ')
     } else if (e.status === 400 || e.status === 422) {
-      serverError.value = 'Data tidak valid. Periksa kembali isian Anda.'
+      serverError.value = 'Invalid data. Please review your inputs.'
     } else if (e.status === 0) {
-      serverError.value = 'Tidak bisa terhubung ke server. Cek koneksi internet Anda.'
+      serverError.value = 'Unable to connect to server. Check your internet connection.'
     } else {
-      serverError.value = e.message || 'Terjadi kesalahan. Silakan coba lagi.'
+      serverError.value = e.message || 'Something went wrong. Please try again.'
     }
   } finally {
     isLoading.value = false
@@ -110,22 +110,22 @@ async function submit() {
   <div class="min-h-[calc(100vh-112px)] flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-slate-800">Buat Akun DrillSpace</h1>
-        <p class="text-slate-500 text-sm mt-2">Sudah punya akun?
-          <NuxtLink to="/login" class="text-primary-600 font-medium hover:underline">Masuk</NuxtLink>
+        <h1 class="text-2xl font-bold text-slate-800">Create a DrillSpace Account</h1>
+        <p class="text-slate-500 text-sm mt-2">Already have an account?
+          <NuxtLink to="/login" class="text-primary-600 font-medium hover:underline">Sign In</NuxtLink>
         </p>
       </div>
 
-      <!-- Success state (fallback kalau auto-login gagal) -->
+      <!-- Success state (fallback if auto-login fails) -->
       <div v-if="success" class="text-center py-8">
         <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 class="text-lg font-bold text-slate-800 mb-2">Akun berhasil dibuat!</h2>
-        <p class="text-slate-500 text-sm mb-6">Silakan masuk dengan email dan kata sandi yang baru saja dibuat.</p>
-        <BaseButton variant="primary" to="/login">Masuk Sekarang</BaseButton>
+        <h2 class="text-lg font-bold text-slate-800 mb-2">Account created!</h2>
+        <p class="text-slate-500 text-sm mb-6">Please sign in with your newly created credentials.</p>
+        <BaseButton variant="primary" to="/login">Sign In Now</BaseButton>
       </div>
 
       <BaseCard v-else shadow="md" padding="lg" class="border border-slate-200">
@@ -139,9 +139,9 @@ async function submit() {
         <form class="space-y-4" @submit.prevent="submit">
           <BaseInput
             v-model="form.full_name"
-            label="Nama Lengkap"
-            placeholder="Nama sesuai KTP"
-            :error="v$.full_name.$error ? 'Nama minimal 3 karakter' : ''"
+            label="Full Name"
+            placeholder="As on your ID card"
+            :error="v$.full_name.$error ? 'Name must be at least 3 characters' : ''"
             required
             @blur="v$.full_name.$touch"
           />
@@ -150,53 +150,52 @@ async function submit() {
             type="email"
             label="Email"
             placeholder="email@example.com"
-            :error="v$.email.$error ? 'Email tidak valid' : ''"
+            :error="v$.email.$error ? 'Invalid email' : ''"
             required
             @blur="v$.email.$touch"
           />
           <BaseInput
             v-model="form.username"
             label="Username"
-            placeholder="contoh: budi_santoso"
-            :error="v$.username.$error ? (v$.username.$errors[0]?.$message as string ?? 'Username minimal 3 karakter') : ''"
+            placeholder="e.g. john_doe"
+            :error="v$.username.$error ? (v$.username.$errors[0]?.$message as string ?? 'Username must be at least 3 characters') : ''"
             required
-            hint="Diisi otomatis dari email, bisa diubah."
+            hint="Auto-filled from email, can be changed."
             @blur="v$.username.$touch"
           />
           <BaseInput
             v-model="form.phone"
             type="tel"
-            label="Nomor HP"
-            placeholder="08123456789 (opsional)"
+            label="Phone Number"
+            placeholder="08123456789 (optional)"
             :error="v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : ''"
-            hint="Opsional. Digunakan untuk konfirmasi pembelian."
+            hint="Optional. Used for purchase confirmation."
             @blur="v$.phone.$touch"
           />
           <BaseInput
             v-model="form.password"
             type="password"
-            label="Kata Sandi"
-            placeholder="Minimal 8 karakter"
-            :error="v$.password.$error ? 'Kata sandi minimal 8 karakter' : ''"
+            label="Password"
+            placeholder="Min. 8 characters"
+            :error="v$.password.$error ? 'Password must be at least 8 characters' : ''"
             required
             @blur="v$.password.$touch"
           />
           <BaseInput
             v-model="form.password_confirm"
             type="password"
-            label="Konfirmasi Kata Sandi"
-            placeholder="Ulangi kata sandi"
+            label="Confirm Password"
+            placeholder="Repeat your password"
             :error="v$.password_confirm.$error ? (v$.password_confirm.$errors[0]?.$message as string) : ''"
             required
             @blur="v$.password_confirm.$touch"
           />
 
           <p class="text-xs text-slate-500">
-            Dengan mendaftar, Anda menyetujui
-            <NuxtLink to="/syarat" class="text-primary-600 hover:underline">Syarat & Ketentuan</NuxtLink>
-            dan
-            <NuxtLink to="/privasi" class="text-primary-600 hover:underline">Kebijakan Privasi</NuxtLink>
-            kami.
+            By registering, you agree to our
+            <NuxtLink to="/syarat" class="text-primary-600 hover:underline">Terms & Conditions</NuxtLink>
+            and
+            <NuxtLink to="/privasi" class="text-primary-600 hover:underline">Privacy Policy</NuxtLink>.
           </p>
 
           <BaseButton
@@ -207,7 +206,7 @@ async function submit() {
             :loading="isLoading"
             :disabled="isLoading || v$.$invalid"
           >
-            Daftar
+            Register
           </BaseButton>
         </form>
       </BaseCard>
