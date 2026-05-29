@@ -13,7 +13,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    ssoApiKey: process.env.NUXT_SSO_API_KEY || 'sk-sso-changeme-generate-a-strong-random-key',
+    ssoApiKey: '',
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.staging.drillspace.id/api/v1',
       clientBaseUrl: process.env.NUXT_PUBLIC_CLIENT_BASE_URL || 'https://staging.lms.drillspace.id',
