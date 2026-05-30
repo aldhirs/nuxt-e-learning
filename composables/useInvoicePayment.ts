@@ -9,6 +9,12 @@ const POLL_INTERVAL_MS = 10_000
 
 export function useInvoicePayment() {
   const api = useApi()
+  const partner = usePartnerStore()
+
+  function clientHeaders(): Record<string, string> {
+    const id = partner.activeClient?.id
+    return id ? { 'X-Client-ID': String(id) } : {}
+  }
 
   const session = ref<InvoicePaymentSession | null>(null)
   const isCreating = ref(false)
@@ -28,7 +34,7 @@ export function useInvoicePayment() {
     const tick = async () => {
       if (!isPolling.value) return
       try {
-        const snap = await api.get<{ status: string }>(`/clients/subscription/invoices/${encodeURIComponent(invoiceNumber)}/status`)
+        const snap = await api.get<{ status: string }>(`/clients/subscription/invoices/${encodeURIComponent(invoiceNumber)}/status`, { headers: clientHeaders() })
         if (snap.status === 'paid') {
           isPaid.value = true
           stopPolling()
@@ -55,6 +61,7 @@ export function useInvoicePayment() {
       const data = await api.post<InvoicePaymentSession>(
         `/clients/subscription/invoices/${encodeURIComponent(invoice.invoice_number)}/pay`,
         body,
+        { headers: clientHeaders() },
       )
       session.value = data
       startPolling(invoice.invoice_number, onPaid)

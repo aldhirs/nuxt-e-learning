@@ -5,7 +5,8 @@ definePageMeta({ layout: 'partner', middleware: 'partner-auth' })
 useSeoMeta({ title: 'Billing & Subscription — DrillSpace' })
 
 const partner = usePartnerStore()
-const route = useRoute()
+const route  = useRoute()
+const router = useRouter()
 
 const isLoadingInvoices = ref(true)
 const invoices = ref<SubscriptionInvoice[]>([])
@@ -27,14 +28,9 @@ onMounted(loadData)
 
 const highlightInvoice = computed(() => route.query.invoice as string | null)
 
-const drawerOpen = ref(false)
-const selectedInvoice = ref<SubscriptionInvoice | null>(null)
-
-function openDrawer(inv: SubscriptionInvoice) {
-  selectedInvoice.value = inv
-  drawerOpen.value = true
+function openPayment(inv: SubscriptionInvoice) {
+  router.push(`/partner/invoice-pay/${inv.invoice_number}`)
 }
-function onPaid() { loadData() }
 
 const renewalDate = computed(() => {
   const sub = partner.subscription
@@ -121,17 +117,15 @@ const planStatusClass = computed(() => {
         <button
           type="button"
           class="text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-          @click="() => { const inv = invoices.find(i => i.invoice_number === highlightInvoice); if (inv) openDrawer(inv) }"
+          @click="() => { const inv = invoices.find(i => i.invoice_number === highlightInvoice); if (inv) openPayment(inv) }"
         >Pay →</button>
       </div>
 
-      <PartnerInvoiceTable :invoices="invoices" :loading="isLoadingInvoices" :highlight-invoice="highlightInvoice" @pay="openDrawer" />
+      <PartnerInvoiceTable :invoices="invoices" :loading="isLoadingInvoices" :highlight-invoice="highlightInvoice" @pay="openPayment" />
 
       <div v-if="invoiceTotal > invoices.length" class="p-4 text-center text-xs text-slate-400">
         Showing {{ invoices.length }} of {{ invoiceTotal }} invoices
       </div>
     </div>
-
-    <PartnerPaymentDrawer :invoice="selectedInvoice" :open="drawerOpen" @close="drawerOpen = false" @paid="onPaid" />
   </div>
 </template>

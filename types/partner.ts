@@ -5,7 +5,6 @@ export interface ClientSummary {
   name: string
   slug: string
   logo?: string | null
-  email: string
   is_active: boolean
   subscription_status?: SubscriptionStatus | null
 }
@@ -60,6 +59,7 @@ export interface CurrentSubscriptionView {
     courses: UsageCounter
     students: UsageCounter
   }
+  pending_invoice_number?: string | null
 }
 
 export interface SubscriptionInvoice {

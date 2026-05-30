@@ -42,7 +42,12 @@ function isActive(to: string) {
 }
 
 const statusBadge = computed(() => {
-  switch (partner.subscriptionStatus) {
+  // subscriptionStatus is null when GET /clients/subscription returns 404
+  // (e.g. suspended clients). Fall back to the status field on the active
+  // client summary, which is populated by fetchClients() via StatusByClientIDs
+  // and includes all statuses (no status filter in that query).
+  const status = partner.subscriptionStatus ?? partner.activeClient?.subscription_status
+  switch (status) {
     case 'trial':     return { label: `Trial · ${partner.trialDaysLeft}d left`, cls: 'bg-blue-100 text-blue-700' }
     case 'active':    return { label: 'Active', cls: 'bg-green-100 text-green-700' }
     case 'past_due':  return { label: 'Past Due', cls: 'bg-amber-100 text-amber-700' }

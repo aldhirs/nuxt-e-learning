@@ -5,8 +5,17 @@ useSeoMeta({ title: 'Partner Dashboard — DrillSpace' })
 const partner = usePartnerStore()
 const { openLmsAdmin, isRedirecting: lmsRedirecting } = usePartnerLmsRedirect()
 
-const { data: stats, status: statsStatus } = await useLazyAsyncData('partner-stats', () => partner.fetchStats())
-const isLoadingStats = computed(() => statsStatus.value === 'pending')
+// Use reactive store state directly — avoids useLazyAsyncData key caching
+// which prevents refresh when navigating to the same route after switchClient.
+const stats = computed(() => partner.stats)
+const isLoadingStats = computed(() => partner.isLoadingStats || partner.isSwitchingClient)
+
+onMounted(async () => {
+  // Fetch stats if not yet loaded (e.g. direct navigation or first load)
+  if (!partner.stats && !partner.isLoadingStats) {
+    await partner.fetchStats()
+  }
+})
 
 const route = useRoute()
 const showOnboarding = ref(false)
@@ -55,6 +64,16 @@ const planHighlight = computed(() => {
 
 <template>
   <div class="space-y-6 pb-20 md:pb-0">
+    <!-- Switching skeleton overlay -->
+    <template v-if="partner.isSwitchingClient">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div v-for="i in 4" :key="i" class="h-24 bg-slate-100 rounded-2xl animate-pulse" />
+      </div>
+      <div class="h-32 bg-slate-100 rounded-2xl animate-pulse" />
+      <div class="h-24 bg-slate-100 rounded-2xl animate-pulse" />
+    </template>
+
+    <template v-else>
     <h1 class="text-xl font-bold text-slate-900">Dashboard</h1>
 
     <!-- Stats -->
@@ -142,5 +161,7 @@ const planHighlight = computed(() => {
         </li>
       </ul>
     </div>
+
+    </template><!-- end v-else switching -->
   </div>
 </template>

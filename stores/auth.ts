@@ -13,6 +13,14 @@ import type {
 export const useAuthStore = defineStore('auth', () => {
   const api = useApi()
 
+  // Single cookie ref created in setup — same reason as partner store.
+  const _clientIdCookie = useCookie<number | null>('ds_active_client_id', {
+    maxAge: 60 * 60 * 24 * 30,
+    path: '/',
+    sameSite: 'lax',
+    secure: !import.meta.dev,
+  })
+
   const user = ref<User | null>(null)
   const isAuthenticated = computed(() => !!api.tokenCookie.value && !!user.value)
   const isLoadingMe = ref(false)
@@ -75,6 +83,15 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const me = await api.get<User>('/auth/storefront/me')
       setUser(me)
+      // Set active client cookie from the first ADMIN-scoped role.
+      // Using role filter (not active_client_id) prevents student/teacher
+      // client IDs from being used as the partner portal context.
+      const adminRole = (me.roles ?? []).find(
+        r => r.role_name === 'ADMIN' && r.client_id != null
+      )
+      if (adminRole?.client_id && !_clientIdCookie.value) {
+        _clientIdCookie.value = adminRole.client_id
+      }
       return me
     } catch (err: unknown) {
       if ((err as { status?: number }).status === 401) {
@@ -100,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     setToken(null)
     setUser(null)
+    _clientIdCookie.value = null
   }
 
   return {

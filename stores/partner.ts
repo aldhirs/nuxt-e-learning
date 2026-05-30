@@ -10,15 +10,17 @@ import type {
 
 export const usePartnerStore = defineStore('partner', () => {
   const api = useApi()
-  const auth = useAuthStore()
 
-  // Returns X-Client-ID header for all /clients/* requests.
-  // Falls back to auth.user.active_client_id so calls that run before
-  // fetchClients() resolves (e.g. parallel Promise.all) still work.
-  function clientHeaders(): Record<string, string> {
-    const id = activeClient.value?.id ?? auth.user?.active_client_id
-    return id ? { 'X-Client-ID': String(id) } : {}
-  }
+  // Single useCookie instance created in setup (where composables are safe to
+  // call). Reused by switchClient, fetchClients, and reset so all writes/reads
+  // go through the same reactive ref — avoids the stale-ref bug that occurs
+  // when useCookie is re-instantiated inside store actions.
+  const _clientIdCookie = useCookie<number | null>('ds_active_client_id', {
+    maxAge: 60 * 60 * 24 * 30,
+    path: '/',
+    sameSite: 'lax',
+    secure: !import.meta.dev,
+  })
 
   // ─── State ────────────────────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ export const usePartnerStore = defineStore('partner', () => {
   const isLoadingSubscription = ref(false)
   const isLoadingProfile = ref(false)
   const isLoadingStats = ref(false)
+  const isSwitchingClient = ref(false)
 
   // ─── Computed ─────────────────────────────────────────────────────────────
 
@@ -65,17 +68,16 @@ export const usePartnerStore = defineStore('partner', () => {
     subscriptionStatus.value === 'past_due' ||
     isTrialActive.value
   )
+  const pendingInvoiceNumber = computed(() => subscriptionView.value?.pending_invoice_number ?? null)
 
-  // ─── Active client cookie ─────────────────────────────────────────────────
-  // Persists the last selected client across page refreshes.
-  // Cleared on logout.
-  function activeClientCookie() {
-    return useCookie<number | null>('ds_active_client_id', {
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      path: '/',
-      sameSite: 'lax',
-      secure: !import.meta.dev,
-    })
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  // Prefer the in-memory activeClient (guaranteed fresh after switchClient).
+  // Fall back to the persisted cookie on hard refresh, before fetchClients()
+  // has run and populated activeClient.
+  function clientHeaders(): Record<string, string> {
+    const id = activeClient.value?.id ?? _clientIdCookie.value
+    return id ? { 'X-Client-ID': String(id) } : {}
   }
 
   // ─── Clients ──────────────────────────────────────────────────────────────
@@ -83,13 +85,18 @@ export const usePartnerStore = defineStore('partner', () => {
   async function fetchClients(): Promise<ClientSummary[]> {
     isLoadingClients.value = true
     try {
-      const list = await api.get<ClientSummary[]>('/auth/me/clients')
+      const list = await api.get<ClientSummary[]>('/auth/storefront/me/clients')
       clients.value = list ?? []
 
       // Restore last-selected client from cookie, fallback to first
-      const savedId = activeClientCookie().value
+      const savedId = _clientIdCookie.value
       const restored = savedId ? clients.value.find(c => c.id === savedId) : null
       activeClient.value = restored ?? clients.value[0] ?? null
+
+      // Persist whichever client ended up active so future reloads restore it
+      if (activeClient.value) {
+        _clientIdCookie.value = activeClient.value.id
+      }
 
       return clients.value
     } catch {
@@ -100,25 +107,35 @@ export const usePartnerStore = defineStore('partner', () => {
   }
 
   async function switchClient(clientId: number): Promise<void> {
-    const data = await api.post<{ access_token: string }>('/auth/switch-client', { client_id: clientId })
-    if (data.access_token) {
-      const authCookie = useAuthCookie()
-      authCookie.value = data.access_token
+    isSwitchingClient.value = true
+    try {
+      // JWT only contains user_id — no client_id embedded. Switching context
+      // only requires updating X-Client-ID source.
+
+      // 1. Update in-memory state FIRST so clientHeaders() immediately returns
+      //    the new value for all subsequent fetch calls in this action.
+      const found = clients.value.find(c => c.id === clientId)
+      if (found) activeClient.value = found
+
+      // 2. Persist to cookie so hard refreshes restore the correct client.
+      _clientIdCookie.value = clientId
+
+      // 3. Reset all stale client-scoped data
+      subscriptionView.value = null
+      stats.value = null
+      profile.value = null
+
+      // 4. Reload with new X-Client-ID (activeClient already updated above)
+      await Promise.all([
+        fetchSubscription(),
+        fetchProfile(),
+        fetchStats(),
+        useAuthStore().fetchMe(),
+      ])
+    } finally {
+      isSwitchingClient.value = false
     }
-    const found = clients.value.find(c => c.id === clientId)
-    if (found) activeClient.value = found
-    // Persist selection in cookie
-    activeClientCookie().value = clientId
-    // Reset all client-scoped data
-    subscriptionView.value = null
-    stats.value = null
-    profile.value = null
-    // Refresh data for the new active client
-    await Promise.all([
-      fetchSubscription(),
-      fetchProfile(),
-      useAuthStore().fetchMe(),
-    ])
+    // Navigation is handled by the caller (PartnerClientSwitcher)
   }
 
   // ─── Subscription ─────────────────────────────────────────────────────────
@@ -192,17 +209,16 @@ export const usePartnerStore = defineStore('partner', () => {
     subscriptionView.value = null
     profile.value = null
     stats.value = null
-    // Clear persisted client selection on logout
-    activeClientCookie().value = null
+    _clientIdCookie.value = null
   }
 
   return {
     // state
     clients, activeClient, subscriptionView, profile, stats,
-    isLoadingClients, isLoadingSubscription, isLoadingProfile, isLoadingStats,
+    isLoadingClients, isLoadingSubscription, isLoadingProfile, isLoadingStats, isSwitchingClient,
     // computed
     subscription, subscriptionStatus, plan, usage,
-    isActive, isSuspended, isCancelled, isPastDue, isTrialActive, trialDaysLeft, canAccessLms,
+    isActive, isSuspended, isCancelled, isPastDue, isTrialActive, trialDaysLeft, canAccessLms, pendingInvoiceNumber,
     // actions
     fetchClients, switchClient, fetchSubscription, fetchInvoiceHistory, fetchProfile, fetchStats, reset,
   }
