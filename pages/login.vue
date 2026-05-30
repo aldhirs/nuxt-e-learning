@@ -44,7 +44,17 @@ async function submit() {
       password: form.password,
       device_name: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 200) : undefined
     })
-    await router.push(redirectTo.value)
+    // Post-login role redirect: follow ?redirect param first, then role-based default
+    const hasPartnerRole =
+      !!auth.user?.active_client_id &&
+      (auth.user?.roles ?? []).some(r => r.role_name === 'ADMIN' && r.client_id != null)
+    const hasStudentRole = auth.user?.is_student === true || !hasPartnerRole
+
+    let dest = redirectTo.value
+    if (dest === '/') {
+      dest = hasPartnerRole && !hasStudentRole ? '/partner/dashboard' : '/'
+    }
+    await router.push(dest)
   } catch (err: unknown) {
     const e = err as { status?: number; code?: string; reason?: string; payload?: { redirect_to_activation?: boolean } }
     const reason = (e.reason || '').toLowerCase()
@@ -85,7 +95,9 @@ async function resendActivation() {
       <div class="text-center mb-8">
         <h1 class="text-2xl font-bold text-slate-800">Sign In to DrillSpace</h1>
         <p class="text-slate-500 text-sm mt-2">Don't have an account?
-          <NuxtLink to="/register" class="text-primary-600 font-medium hover:underline">Sign up for free</NuxtLink>
+          <NuxtLink to="/register" class="text-primary-600 font-medium hover:underline">Sign up as Student</NuxtLink>
+          ·
+          <NuxtLink to="/partner/register" class="text-primary-600 font-medium hover:underline">Become a Partner</NuxtLink>
         </p>
       </div>
 

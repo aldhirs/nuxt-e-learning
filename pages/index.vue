@@ -88,6 +88,7 @@ const coursesRef  = ref<HTMLElement | null>(null)
 const whyRef      = ref<HTMLElement | null>(null)
 const testimRef   = ref<HTMLElement | null>(null)
 const partnersRef = ref<HTMLElement | null>(null)
+const sellRef     = ref<HTMLElement | null>(null)
 const ctaRef      = ref<HTMLElement | null>(null)
 
 onMounted(() => {
@@ -99,6 +100,7 @@ onMounted(() => {
     { ref: whyRef,      key: 'why' },
     { ref: testimRef,   key: 'testimonials' },
     { ref: partnersRef, key: 'partners' },
+    { ref: sellRef,     key: 'sell' },
     { ref: ctaRef,      key: 'cta' },
   ]
 
@@ -565,6 +567,79 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
           title="No partners yet"
           description="Partners will appear here when they publish their courses."
         />
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SELL ON DRILLSPACE — PARTNER CTA
+    ═══════════════════════════════════════════════════════════ -->
+    <section ref="sellRef" class="py-20 bg-[var(--color-bg)]">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="relative bg-slate-900 rounded-3xl overflow-hidden px-8 sm:px-12 lg:px-16 py-14">
+          <!-- Background decorations -->
+          <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+            <div class="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-primary-500/15 blur-3xl"></div>
+            <div class="absolute -bottom-20 left-1/3 w-72 h-72 rounded-full bg-accent/10 blur-3xl"></div>
+            <svg class="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
+              <defs><pattern id="sell-dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.5" fill="white"/></pattern></defs>
+              <rect width="100%" height="100%" fill="url(#sell-dots)"/>
+            </svg>
+          </div>
+
+          <div
+            :class="['relative grid lg:grid-cols-2 gap-10 items-center transition-all duration-700', revealed.sell ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
+          >
+            <!-- Left: content -->
+            <div>
+              <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-primary-300 text-xs font-bold px-4 py-2 rounded-full mb-5">
+                <span class="w-2 h-2 rounded-full bg-primary-400 animate-pulse-dot"></span>
+                For Training Organizations
+              </div>
+              <h2 class="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-4">
+                Have Expertise to Share?<br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-300 to-accent">Sell Courses Here.</span>
+              </h2>
+              <p class="text-slate-400 text-base leading-relaxed mb-8 max-w-md">
+                Launch your own branded platform on DrillSpace. Reach thousands of maritime professionals, manage students, and earn revenue — all in one place.
+              </p>
+              <div class="flex flex-wrap gap-3">
+                <NuxtLink to="/partner/register"
+                  class="inline-flex items-center gap-2 bg-accent hover:bg-amber-400 text-slate-900 font-bold px-6 py-3 rounded-xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all active:scale-95 text-sm">
+                  Start Free Trial
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                </NuxtLink>
+                <NuxtLink to="/partner"
+                  class="inline-flex items-center gap-2 border border-white/20 text-white hover:bg-white/10 font-semibold px-6 py-3 rounded-xl transition-all text-sm">
+                  Learn More
+                </NuxtLink>
+              </div>
+            </div>
+
+            <!-- Right: 3 mini benefit cards -->
+            <div class="grid grid-cols-1 gap-4">
+              <div
+                v-for="(b, i) in [
+                  { icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064', title: 'Your Own Branded Subdomain', desc: 'Custom URL under drillspace.id with your logo and colors.' },
+                  { icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Commission from 5%', desc: 'Keep more of your revenue as you grow your subscriber base.' },
+                  { icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', title: 'Real-Time Analytics', desc: 'Track revenue, enrollments, and course performance live.' },
+                ]"
+                :key="b.title"
+                class="flex items-start gap-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl px-5 py-4 transition-colors"
+                :style="{ transitionDelay: `${100 + i * 80}ms` }"
+              >
+                <div class="w-10 h-10 rounded-xl bg-primary-500/20 border border-primary-500/30 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="b.icon"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-white">{{ b.title }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">{{ b.desc }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

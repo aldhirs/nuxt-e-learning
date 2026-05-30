@@ -114,13 +114,6 @@ const ewallets = [
     desc: 'Pay directly from DANA balance',
     accent: 'hover:border-blue-300 hover:shadow-blue-100',
   },
-  {
-    value: 'ewallet_gopay' as PaymentMethod,
-    name: 'GoPay',
-    logo: '/images/payment/gopay.svg',
-    desc: 'Pay directly from GoPay balance',
-    accent: 'hover:border-teal-300 hover:shadow-teal-100',
-  },
 ]
 </script>
 

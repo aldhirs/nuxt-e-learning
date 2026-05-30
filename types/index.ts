@@ -367,9 +367,15 @@ export interface PaymentStatusSnapshot {
 
 export type UserStatus = 'active' | 'pending_activation' | 'suspended'
 
-// Shape per /me deployed BE. Contract has full_name/phone/status/role as required,
-// but real BE returns nullables + a roles[] array instead of role. We keep both
-// shapes here so the UI can render whichever fields exist.
+export interface UserRoleEntry {
+  role_id: number
+  role_name: string
+  client_id: number | null
+  client_name: string | null
+  assigned_at: string
+}
+
+// Shape per /me deployed BE.
 export interface User {
   id: number
   email: string
@@ -378,7 +384,7 @@ export interface User {
   phone?: string | null
   status?: UserStatus
   role?: string | null
-  roles?: string[]
+  roles?: UserRoleEntry[]
   is_student?: boolean
   '2fa_enabled'?: boolean
   active_client_id?: number | null
@@ -402,7 +408,6 @@ export interface LoginResponse {
   full_name?: string | null
   is_student?: boolean
   is_sysadmin?: boolean
-  is_user_client?: boolean
   clients?: unknown[]
   refresh_token?: string
   // Common:

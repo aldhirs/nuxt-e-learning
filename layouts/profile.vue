@@ -125,6 +125,7 @@ async function doLogout() {
     </div>
 
     <AppFooter />
+    <AppToast />
   </div>
 </template>
 

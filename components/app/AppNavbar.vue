@@ -30,6 +30,11 @@ const quickLinks = [
   { label: 'Contact',    to: '/contact-us', authenticated: false },
 ]
 
+const hasPartnerRole = computed(() =>
+  !!auth.user?.active_client_id &&
+  (auth.user?.roles ?? []).some(r => r.role_name === 'ADMIN' && r.client_id != null)
+)
+
 // Row 2 category bar
 const categoryPills = [
   { label: 'All Courses',  to: '/courses',              primary: false },
@@ -101,6 +106,27 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
         </template>
 
         <div class="w-px h-5 bg-slate-200 mx-1"></div>
+
+        <!-- Become a Partner CTA — shown to guests and student-only users -->
+        <NuxtLink
+          v-if="!hasPartnerRole"
+          to="/partner"
+          class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-primary-300 text-primary-600 hover:bg-primary-50 transition-colors"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Sell Courses
+        </NuxtLink>
+
+        <!-- Partner Portal link — shown to users with ADMIN role on a client -->
+        <NuxtLink
+          v-if="hasPartnerRole"
+          to="/partner/dashboard"
+          class="hidden lg:inline-flex px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+        >
+          Partner Portal
+        </NuxtLink>
 
         <!-- Auth state -->
         <template v-if="auth.isAuthenticated">
@@ -260,6 +286,13 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
           <template v-else>
             <NuxtLink to="/login" class="block w-full text-center py-3 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-700 hover:border-primary-300">Sign In</NuxtLink>
             <NuxtLink to="/register" class="block w-full text-center py-3 rounded-xl bg-primary-500 text-sm font-bold text-white hover:bg-primary-600">Register</NuxtLink>
+            <NuxtLink to="/partner" class="block w-full text-center py-3 rounded-xl border-2 border-primary-200 text-sm font-semibold text-primary-600 hover:bg-primary-50">Sell Courses</NuxtLink>
+          </template>
+          <template v-if="auth.isAuthenticated && hasPartnerRole">
+            <NuxtLink to="/partner/dashboard" class="block w-full text-center py-3 rounded-xl bg-primary-600 text-sm font-bold text-white hover:bg-primary-700">Partner Portal</NuxtLink>
+          </template>
+          <template v-if="auth.isAuthenticated && !hasPartnerRole">
+            <NuxtLink to="/partner" class="block w-full text-center py-3 rounded-xl border-2 border-primary-200 text-sm font-semibold text-primary-600 hover:bg-primary-50">Sell Courses</NuxtLink>
           </template>
         </div>
       </div>

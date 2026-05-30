@@ -13,5 +13,6 @@ const route = useRoute()
       </Transition>
     </main>
     <AppFooter />
+    <AppToast />
   </div>
 </template>

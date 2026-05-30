@@ -19,10 +19,10 @@ if (!config.public.enableProfileEdit) {
   throw createError({ statusCode: 404, statusMessage: 'Page Not Found', fatal: true })
 }
 
+const toast = useToast()
 const isLoading = ref(false)
 const serverError = ref('')
 const fieldErrors = ref<Record<string, string>>({})
-const successMessage = ref('')
 const initialReady = ref(false)
 
 const form = reactive({
@@ -64,7 +64,6 @@ onMounted(hydrate)
 async function submit() {
   serverError.value = ''
   fieldErrors.value = {}
-  successMessage.value = ''
   const ok = await v$.value.$validate()
   if (!ok) return
 
@@ -81,14 +80,14 @@ async function submit() {
     if (phone !== (auth.user?.phone || '')) payload.phone = phone
 
     if (Object.keys(payload).length === 0) {
-      successMessage.value = 'No changes to save.'
-      setTimeout(() => router.push('/profile'), 800)
+      toast.info('No changes to save.')
+      await router.push('/profile')
       return
     }
 
     await auth.updateProfile(payload)
-    successMessage.value = 'Profile updated successfully.'
-    setTimeout(() => router.push('/profile'), 1200)
+    toast.success('Profile updated successfully.')
+    await router.push('/profile')
   } catch (err: unknown) {
     if ((err as { status?: number }).status === 401) {
       serverError.value = 'Your session has expired. Please sign in again.'
@@ -126,13 +125,6 @@ async function submit() {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         {{ serverError }}
-      </div>
-
-      <div v-if="successMessage" class="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-5 text-sm text-green-700" role="status">
-        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-        {{ successMessage }}
       </div>
 
       <form class="space-y-4" @submit.prevent="submit">
