@@ -20,7 +20,7 @@ export function useSsoRedirect() {
         method: 'POST',
         body: { user_id: userId, client_slug: clientSlug, redirect_path: redirectPath }
       })
-      window.open(result.exchange_url, '_blank')
+      window.location.href = result.exchange_url
     } catch {
       toastError('Failed to open the learning page. Please try again.')
     } finally {
