@@ -4,6 +4,7 @@ interface Props {
   title?: string
   closable?: boolean
   size?: 'sm' | 'md' | 'lg' | 'xl'
+  class?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -46,18 +47,21 @@ onMounted(() => {
     <Transition name="modal">
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        :class="['fixed inset-0 z-50 overflow-y-auto', props.class]"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="title ? 'modal-title' : undefined"
       >
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50" @click="close" aria-hidden="true" />
+        <div class="fixed inset-0 bg-black/50" @click="close" aria-hidden="true" />
 
-        <!-- Panel -->
-        <div :class="['relative bg-white rounded-xl shadow-xl w-full', sizeClasses[size]]">
+        <!-- Centering wrapper — min-h-full keeps modal vertically centered on short content -->
+        <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
+
+        <!-- Panel — flex column so body scrolls while header/footer stay fixed -->
+        <div :class="['relative bg-white rounded-xl shadow-xl w-full flex flex-col max-h-[85vh]', sizeClasses[size]]">
           <!-- Header -->
-          <div v-if="title || closable" class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div v-if="title || closable" class="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
             <h2 v-if="title" id="modal-title" class="text-lg font-semibold text-slate-800">{{ title }}</h2>
             <button
               v-if="closable"
@@ -72,16 +76,18 @@ onMounted(() => {
             </button>
           </div>
 
-          <!-- Body -->
-          <div class="px-6 py-5">
+          <!-- Body — scrollable -->
+          <div class="px-6 py-5 overflow-y-auto flex-1 min-h-0">
             <slot />
           </div>
 
           <!-- Footer -->
-          <div v-if="$slots.footer" class="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end">
+          <div v-if="$slots.footer" class="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end flex-shrink-0">
             <slot name="footer" />
           </div>
         </div>
+
+        </div><!-- end centering wrapper -->
       </div>
     </Transition>
   </Teleport>

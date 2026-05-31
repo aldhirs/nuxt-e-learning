@@ -79,7 +79,7 @@ async function select(clientId: number) {
     </button>
 
     <!-- ── Modal ──────────────────────────────────────────────────────── -->
-    <BaseModal v-model="open" title="Switch Organization" size="md">
+    <BaseModal v-model="open" title="Switch Organization" size="lg" class="mt-20">
       <div class="space-y-2">
         <!-- Client cards -->
         <button
