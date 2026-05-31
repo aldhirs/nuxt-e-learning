@@ -79,6 +79,7 @@ const renewalDate = computed(() => {
 })
 
 const showUpgradeModal = ref(false)
+const showCancelModal  = ref(false)
 
 const planStatusLabel = computed(() => {
   const m: Record<string, string> = { trial: 'Trial', active: 'Active', past_due: 'Overdue', suspended: 'Suspended', cancelled: 'Cancelled' }
@@ -103,14 +104,30 @@ const planStatusClass = computed(() => {
     <!-- Suspended ticker -->
     <div
       v-if="partner.isSuspended"
-      class="flex items-center gap-3 px-4 py-3 bg-red-600 text-white rounded-xl text-sm font-medium shadow-sm"
+      class="flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm font-medium"
       role="alert"
     >
-      <span class="text-lg leading-none flex-shrink-0">⛔</span>
+      <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
       <p class="flex-1">
         <strong>Your account has been suspended.</strong>
-        All portal actions are currently disabled — you cannot change your plan or pay invoices here.
-        Please <NuxtLink to="/contact-us" class="underline underline-offset-2 hover:no-underline font-semibold">contact support</NuxtLink> to reactivate your account.
+        Pay the outstanding invoice below to immediately reactivate your platform.
+      </p>
+    </div>
+
+    <!-- Cancelled ticker -->
+    <div
+      v-if="partner.isCancelled"
+      class="flex items-start gap-3 px-4 py-3 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-sm font-medium"
+      role="alert"
+    >
+      <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+      </svg>
+      <p class="flex-1">
+        Your subscription has been cancelled.
+        <NuxtLink to="/contact-us" class="underline underline-offset-2 hover:no-underline font-semibold ml-1">Contact support</NuxtLink> to reactivate your account.
       </p>
     </div>
 
@@ -145,7 +162,8 @@ const planStatusClass = computed(() => {
             <PartnerUsageBar label="Students" :usage="partner.usage?.students" />
           </div>
         </div>
-        <div class="mt-4 pt-4 border-t border-slate-100">
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3 flex-wrap">
+          <!-- Change Plan -->
           <button
             v-if="!partner.isCancelled"
             type="button"
@@ -161,18 +179,41 @@ const planStatusClass = computed(() => {
           >
             Change Plan
           </button>
+
+          <!-- Cancel Subscription -->
+          <button
+            v-if="partner.isActive && !partner.isCancelled"
+            type="button"
+            :disabled="partner.isSuspended"
+            :title="partner.isSuspended ? 'Account suspended — contact support to reactivate' : undefined"
+            :class="[
+              'text-sm font-semibold px-4 py-2 rounded-xl transition-colors',
+              partner.isSuspended
+                ? 'text-slate-300 cursor-not-allowed'
+                : 'text-red-500 hover:text-red-700 hover:bg-red-50'
+            ]"
+            @click="!partner.isSuspended && (showCancelModal = true)"
+          >
+            Cancel Subscription
+          </button>
         </div>
       </template>
       <template v-else>
         <div class="flex flex-col items-start gap-3">
-          <p class="text-sm text-slate-600">No active subscription yet.</p>
           <template v-if="partner.isSuspended">
-            <p class="text-xs text-red-600">Your account is currently suspended. Please contact support to reactivate and choose a plan.</p>
+            <p class="text-sm text-slate-600">
+              Your subscription is currently <strong class="text-red-600">suspended</strong>.
+              Pay the outstanding invoice in the history below to reactivate your platform immediately.
+            </p>
+          </template>
+          <template v-else-if="partner.isCancelled">
+            <p class="text-sm text-slate-600">Your subscription has been cancelled.</p>
           </template>
           <template v-else>
+            <p class="text-sm text-slate-600">No active subscription yet.</p>
             <NuxtLink to="/partner/pricing" class="text-sm font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-xl transition-colors">
-            View Plans &amp; Start Trial →
-          </NuxtLink>
+              View Plans &amp; Start Trial →
+            </NuxtLink>
           </template>
         </div>
       </template>
@@ -188,14 +229,15 @@ const planStatusClass = computed(() => {
       <div v-if="highlightInvoice" class="mx-5 mt-4 p-3 bg-primary-50 border border-primary-200 rounded-xl text-sm text-primary-800 flex items-center justify-between gap-3">
         <span>📌 Invoice <strong>{{ highlightInvoice }}</strong> requires payment.</span>
         <button
-          v-if="!partner.isSuspended"
+          v-if="!partner.isCancelled"
           type="button"
           class="text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
           @click="() => { const inv = invoices.find(i => i.invoice_number === highlightInvoice); if (inv) openPayment(inv) }"
         >Pay →</button>
       </div>
 
-      <PartnerInvoiceTable :invoices="invoices" :loading="isLoadingInvoices" :highlight-invoice="highlightInvoice" :disabled-pay="partner.isSuspended" @pay="openPayment" />
+      <!-- disabledPay: only for cancelled — suspended clients MUST be able to pay to reactivate -->
+      <PartnerInvoiceTable :invoices="invoices" :loading="isLoadingInvoices" :highlight-invoice="highlightInvoice" :disabled-pay="partner.isCancelled" @pay="openPayment" />
 
       <div v-if="invoiceTotal > invoices.length" class="p-4 text-center text-xs text-slate-400">
         Showing {{ invoices.length }} of {{ invoiceTotal }} invoices
@@ -206,5 +248,10 @@ const planStatusClass = computed(() => {
   <PartnerUpgradePlanModal
     v-model:open="showUpgradeModal"
     @changed="loadData"
+  />
+
+  <PartnerCancelSubscriptionModal
+    v-model:open="showCancelModal"
+    @cancelled="loadData"
   />
 </template>

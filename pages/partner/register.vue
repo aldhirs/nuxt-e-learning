@@ -128,6 +128,11 @@ async function submitOnboard() {
     const cookie = useAuthCookie()
     cookie.value = res.access_token
     await auth.fetchMe()
+    // Force-refresh client list with the new client as active.
+    // Required because partner.clients may already be cached from a previous partner
+    // session — the middleware would skip fetchClients() if list is non-empty.
+    const partner = usePartnerStore()
+    await partner.refreshClients(res.active_client_id)
     await router.push('/partner/dashboard?onboarding=true')
   } catch (err: unknown) {
     const { global, perField } = mapApiError(err, ['organization_name', 'subdomain_slug', 'agree_tos'])
@@ -161,12 +166,12 @@ async function submitOnboard() {
         </svg>
         <div class="text-sm">
           <p class="font-semibold text-amber-800">
-            Anda sudah memiliki partner
+            You have an existing partner account 
             <span v-if="currentPartnerName" class="font-bold"> "{{ currentPartnerName }}"</span>.
           </p>
-          <p class="text-amber-700 mt-0.5">Anda tetap bisa membuat partner baru di bawah akun yang sama.</p>
+          <p class="text-amber-700 mt-0.5">You can still create a new partner under the same account.</p>
           <NuxtLink to="/partner/dashboard" class="text-amber-800 font-semibold hover:underline text-xs mt-1 inline-block">
-            Kembali ke dashboard partner →
+            Back to partner dashboard →
           </NuxtLink>
         </div>
       </div>

@@ -1,5 +1,5 @@
 export function useSsoRedirect() {
-  const { learningUrl } = useLearningUrl()
+  const { error: toastError } = useToast()
 
   const isLoading = ref(false)
   const loadingEnrollmentId = ref<number | null>(null)
@@ -20,10 +20,9 @@ export function useSsoRedirect() {
         method: 'POST',
         body: { user_id: userId, client_slug: clientSlug, redirect_path: redirectPath }
       })
-      window.location.href = result.exchange_url
+      window.open(result.exchange_url, '_blank')
     } catch {
-      // Graceful degradation: direct link (user will need to login manually on LMS)
-      window.location.href = learningUrl(clientSlug, courseId, enrollmentId)
+      toastError('Failed to open the learning page. Please try again.')
     } finally {
       isLoading.value = false
       loadingEnrollmentId.value = null

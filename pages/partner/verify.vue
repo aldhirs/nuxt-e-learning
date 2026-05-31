@@ -34,6 +34,12 @@ if (token) {
       if (data.access_token) {
         useAuthCookie().value = data.access_token
         await auth.fetchMe()
+        // Pre-load the client list so the dashboard has the correct active client
+        // immediately on mount. fetchMe() already sets ds_active_client_id cookie
+        // via the adminRole lookup, so refreshClients() without an explicit ID
+        // will restore to the newly verified client.
+        const partner = usePartnerStore()
+        await partner.refreshClients()
       }
       state.value = 'success'
       setTimeout(() => router.push('/partner/dashboard?onboarding=true'), 2500)

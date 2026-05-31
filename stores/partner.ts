@@ -206,6 +206,29 @@ export const usePartnerStore = defineStore('partner', () => {
     }
   }
 
+  // ─── Refresh after new registration ──────────────────────────────────────
+  // Force-clear the cached client list and re-fetch with a specific active client.
+  // Called after partner registration or onboard-as-partner so the dashboard
+  // immediately shows the newly created client.
+  async function refreshClients(newActiveClientId?: number): Promise<void> {
+    if (newActiveClientId) {
+      _clientIdCookie.value = newActiveClientId
+    }
+    clients.value = []
+    await fetchClients()
+  }
+
+  // ─── Cancel Subscription ──────────────────────────────────────────────────
+
+  async function cancelSubscription(reason: string, effective: 'end_of_period' | 'immediate' = 'end_of_period'): Promise<void> {
+    await api.post(
+      '/clients/subscription/cancel',
+      { reason, effective },
+      { headers: clientHeaders() },
+    )
+    await fetchSubscription()
+  }
+
   // ─── Reset ────────────────────────────────────────────────────────────────
 
   function reset() {
@@ -225,6 +248,6 @@ export const usePartnerStore = defineStore('partner', () => {
     subscription, subscriptionStatus, plan, usage,
     isActive, isSuspended, isCancelled, isPastDue, isTrialActive, trialDaysLeft, canAccessLms, pendingInvoiceNumber,
     // actions
-    fetchClients, switchClient, fetchSubscription, fetchInvoiceHistory, fetchProfile, fetchStats, reset,
+    fetchClients, switchClient, refreshClients, fetchSubscription, fetchInvoiceHistory, fetchProfile, fetchStats, cancelSubscription, reset,
   }
 })

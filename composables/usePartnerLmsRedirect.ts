@@ -1,8 +1,7 @@
 export function usePartnerLmsRedirect() {
-  const config = useRuntimeConfig()
   const auth = useAuthStore()
   const partner = usePartnerStore()
-  const lmsBase = (config.public.clientBaseUrl as string).replace(/\/$/, '')
+  const { error: toastError } = useToast()
 
   const isRedirecting = ref(false)
 
@@ -20,8 +19,7 @@ export function usePartnerLmsRedirect() {
       const clientSlug = partner.activeClient?.slug
 
       if (!userId || !clientSlug) {
-        // Slug unavailable — open LMS directly (user may need to log in manually)
-        window.open(`${lmsBase}/client`, '_blank')
+        toastError('Failed to open the LMS: incomplete account data. Please reload the page.')
         return
       }
 
@@ -31,8 +29,7 @@ export function usePartnerLmsRedirect() {
       })
       window.open(result.exchange_url, '_blank')
     } catch {
-      // SSO failed — graceful fallback to direct link
-      window.open(`${lmsBase}/client`, '_blank')
+      toastError('Failed to open the LMS admin page. Please try again.')
     } finally {
       isRedirecting.value = false
     }

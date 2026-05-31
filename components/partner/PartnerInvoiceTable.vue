@@ -106,7 +106,7 @@ function planLabel(inv: SubscriptionInvoice): string | null {
               v-if="inv.status === 'pending' || inv.status === 'past_due'"
               type="button"
               :disabled="disabledPay"
-              :title="disabledPay ? 'Account suspended — contact support to reactivate' : undefined"
+              :title="disabledPay ? 'Subscription cancelled — contact support to reactivate' : undefined"
               :class="[
                 'text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors',
                 disabledPay

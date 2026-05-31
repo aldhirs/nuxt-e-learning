@@ -471,7 +471,7 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       <div class="p-6 md:p-8 text-white">
         <!-- Bank logo -->
         <div class="flex items-center justify-between mb-6">
-          <div :class="['bg-white rounded-xl px-4 py-2 text-sm font-extrabold tracking-wider', bankColorClass]" style="color: white;">
+          <div :class="['bg-white rounded-xl px-4 py-2 text-sm font-extrabold tracking-wider', bankColorClass]" style="color: black;">
             {{ bankLabel }}
           </div>
           <div class="text-right">

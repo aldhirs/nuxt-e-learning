@@ -19,7 +19,8 @@ async function fetchPlans() {
   loading.value = true
   try {
     const res = await api.get<SubscriptionPlan[]>('/public/subscription/plans')
-    plans.value = (res ?? []).filter(p => p.code !== 'trial' && p.is_active)
+    // Public endpoint already returns only active plans (is_active stripped per §2.11).
+    plans.value = (res ?? []).filter(p => p.code !== 'trial')
   } catch { /* non-fatal */ }
   finally { loading.value = false }
 }
@@ -230,8 +231,7 @@ async function submit() {
               </div>
               <p class="text-xs text-slate-500 mt-0.5">
                 {{ plan.max_courses === -1 ? 'Unlimited' : plan.max_courses }} courses ·
-                {{ plan.max_students === -1 ? 'Unlimited' : plan.max_students }} students ·
-                {{ plan.commission_rate_percent }}% commission
+                {{ plan.max_students === -1 ? 'Unlimited' : plan.max_students }} students
               </p>
             </div>
 
