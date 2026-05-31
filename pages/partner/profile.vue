@@ -20,7 +20,7 @@ const form = reactive({
 
 const toast = useToast()
 const { transformUrl } = useFileUrl()
-const isLoading = ref(false)
+const isLoading = ref(true)
 const isSaving = ref(false)
 const serverError = ref('')
 const fieldErrors = ref<Record<string, string>>({})

@@ -17,11 +17,11 @@ const config = computed(() => {
       if ((props.trialDaysLeft ?? 0) <= 0) {
         return { type: 'error', icon: '✕', text: 'Your trial has ended.', sub: 'Choose a paid plan to reactivate platform access.', cta: 'View Plans', href: '/partner/pricing', dismissable: false }
       }
-      return { type: 'info', icon: 'ℹ', text: `Your trial ends in ${props.trialDaysLeft} day${props.trialDaysLeft === 1 ? '' : 's'}.`, sub: null, cta: 'View Paid Plans', href: '/partner/pricing', dismissable: true }
+      return { type: 'info', icon: 'ℹ', text: `Your trial ends in ${props.trialDaysLeft} day${props.trialDaysLeft === 1 ? '' : 's'}.`, sub: null, cta: 'View Paid Plans', href: '/partner/billing', dismissable: true }
     case 'past_due':
       return { type: 'warning', icon: '⚠', text: 'Your subscription invoice is unpaid.', sub: 'Pay now to avoid platform suspension.', cta: 'Pay Now', href: props.invoiceNumber ? `/partner/billing?invoice=${props.invoiceNumber}` : '/partner/billing', dismissable: false }
     case 'suspended':
-      return { type: 'error', icon: '✕', text: 'Your platform has been suspended.', sub: 'Students cannot access courses. Pay your invoice to reactivate.', cta: 'Pay Invoice', href: '/partner/billing', dismissable: false }
+      return { type: 'error', icon: '⛔', text: 'Your account has been suspended. All portal actions are disabled.', sub: 'Contact our support team to reactivate your account.', cta: 'Contact Support', href: '/contact-us', dismissable: false }
     case 'cancelled':
       return { type: 'neutral', icon: '○', text: 'Your subscription has been cancelled.', sub: null, cta: 'Contact Us', href: '/contact-us', dismissable: false }
     default:

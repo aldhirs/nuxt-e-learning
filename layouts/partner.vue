@@ -6,12 +6,11 @@ const router = useRouter()
 const config = useRuntimeConfig()
 
 onMounted(async () => {
-  // Always fetch clients so PartnerClientSwitcher has the full list.
-  // fetchSubscription only if not already loaded to avoid redundant calls.
-  await Promise.all([
-    partner.fetchClients(),
-    partner.subscriptionView === null ? partner.fetchSubscription() : Promise.resolve(),
-  ])
+  // fetchClients is already called in partner-auth middleware (before pages mount),
+  // so activeClient is ready. Here we only need subscription data for the status badge.
+  if (partner.subscriptionView === null) {
+    await partner.fetchSubscription()
+  }
 })
 
 const { openLmsAdmin, isRedirecting: lmsRedirecting } = usePartnerLmsRedirect()
@@ -181,9 +180,7 @@ async function doLogout() {
 
           <!-- ── Page content ────────────────────────────────── -->
           <div class="flex-1 min-w-0">
-            <Transition name="profile-page" mode="out-in">
-              <slot />
-            </Transition>
+            <slot />
           </div>
 
         </div>
@@ -211,19 +208,3 @@ async function doLogout() {
   </div>
 </template>
 
-<style scoped>
-.profile-page-leave-active {
-  transition: opacity 0.15s ease-in, transform 0.15s ease-in;
-}
-.profile-page-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-.profile-page-enter-active {
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-}
-.profile-page-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
-</style>

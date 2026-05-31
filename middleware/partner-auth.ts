@@ -28,4 +28,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
     // Authenticated but no partner role → redirect to landing to prompt upgrade
     return navigateTo('/partner')
   }
+
+  // Ensure client list is loaded before pages mount. Pages call clientHeaders()
+  // in their onMounted hooks — which run BEFORE the layout's onMounted in Vue 3's
+  // lifecycle order. Without this, pages fetch without X-Client-ID and get empty data.
+  const partner = usePartnerStore()
+  if (!partner.clients.length) {
+    await partner.fetchClients()
+  }
 })

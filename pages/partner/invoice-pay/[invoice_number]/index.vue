@@ -62,12 +62,12 @@ async function selectAndProceed(method: SubscriptionPaymentMethod) {
       invoice_number: invoiceNumber.value,
       invoice_amount: invoice.value.amount,
       payment_method: method,
-      expires_at:     session.expires_at ?? (session as Record<string, string>).expired_at ?? '',
+      expires_at:     session.expired_at ?? '',
       va_number:      session.va_number,
       bank_code:      session.bank_code,
-      qr_url:         session.qr_url,
-      qr_string:      session.qr_string,
-      redirect_url:   session.redirect_url ?? (session as Record<string, string>).ewallet_redirect_url,
+      qr_url:         session.qris_url,
+      qr_string:      session.qris_string,
+      redirect_url:   session.ewallet_redirect_url,
     })
     const base = `/partner/invoice-pay/${invoiceNumber.value}`
     if (method.startsWith('va_'))       await router.push(`${base}/va`)

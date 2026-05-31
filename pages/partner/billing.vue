@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import type { SubscriptionInvoice } from '~/types/partner'
+import type { SubscriptionInvoice, SubscriptionPaymentMethod } from '~/types/partner'
+import { useSubscriptionPaymentApi } from '~/composables/api/useSubscriptionPaymentApi'
 
 definePageMeta({ layout: 'partner', middleware: 'partner-auth' })
 useSeoMeta({ title: 'Billing & Subscription — DrillSpace' })
 
-const partner = usePartnerStore()
+const partner      = usePartnerStore()
+const paymentStore = usePartnerPaymentStore()
+const subPayApi    = useSubscriptionPaymentApi()
 const route  = useRoute()
 const router = useRouter()
 
@@ -28,8 +31,45 @@ onMounted(loadData)
 
 const highlightInvoice = computed(() => route.query.invoice as string | null)
 
-function openPayment(inv: SubscriptionInvoice) {
-  router.push(`/partner/invoice-pay/${inv.invoice_number}`)
+function paymentPageForMethod(method: string): string {
+  if (method.startsWith('va_'))  return 'va'
+  if (method === 'qris')          return 'qris'
+  return 'ewallet'
+}
+
+async function openPayment(inv: SubscriptionInvoice) {
+  const base = `/partner/invoice-pay/${inv.invoice_number}`
+
+  // If invoice already has a payment method, skip method-selection and resume session.
+  if (inv.payment_method && (inv.status === 'pending' || inv.status === 'past_due')) {
+    const method = inv.payment_method as SubscriptionPaymentMethod
+
+    // Check localStorage first (same device/session).
+    if (paymentStore.getSession(inv.invoice_number)) {
+      return router.push(`${base}/${paymentPageForMethod(method)}`)
+    }
+
+    // No stored session — re-initiate (idempotent: API returns existing active session).
+    try {
+      const session = await subPayApi.initiate(inv.invoice_number, method)
+      paymentStore.setSession({
+        invoice_number: inv.invoice_number,
+        invoice_amount: inv.amount,
+        payment_method: method,
+        expires_at:     session.expired_at ?? '',
+        va_number:      session.va_number,
+        bank_code:      session.bank_code,
+        qr_url:         session.qris_url,
+        qr_string:      session.qris_string,
+        redirect_url:   session.ewallet_redirect_url,
+      })
+      return router.push(`${base}/${paymentPageForMethod(method)}`)
+    } catch {
+      // Session expired or error — fall through to method selection.
+    }
+  }
+
+  router.push(base)
 }
 
 const renewalDate = computed(() => {
@@ -37,6 +77,8 @@ const renewalDate = computed(() => {
   if (!sub) return '—'
   return new Date(sub.current_period_end).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
 })
+
+const showUpgradeModal = ref(false)
 
 const planStatusLabel = computed(() => {
   const m: Record<string, string> = { trial: 'Trial', active: 'Active', past_due: 'Overdue', suspended: 'Suspended', cancelled: 'Cancelled' }
@@ -57,6 +99,20 @@ const planStatusClass = computed(() => {
 <template>
   <div class="space-y-6 pb-20 md:pb-0">
     <h1 class="text-xl font-bold text-slate-900">Billing & Subscription</h1>
+
+    <!-- Suspended ticker -->
+    <div
+      v-if="partner.isSuspended"
+      class="flex items-center gap-3 px-4 py-3 bg-red-600 text-white rounded-xl text-sm font-medium shadow-sm"
+      role="alert"
+    >
+      <span class="text-lg leading-none flex-shrink-0">⛔</span>
+      <p class="flex-1">
+        <strong>Your account has been suspended.</strong>
+        All portal actions are currently disabled — you cannot change your plan or pay invoices here.
+        Please <NuxtLink to="/contact-us" class="underline underline-offset-2 hover:no-underline font-semibold">contact support</NuxtLink> to reactivate your account.
+      </p>
+    </div>
 
     <!-- Current plan -->
     <div class="bg-white rounded-2xl border border-slate-100 p-5">
@@ -90,17 +146,34 @@ const planStatusClass = computed(() => {
           </div>
         </div>
         <div class="mt-4 pt-4 border-t border-slate-100">
-          <NuxtLink v-if="!partner.isCancelled" to="/partner/pricing" class="text-sm font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-xl transition-colors">
-            Upgrade Plan
-          </NuxtLink>
+          <button
+            v-if="!partner.isCancelled"
+            type="button"
+            :disabled="partner.isSuspended"
+            :title="partner.isSuspended ? 'Account suspended — contact support to reactivate' : undefined"
+            :class="[
+              'text-sm font-semibold px-4 py-2 rounded-xl transition-colors',
+              partner.isSuspended
+                ? 'text-slate-400 bg-slate-100 cursor-not-allowed'
+                : 'text-primary-600 bg-primary-50 hover:bg-primary-100'
+            ]"
+            @click="!partner.isSuspended && (showUpgradeModal = true)"
+          >
+            Change Plan
+          </button>
         </div>
       </template>
       <template v-else>
         <div class="flex flex-col items-start gap-3">
-          <p class="text-sm text-slate-600">Belum ada subscription aktif.</p>
-          <NuxtLink to="/partner/pricing" class="text-sm font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-xl transition-colors">
-            Lihat Plan &amp; Mulai Trial →
+          <p class="text-sm text-slate-600">No active subscription yet.</p>
+          <template v-if="partner.isSuspended">
+            <p class="text-xs text-red-600">Your account is currently suspended. Please contact support to reactivate and choose a plan.</p>
+          </template>
+          <template v-else>
+            <NuxtLink to="/partner/pricing" class="text-sm font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-xl transition-colors">
+            View Plans &amp; Start Trial →
           </NuxtLink>
+          </template>
         </div>
       </template>
     </div>
@@ -115,17 +188,23 @@ const planStatusClass = computed(() => {
       <div v-if="highlightInvoice" class="mx-5 mt-4 p-3 bg-primary-50 border border-primary-200 rounded-xl text-sm text-primary-800 flex items-center justify-between gap-3">
         <span>📌 Invoice <strong>{{ highlightInvoice }}</strong> requires payment.</span>
         <button
+          v-if="!partner.isSuspended"
           type="button"
           class="text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
           @click="() => { const inv = invoices.find(i => i.invoice_number === highlightInvoice); if (inv) openPayment(inv) }"
         >Pay →</button>
       </div>
 
-      <PartnerInvoiceTable :invoices="invoices" :loading="isLoadingInvoices" :highlight-invoice="highlightInvoice" @pay="openPayment" />
+      <PartnerInvoiceTable :invoices="invoices" :loading="isLoadingInvoices" :highlight-invoice="highlightInvoice" :disabled-pay="partner.isSuspended" @pay="openPayment" />
 
       <div v-if="invoiceTotal > invoices.length" class="p-4 text-center text-xs text-slate-400">
         Showing {{ invoices.length }} of {{ invoiceTotal }} invoices
       </div>
     </div>
   </div>
+
+  <PartnerUpgradePlanModal
+    v-model:open="showUpgradeModal"
+    @changed="loadData"
+  />
 </template>

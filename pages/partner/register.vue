@@ -183,10 +183,10 @@ async function submitOnboard() {
             </div>
           </div>
           <h1 class="text-lg font-bold mt-3">
-            {{ alreadyPartner ? 'Buat Partner Baru' : 'Open Your Course Store' }}
+            {{ alreadyPartner ? 'Create New Partner' : 'Open Your Course Store' }}
           </h1>
           <p class="text-sm text-primary-200 mt-1">
-            {{ alreadyPartner ? 'Tambahkan organisasi baru ke akun Anda.' : 'One step — no new account needed. Your 14-day trial starts now.' }}
+            {{ alreadyPartner ? 'Add a new organization to your account.' : 'One step — no new account needed. Your 14-day trial starts now.' }}
           </p>
         </div>
 

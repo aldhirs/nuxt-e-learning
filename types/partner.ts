@@ -62,12 +62,25 @@ export interface CurrentSubscriptionView {
   pending_invoice_number?: string | null
 }
 
+export interface PlanSnapshot {
+  plan_id: number
+  plan_code: string
+  plan_name: string
+  monthly_fee: number
+  yearly_fee: number
+  max_courses?: number
+  max_students?: number
+  commission_rate_percent?: number
+}
+
 export interface SubscriptionInvoice {
   id: number
   client_subscription_id: number
   invoice_number: string
   period_start: string
   period_end: string
+  billing_cycle?: BillingCycle | null
+  plan_snapshot?: PlanSnapshot | null
   amount: number
   currency: string
   status: InvoiceStatus
@@ -171,20 +184,21 @@ export interface InvoicePaymentRequest {
   payment_method: SubscriptionPaymentMethod
 }
 
+// Shape returned by POST /clients/subscription/invoices/{n}/pay → data.payment_session
 export interface InvoicePaymentSession {
+  payment_method: SubscriptionPaymentMethod
   invoice_number: string
   amount: number
-  payment_method: SubscriptionPaymentMethod
-  status: 'pending' | 'paid' | 'expired'
-  expires_at: string
+  is_existing_session: boolean
+  expired_at: string
   // VA
-  va_number?: string
-  bank_code?: string
+  va_number?: string | null
+  bank_code?: string | null
   // QRIS
-  qr_url?: string
-  qr_string?: string
+  qris_string?: string | null
+  qris_url?: string | null
   // e-wallet
-  redirect_url?: string
+  ewallet_redirect_url?: string | null
 }
 
 // ─── Onboarding ──────────────────────────────────────────────────────────────

@@ -39,7 +39,12 @@ export const usePartnerStore = defineStore('partner', () => {
   // ─── Computed ─────────────────────────────────────────────────────────────
 
   const subscription = computed(() => subscriptionView.value?.subscription ?? null)
-  const subscriptionStatus = computed(() => subscription.value?.status ?? null)
+  // When suspended, GET /clients/subscription returns 404 → subscriptionView is null.
+  // Fall back to subscription_status on the ClientSummary (set by fetchClients) so
+  // isSuspended / isPastDue / canAccessLms remain correct without hitting the endpoint.
+  const subscriptionStatus = computed(() =>
+    subscription.value?.status ?? activeClient.value?.subscription_status ?? null
+  )
   const plan = computed(() => subscriptionView.value?.plan ?? null)
   const usage = computed(() => subscriptionView.value?.usage ?? null)
 

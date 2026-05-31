@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { SubscriptionInvoice, InvoiceStatus } from '~/types/partner'
+import type { SubscriptionInvoice, InvoiceStatus, BillingCycle } from '~/types/partner'
 
 const props = defineProps<{
   invoices: SubscriptionInvoice[]
   loading?: boolean
   highlightInvoice?: string | null
+  disabledPay?: boolean
 }>()
 
 const emit = defineEmits<{ pay: [invoice: SubscriptionInvoice] }>()
@@ -32,6 +33,15 @@ function dueDateLabel(due: string) {
 function periodLabel(start: string, end: string) {
   const fmt = (s: string) => new Date(s).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
   return `${fmt(start)} – ${fmt(end)}`
+}
+
+function planLabel(inv: SubscriptionInvoice): string | null {
+  const snap = inv.plan_snapshot
+  if (!snap) return null
+  const cycle = inv.billing_cycle as BillingCycle | null
+  const fee = cycle === 'yearly' ? snap.yearly_fee : snap.monthly_fee
+  const cycleLabel = cycle === 'yearly' ? '/yr' : '/mo'
+  return `${snap.plan_name} · Rp ${fee.toLocaleString('id-ID')}${cycleLabel}`
 }
 </script>
 
@@ -74,7 +84,10 @@ function periodLabel(start: string, end: string) {
             highlightInvoice === inv.invoice_number ? 'ring-2 ring-primary-400 ring-inset' : ''
           ]"
         >
-          <td class="py-3 px-4"><span class="font-mono text-xs text-slate-700">{{ inv.invoice_number }}</span></td>
+          <td class="py-3 px-4">
+            <span class="font-mono text-xs text-slate-700">{{ inv.invoice_number }}</span>
+            <p v-if="planLabel(inv)" class="text-xs text-slate-400 mt-0.5">{{ planLabel(inv) }}</p>
+          </td>
           <td class="py-3 px-4 hidden sm:table-cell text-slate-600">{{ periodLabel(inv.period_start, inv.period_end) }}</td>
           <td class="py-3 px-4 text-right font-semibold text-slate-800">Rp {{ inv.amount.toLocaleString('id-ID') }}</td>
           <td class="py-3 px-4 hidden md:table-cell">
@@ -92,8 +105,15 @@ function periodLabel(start: string, end: string) {
             <button
               v-if="inv.status === 'pending' || inv.status === 'past_due'"
               type="button"
-              class="text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 px-3 py-1.5 rounded-lg transition-colors"
-              @click="emit('pay', inv)"
+              :disabled="disabledPay"
+              :title="disabledPay ? 'Account suspended — contact support to reactivate' : undefined"
+              :class="[
+                'text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors',
+                disabledPay
+                  ? 'text-slate-400 bg-slate-100 cursor-not-allowed'
+                  : 'text-white bg-primary-600 hover:bg-primary-700'
+              ]"
+              @click="!disabledPay && emit('pay', inv)"
             >
               Pay
             </button>

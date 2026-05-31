@@ -11,10 +11,7 @@ const stats = computed(() => partner.stats)
 const isLoadingStats = computed(() => partner.isLoadingStats || partner.isSwitchingClient)
 
 onMounted(async () => {
-  // Fetch stats if not yet loaded (e.g. direct navigation or first load)
-  if (!partner.stats && !partner.isLoadingStats) {
-    await partner.fetchStats()
-  }
+  await partner.fetchStats()
 })
 
 const route = useRoute()
