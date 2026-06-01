@@ -34,6 +34,43 @@ const isExpired = computed(() => {
   return new Date(order.value.expires_at).getTime() < Date.now()
 })
 
+// Guard: redirect to the active payment detail page if a non-expired session
+// exists. Runs on mount (client-only) because the session store reads from
+// localStorage. Also checks order.payment_method as fallback for hard refreshes
+// where localStorage may have been cleared but the order still has an active method.
+onMounted(() => {
+  if (!order.value || isExpired.value || order.value.status !== 'pending') return
+
+  const base = `/orders/${orderNumber.value}/payment`
+
+  // Primary: check in-memory store (localStorage)
+  const session = paymentStore.getSession(orderNumber.value)
+  if (session) {
+    const sessionExpired = session.expires_at
+      ? new Date(session.expires_at).getTime() < Date.now()
+      : false
+    if (!sessionExpired) {
+      const m = session.payment_method as string
+      if (m.startsWith('va_')) { router.replace(`${base}/va`); return }
+      if (m === 'qris') { router.replace(`${base}/qris`); return }
+      router.replace(`${base}/ewallet`)
+      return
+    }
+    // Session expired in store — clear it so the form shows fresh
+    paymentStore.clearSession(orderNumber.value)
+  }
+
+  // Fallback: check payment_method on the order (server state).
+  // This handles hard refresh after initiating payment but before store is hydrated.
+  // After CancelPaymentSession, order.payment_method is reset to null by backend.
+  const method = order.value.payment_method as string | null | undefined
+  if (method) {
+    if (method.startsWith('va_')) { router.replace(`${base}/va`); return }
+    if (method === 'qris') { router.replace(`${base}/qris`); return }
+    router.replace(`${base}/ewallet`)
+  }
+})
+
 async function selectAndProceed(method: PaymentMethod) {
   if (!order.value || isExpired.value) return
   selectedMethod.value = method

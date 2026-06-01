@@ -217,18 +217,18 @@ async function submitOnboard() {
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1.5">Subdomain <span class="text-red-500">*</span></label>
               <div class="flex items-center gap-2">
+                <span class="flex-shrink-0 text-sm text-slate-500 whitespace-nowrap">drillspace.id/</span>
                 <BaseInput
                   v-model="onboardForm.subdomain_slug"
                   placeholder="your-name"
                   class="flex-1"
-                  :error="onboardFieldErrors.subdomain_slug || (vB$.subdomain_slug.$error ? 'Invalid subdomain format' : '') || (slugStatus === 'taken' ? 'Subdomain already taken' : '')"
+                  :error="onboardFieldErrors.subdomain_slug || (vB$.subdomain_slug.$error ? 'Invalid slug format' : '') || (slugStatus === 'taken' ? 'Slug already taken' : '')"
                   @blur="vB$.subdomain_slug.$touch"
                 />
-                <span class="flex-shrink-0 text-sm text-slate-500 whitespace-nowrap">.drillspace.id</span>
               </div>
-              <p v-if="onboardForm.subdomain_slug && slugStatus === 'available'" class="text-xs text-green-600 mt-1">✓ Subdomain available</p>
+              <p v-if="onboardForm.subdomain_slug && slugStatus === 'available'" class="text-xs text-green-600 mt-1">✓ Slug available</p>
               <p v-else-if="slugStatus === 'checking'" class="text-xs text-slate-400 mt-1">Checking availability...</p>
-              <p v-else-if="onboardForm.subdomain_slug" class="text-xs text-slate-400 mt-1">Preview: {{ onboardForm.subdomain_slug }}.drillspace.id</p>
+              <p v-else-if="onboardForm.subdomain_slug" class="text-xs text-slate-400 mt-1">Preview: drillspace.id/{{ onboardForm.subdomain_slug }}</p>
             </div>
 
             <div class="flex items-start gap-3 pt-1">
@@ -256,7 +256,7 @@ async function submitOnboard() {
           <h1 class="text-xl font-bold leading-snug">Start selling your courses in minutes</h1>
           <ul class="space-y-2.5 text-sm text-primary-100">
             <li>✓ 14-day free trial</li>
-            <li>✓ Your own subdomain</li>
+            <li>✓ Your own page on DrillSpace</li>
             <li>✓ Analytics dashboard</li>
             <li>✓ 24/7 support</li>
           </ul>
@@ -290,12 +290,12 @@ async function submitOnboard() {
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1.5">Subdomain <span class="text-red-500">*</span></label>
             <div class="flex items-center gap-2">
-              <BaseInput v-model="form.subdomain_slug" placeholder="your-name" class="flex-1" :error="fieldErrors.subdomain_slug || (v$.subdomain_slug.$error ? 'Invalid subdomain format' : '') || (slugStatus === 'taken' ? 'Subdomain already taken' : '')" @blur="v$.subdomain_slug.$touch" />
-              <span class="flex-shrink-0 text-sm text-slate-500 whitespace-nowrap">.drillspace.id</span>
+              <span class="flex-shrink-0 text-sm text-slate-500 whitespace-nowrap">drillspace.id/</span>
+              <BaseInput v-model="form.subdomain_slug" placeholder="your-name" class="flex-1" :error="fieldErrors.subdomain_slug || (v$.subdomain_slug.$error ? 'Invalid slug format' : '') || (slugStatus === 'taken' ? 'Slug already taken' : '')" @blur="v$.subdomain_slug.$touch" />
             </div>
-            <p v-if="form.subdomain_slug && slugStatus === 'available'" class="text-xs text-green-600 mt-1">✓ Subdomain available</p>
+            <p v-if="form.subdomain_slug && slugStatus === 'available'" class="text-xs text-green-600 mt-1">✓ Slug available</p>
             <p v-else-if="slugStatus === 'checking'" class="text-xs text-slate-400 mt-1">Checking availability...</p>
-            <p v-else-if="form.subdomain_slug" class="text-xs text-slate-400 mt-1">Preview: {{ form.subdomain_slug }}.drillspace.id</p>
+            <p v-else-if="form.subdomain_slug" class="text-xs text-slate-400 mt-1">Preview: drillspace.id/{{ form.subdomain_slug }}</p>
           </div>
 
           <BaseInput v-model="form.phone" type="tel" label="Phone (optional)" placeholder="+628123456789" :error="fieldErrors.phone || (v$.phone.$error ? 'Invalid format. Use +628...' : '')" @blur="v$.phone.$touch" />

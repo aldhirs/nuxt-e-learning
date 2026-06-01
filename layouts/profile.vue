@@ -13,40 +13,48 @@ const navLinks = [
   {
     to: '/profile',
     label: 'Profile',
+    mobileLabel: 'Profile',
     exact: true,
     icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
   },
   {
     to: '/orders',
     label: 'My Orders',
+    mobileLabel: 'Orders',
     exact: false,
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
   },
   {
     to: '/my/courses',
     label: 'My Courses',
+    mobileLabel: 'Courses',
     exact: false,
     icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
   },
   {
     to: '/profile/edit',
     label: 'Edit Profile',
+    mobileLabel: 'Edit',
     exact: true,
     icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
   },
   {
     to: '/forgot-password',
     label: 'Change Password',
+    mobileLabel: null,
     exact: true,
     icon: 'M5 11h14a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2zm3-1V7a4 4 0 118 0v3'
   },
   {
     to: '/profile/security',
     label: 'Security',
+    mobileLabel: null,
     exact: true,
     icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'
   }
 ]
+
+const mobileNavLinks = navLinks.filter(l => l.mobileLabel !== null)
 
 function isActive(link: typeof navLinks[0]) {
   return link.exact
@@ -122,13 +130,41 @@ async function doLogout() {
           </aside>
 
           <!-- ── Page content ────────────────────────────────── -->
-          <Transition name="profile-page" mode="out-in">
+          <Transition name="profile-page" mode="out-in" class="flex-1 min-w-0 pb-20 md:pb-0">
               <slot />
           </Transition>
 
         </div>
       </div>
     </div>
+
+    <!-- Mobile bottom nav -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex z-40" aria-label="Mobile profile navigation">
+      <NuxtLink
+        v-for="link in mobileNavLinks"
+        :key="link.to"
+        :to="link.to"
+        :class="[
+          'flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors',
+          isActive(link) ? 'text-primary-600' : 'text-slate-500'
+        ]"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="link.icon" />
+        </svg>
+        <span>{{ link.mobileLabel }}</span>
+      </NuxtLink>
+      <button
+        type="button"
+        class="flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium text-red-400 transition-colors hover:text-red-500"
+        @click="doLogout"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        <span>Logout</span>
+      </button>
+    </nav>
 
     <AppFooter />
     <AppToast />

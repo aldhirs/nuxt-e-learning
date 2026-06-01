@@ -12,8 +12,36 @@ const session = computed(() => paymentStore.getSession(invoiceNumber.value))
 
 useSeoMeta({ title: () => `Pay with QRIS — ${invoiceNumber.value}` })
 
-onMounted(() => {
-  if (session.value?.payment_method !== 'qris') navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+onMounted(async () => {
+  if (session.value) {
+    if (session.value.payment_method !== 'qris') {
+      navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+    }
+    return
+  }
+
+  // No store session (hard refresh / direct URL) — fetch from server
+  try {
+    const snap = await subPayApi.getStatus(invoiceNumber.value)
+    if (snap.status === 'paid') {
+      navigateTo(`/partner/invoice-pay/${invoiceNumber.value}/done`)
+      return
+    }
+    if (!snap.has_payment_session || snap.is_expired || snap.payment_method !== 'qris') {
+      navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+      return
+    }
+    paymentStore.setSession({
+      invoice_number: invoiceNumber.value,
+      invoice_amount: snap.amount,
+      payment_method: 'qris',
+      expires_at: snap.expires_at ?? '',
+      qr_url: snap.qris_url,
+      qr_string: snap.qris_string,
+    })
+  } catch {
+    navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+  }
 })
 
 const qrSrc = computed(() => {
@@ -55,6 +83,12 @@ async function checkStatus() {
 }
 
 onMounted(() => { pollTimer = setTimeout(checkStatus, POLL_MS) })
+const isExpiredQris = computed(() => false) // QRIS expiry detected server-side; no local check needed
+const { showConfirmModal, isChanging, openConfirmModal, closeConfirmModal, confirmChange } = useChangePaymentMethod(
+  { type: 'invoice', invoiceNumber: invoiceNumber.value, methodSelectionPath: `/partner/invoice-pay/${invoiceNumber.value}` },
+  { isPaid: computed(() => showSuccess.value), isExpired: isExpiredQris }
+)
+
 onBeforeUnmount(() => { stopPolling(); if (countdownTimer) clearInterval(countdownTimer) })
 
 // ── Manual check ──────────────────────────────────────────────────────────────
@@ -103,11 +137,11 @@ async function manualCheck() {
   </Teleport>
 
   <PartnerInvoicePaymentStepper :step="3" />
-  <div v-if="session" class="max-w-sm mx-auto pb-10 px-4">
-    <NuxtLink :to="`/partner/invoice-pay/${invoiceNumber}`" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition-colors group mb-6">
+  <div v-if="session" class="max-w-sm mx-auto pb-10 px-4 mt-4">
+    <button type="button" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition-colors group mb-6" @click="openConfirmModal">
       <svg class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
       Change payment method
-    </NuxtLink>
+    </button>
 
     <h1 class="text-xl font-bold text-slate-800 mb-1 text-center">Pay with QRIS</h1>
     <p class="text-sm text-slate-500 mb-6 text-center font-mono">{{ invoiceNumber }}</p>
@@ -152,9 +186,29 @@ async function manualCheck() {
         <svg v-if="!manualChecking" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
         {{ manualChecking ? 'Checking...' : "I've Already Paid" }}
       </BaseButton>
+      <BaseButton
+        variant="secondary"
+        size="lg"
+        block
+        :loading="isChanging"
+        :disabled="isChanging"
+        @click="openConfirmModal"
+      >
+        Change Payment Method
+      </BaseButton>
       <BaseButton variant="ghost" size="lg" block to="/partner/billing">Back to Billing</BaseButton>
     </div>
   </div>
+
+  <BaseModal v-model="showConfirmModal" title="Change Payment Method?" size="sm" @close="closeConfirmModal">
+    <p class="text-sm text-slate-600">The QR code that was generated will expire and can no longer be scanned for payment.</p>
+    <template #footer>
+      <div class="flex gap-3 justify-end">
+        <BaseButton variant="ghost" size="sm" :disabled="isChanging" @click="closeConfirmModal">Cancel</BaseButton>
+        <BaseButton variant="primary" size="sm" :loading="isChanging" @click="confirmChange">Yes, Change Method</BaseButton>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>

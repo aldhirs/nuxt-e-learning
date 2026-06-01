@@ -46,6 +46,13 @@ const steps = computed(() => {
   ]
 })
 
+const isExpiredEwallet = computed(() => false) // e-wallet sessions redirect immediately; no local expiry check
+
+const { showConfirmModal, isChanging, openConfirmModal, closeConfirmModal, confirmChange } = useChangePaymentMethod(
+  { type: 'order', orderNumber: orderNumber.value, methodSelectionPath: `/orders/${orderNumber.value}/payment` },
+  { isPaid: ref(false), isExpired: isExpiredEwallet }
+)
+
 async function openWallet() {
   const s = session.value
   if (!s) return
@@ -85,13 +92,16 @@ async function openWallet() {
   </div>
 
   <div v-else class="max-w-sm mx-auto px-4 py-10 flex flex-col items-center text-center">
-    <NuxtLink :to="`/orders/${orderNumber}/payment`"
-      class="self-start inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
+    <button
+      type="button"
+      class="self-start inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors"
+      @click="openConfirmModal"
+    >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
       Change method
-    </NuxtLink>
+    </button>
 
     <div
       class="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 text-white text-2xl font-black"
@@ -122,9 +132,29 @@ async function openWallet() {
       <BaseButton variant="secondary" size="lg" block :to="`/orders/${orderNumber}/payment/status`">
         I've Already Paid
       </BaseButton>
+      <BaseButton
+        variant="secondary"
+        size="lg"
+        block
+        :loading="isChanging"
+        :disabled="isChanging"
+        @click="openConfirmModal"
+      >
+        Change Payment Method
+      </BaseButton>
       <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
         Back to Order Details
       </BaseButton>
     </div>
   </div>
+
+  <BaseModal v-model="showConfirmModal" title="Change Payment Method?" size="sm" @close="closeConfirmModal">
+    <p class="text-sm text-slate-600">The e-wallet payment link that was created will expire and can no longer be used.</p>
+    <template #footer>
+      <div class="flex gap-3 justify-end">
+        <BaseButton variant="ghost" size="sm" :disabled="isChanging" @click="closeConfirmModal">Cancel</BaseButton>
+        <BaseButton variant="primary" size="sm" :loading="isChanging" @click="confirmChange">Yes, Change Method</BaseButton>
+      </div>
+    </template>
+  </BaseModal>
 </template>

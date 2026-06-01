@@ -4,6 +4,7 @@ useSeoMeta({ title: 'Partner Dashboard — DrillSpace' })
 
 const partner = usePartnerStore()
 const { openLmsAdmin, isRedirecting: lmsRedirecting } = usePartnerLmsRedirect()
+const { formatCurrency } = useFormatters()
 
 // Use reactive store state directly — avoids useLazyAsyncData key caching
 // which prevents refresh when navigating to the same route after switchClient.
@@ -82,11 +83,14 @@ const planHighlight = computed(() => {
       <PartnerStatsWidget label="Active Students" :value="stats?.students_active ?? '—'" :sub="`of ${partner.plan?.max_students === -1 ? '∞' : partner.plan?.max_students ?? '—'} max`" :loading="isLoadingStats" />
     </div>
 
-    <!-- Usage bars -->
-    <div v-if="partner.usage" class="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
-      <h2 class="text-sm font-semibold text-slate-700">Plan Usage</h2>
-      <PartnerUsageBar label="Courses" :usage="partner.usage.courses" />
-      <PartnerUsageBar label="Students" :usage="partner.usage.students" />
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <PartnerStatsWidget label="Revenue This Month" :value="stats != null ? formatCurrency(stats.revenue_this_month) : '—'" sub="net after commission" :loading="isLoadingStats" class="col-span-2 md:col-span-2" />
+      <!-- Usage bars -->
+      <div v-if="partner.usage" class="bg-white rounded-2xl border border-slate-100 p-5 space-y-4 col-span-2 md:col-span-2">
+        <h2 class="text-sm font-semibold text-slate-700">Plan Usage</h2>
+        <PartnerUsageBar label="Courses" :usage="partner.usage.courses" />
+        <PartnerUsageBar label="Students" :usage="partner.usage.students" />
+      </div>
     </div>
 
     <!-- Quick links -->
@@ -152,15 +156,19 @@ const planHighlight = computed(() => {
     </div>
 
     <!-- Recent activity -->
-    <div v-if="stats?.recent_activities?.length" class="bg-white rounded-2xl border border-slate-100 p-5">
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
       <h2 class="text-sm font-semibold text-slate-700 mb-3">Recent Activity</h2>
-      <ul class="space-y-2.5">
+      <template v-if="isLoadingStats">
+        <div v-for="i in 3" :key="i" class="h-5 bg-slate-100 rounded animate-pulse mb-2.5" />
+      </template>
+      <ul v-else-if="stats?.recent_activities?.length" class="space-y-2.5">
         <li v-for="a in stats.recent_activities.slice(0, 5)" :key="a.created_at" class="flex items-start gap-2.5 text-sm">
           <span class="w-1.5 h-1.5 rounded-full bg-primary-400 flex-shrink-0 mt-1.5" />
           <span class="flex-1 text-slate-700">{{ a.description }}</span>
           <span class="text-xs text-slate-400 flex-shrink-0">{{ new Date(a.created_at).toLocaleDateString('en-US') }}</span>
         </li>
       </ul>
+      <p v-else class="text-sm text-slate-400">No activity yet. Start by publishing a course or enrolling your first student.</p>
     </div>
 
     </template><!-- end v-else switching -->

@@ -39,11 +39,11 @@ const taxPercentLabel = computed(() => {
       <span>- {{ formatCurrency(discount) }}</span>
     </div>
     <div v-if="showTaxAlways || (tax && tax > 0)" class="flex justify-between text-slate-500">
-      <span>Pajak{{ taxPercentLabel }}</span>
+      <span>Tax{{ taxPercentLabel }}</span>
       <span>{{ formatCurrency(tax ?? 0) }}</span>
     </div>
     <div class="border-t border-slate-200 pt-2 flex justify-between font-bold text-slate-800 text-base">
-      <span>Total Keseluruhan</span>
+      <span>Grand Total</span>
       <span class="text-primary-600">{{ formatCurrency(total) }}</span>
     </div>
   </div>

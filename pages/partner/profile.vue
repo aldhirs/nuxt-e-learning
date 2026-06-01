@@ -175,12 +175,12 @@ function cancel() {
         <div class="bg-white rounded-2xl border border-slate-100 p-5">
           <h2 class="text-sm font-semibold text-slate-700 mb-3">Platform Settings</h2>
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1.5">Subdomain</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Page Slug</label>
             <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-400 flex-shrink-0 whitespace-nowrap">drillspace.id/</span>
               <div class="flex-1 bg-slate-100 rounded-xl px-4 py-3 text-sm text-slate-500 cursor-not-allowed">{{ partner.profile?.slug ?? '—' }}</div>
-              <span class="text-sm text-slate-400 flex-shrink-0">.drillspace.id</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1.5">Subdomain cannot be changed here. <NuxtLink to="/contact-us" class="text-primary-600 hover:underline">Contact support</NuxtLink> to request a change.</p>
+            <p class="text-xs text-slate-400 mt-1.5">Slug cannot be changed here. <NuxtLink to="/contact-us" class="text-primary-600 hover:underline">Contact support</NuxtLink> to request a change.</p>
           </div>
         </div>
 

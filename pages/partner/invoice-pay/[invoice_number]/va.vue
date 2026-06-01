@@ -12,8 +12,39 @@ const session = computed(() => paymentStore.getSession(invoiceNumber.value))
 
 useSeoMeta({ title: () => `Awaiting VA Payment — ${invoiceNumber.value}` })
 
-onMounted(() => {
-  if (!session.value?.payment_method?.startsWith('va_')) navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+onMounted(async () => {
+  if (session.value) {
+    // Session in store — verify it's VA
+    if (!session.value.payment_method?.startsWith('va_')) {
+      navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+    }
+    return
+  }
+
+  // No store session (hard refresh / direct URL) — fetch from server
+  try {
+    const snap = await subPayApi.getStatus(invoiceNumber.value)
+    if (snap.status === 'paid') {
+      // Already paid — go to done page
+      navigateTo(`/partner/invoice-pay/${invoiceNumber.value}/done`)
+      return
+    }
+    if (!snap.has_payment_session || snap.is_expired || !snap.payment_method?.startsWith('va_')) {
+      // No active VA session → redirect to method selection
+      navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+      return
+    }
+    // Rebuild session from API response
+    paymentStore.setSession({
+      invoice_number: invoiceNumber.value,
+      invoice_amount: snap.amount,
+      payment_method: snap.payment_method as string,
+      expires_at: snap.expires_at ?? '',
+      va_number: snap.va_number,
+    })
+  } catch {
+    navigateTo(`/partner/invoice-pay/${invoiceNumber.value}`)
+  }
 })
 
 const bankNameMap: Record<string, string> = {
@@ -72,6 +103,11 @@ async function checkStatus() {
   } catch { /* non-fatal */ }
   if (!showSuccess.value) pollTimer = setTimeout(checkStatus, POLL_MS)
 }
+
+const { showConfirmModal, isChanging, openConfirmModal, closeConfirmModal, confirmChange } = useChangePaymentMethod(
+  { type: 'invoice', invoiceNumber: invoiceNumber.value, methodSelectionPath: `/partner/invoice-pay/${invoiceNumber.value}` },
+  { isPaid: computed(() => showSuccess.value), isExpired }
+)
 
 onMounted(() => { pollTimer = setTimeout(checkStatus, POLL_MS) })
 onBeforeUnmount(() => { stopPolling(); if (countdownTimer) clearInterval(countdownTimer) })
@@ -160,15 +196,20 @@ const instructions = computed(() => {
   </Teleport>
 
   <PartnerInvoicePaymentStepper :step="3" />
-  <div v-if="session" class="max-w-xl mx-auto space-y-5 pb-10 px-4">
+  <div v-if="session" class="max-w-xl mx-auto space-y-5 pb-10 px-4 mt-4">
 
-    <!-- Change method link -->
-    <NuxtLink :to="`/partner/invoice-pay/${invoiceNumber}`" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition-colors group">
+    <!-- Change method button -->
+    <button
+      v-if="!isExpired"
+      type="button"
+      class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition-colors group"
+      @click="openConfirmModal"
+    >
       <svg class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
       Change payment method
-    </NuxtLink>
+    </button>
 
     <!-- Expired alert -->
     <div v-if="isExpired" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
@@ -273,6 +314,17 @@ const instructions = computed(() => {
         {{ manualChecking ? 'Checking...' : "I've Already Transferred" }}
       </BaseButton>
       <BaseButton v-if="isExpired" variant="primary" size="lg" block :to="`/partner/invoice-pay/${invoiceNumber}`">Select Another Method</BaseButton>
+      <BaseButton
+        v-if="!isExpired"
+        variant="secondary"
+        size="lg"
+        block
+        :loading="isChanging"
+        :disabled="isChanging"
+        @click="openConfirmModal"
+      >
+        Change Payment Method
+      </BaseButton>
       <BaseButton variant="ghost" size="lg" block to="/partner/billing">Back to Billing</BaseButton>
     </div>
 
@@ -281,6 +333,16 @@ const instructions = computed(() => {
       Secure &amp; SSL 256-bit encrypted transaction
     </p>
   </div>
+
+  <BaseModal v-model="showConfirmModal" title="Change Payment Method?" size="sm" @close="closeConfirmModal">
+    <p class="text-sm text-slate-600">The Virtual Account number that was created will expire and can no longer be used for payment.</p>
+    <template #footer>
+      <div class="flex gap-3 justify-end">
+        <BaseButton variant="ghost" size="sm" :disabled="isChanging" @click="closeConfirmModal">Cancel</BaseButton>
+        <BaseButton variant="primary" size="sm" :loading="isChanging" @click="confirmChange">Yes, Change Method</BaseButton>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>

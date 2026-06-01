@@ -71,6 +71,17 @@ async function checkStatus() {
   }
 }
 
+const isExpiredQris = computed(() => {
+  const s = session.value
+  if (!s?.expires_at) return false
+  return new Date(s.expires_at).getTime() < Date.now()
+})
+
+const { showConfirmModal, isChanging, openConfirmModal, closeConfirmModal, confirmChange } = useChangePaymentMethod(
+  { type: 'order', orderNumber: orderNumber.value, methodSelectionPath: `/orders/${orderNumber.value}/payment` },
+  { isPaid: computed(() => showSuccessOverlay.value), isExpired: isExpiredQris }
+)
+
 onMounted(() => {
   pollTimer = setTimeout(checkStatus, POLL_INTERVAL_MS)
 })
@@ -177,15 +188,16 @@ async function manualCheck() {
 
   <!-- QRIS payment page -->
   <div v-else class="max-w-sm mx-auto px-4 py-10">
-    <NuxtLink
-      :to="`/orders/${orderNumber}/payment`"
+    <button
+      type="button"
       class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors"
+      @click="openConfirmModal"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
       Change method
-    </NuxtLink>
+    </button>
 
     <h1 class="text-xl font-bold text-slate-800 mb-1 text-center">Pay with QRIS</h1>
     <p class="text-sm text-slate-500 mb-6 text-center">Order <span class="font-mono font-semibold">{{ order.order_number }}</span></p>
@@ -253,11 +265,32 @@ async function manualCheck() {
         </svg>
         {{ manualChecking ? 'Checking...' : "I've Already Paid" }}
       </BaseButton>
+      <BaseButton
+        variant="secondary"
+        size="lg"
+        block
+        :loading="isChanging"
+        :disabled="isChanging"
+        @click="openConfirmModal"
+      >
+        Change Payment Method
+      </BaseButton>
       <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
         Back to Order Details
       </BaseButton>
     </div>
   </div>
+
+  <!-- Change Payment Method Confirmation Modal -->
+  <BaseModal v-model="showConfirmModal" title="Change Payment Method?" size="sm" @close="closeConfirmModal">
+    <p class="text-sm text-slate-600">The QR code that was generated will expire and can no longer be scanned for payment.</p>
+    <template #footer>
+      <div class="flex gap-3 justify-end">
+        <BaseButton variant="ghost" size="sm" :disabled="isChanging" @click="closeConfirmModal">Cancel</BaseButton>
+        <BaseButton variant="primary" size="sm" :loading="isChanging" @click="confirmChange">Yes, Change Method</BaseButton>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>

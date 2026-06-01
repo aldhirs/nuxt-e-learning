@@ -10,7 +10,14 @@ export function useSubscriptionPaymentApi() {
   }
 
   function fetchInvoice(invoiceNumber: string) {
-    return api.get<SubscriptionInvoice>(
+    return api.get<{
+      invoice: SubscriptionInvoice
+      active_payment_session: {
+        payment_method: string
+        expires_at: string | null
+        is_expired: boolean
+      } | null
+    }>(
       `/clients/subscription/invoices/${encodeURIComponent(invoiceNumber)}`,
       { headers: clientHeaders() },
     )
@@ -27,14 +34,42 @@ export function useSubscriptionPaymentApi() {
   }
 
   function getStatus(invoiceNumber: string) {
-    // Correct path is /payment/status (not /status).
-    // API returns { invoice_status: 'paid' | 'pending' | ... }.
-    // Normalise to { status } so polling code stays unchanged.
-    return api.get<{ invoice_status: string }>(
+    return api.get<{
+      invoice_number: string
+      invoice_status: string
+      amount: number
+      has_payment_session?: boolean
+      payment_method?: string
+      is_expired?: boolean
+      expires_at?: string
+      va_number?: string
+      qris_string?: string
+      qris_url?: string
+    }>(
       `/clients/subscription/invoices/${encodeURIComponent(invoiceNumber)}/payment/status`,
       { headers: clientHeaders() },
-    ).then(r => ({ status: r.invoice_status }))
+    ).then(r => ({
+      // Normalised field used by polling code
+      status: r.invoice_status,
+      // Full fields for session hydration on hard refresh
+      amount: r.amount,
+      has_payment_session: r.has_payment_session ?? false,
+      payment_method: r.payment_method,
+      is_expired: r.is_expired ?? false,
+      expires_at: r.expires_at,
+      va_number: r.va_number,
+      qris_string: r.qris_string,
+      qris_url: r.qris_url,
+    }))
   }
 
-  return { fetchInvoice, initiate, getStatus }
+  function cancel(invoiceNumber: string) {
+    return api.post<{ message: string }>(
+      `/clients/subscription/invoices/${encodeURIComponent(invoiceNumber)}/payment/cancel`,
+      {},
+      { headers: clientHeaders() },
+    )
+  }
+
+  return { fetchInvoice, initiate, getStatus, cancel }
 }

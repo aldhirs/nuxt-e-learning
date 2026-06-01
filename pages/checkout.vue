@@ -283,7 +283,7 @@ async function placeOrder() {
                   :disabled="isLoading || isFreeCourse || isPriceUnset"
                   @click="placeOrder"
                 >
-                  Bayar {{ formatCurrency(total) }}
+                  Pay {{ formatCurrency(total) }}
                 </BaseButton>
               </div>
 

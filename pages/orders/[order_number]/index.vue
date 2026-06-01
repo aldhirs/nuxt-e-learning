@@ -190,15 +190,6 @@ async function confirmCancel() {
           <BaseButton v-if="statusInfo?.nextTo" variant="primary" size="sm" :to="statusInfo.nextTo">
             {{ statusInfo?.nextAction }}
           </BaseButton>
-          <!-- Show "Ganti Metode" only when a method is already selected -->
-          <BaseButton
-            v-if="hasPaymentMethod"
-            variant="secondary"
-            size="sm"
-            :to="`/orders/${order.order_number}/payment`"
-          >
-            Change Method
-          </BaseButton>
           <BaseButton
             v-if="order.status === 'pending'"
             variant="ghost"

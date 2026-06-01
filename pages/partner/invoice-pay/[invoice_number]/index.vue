@@ -22,8 +22,37 @@ const serverError = ref('')
 const activeMethod = ref<SubscriptionPaymentMethod | null>(null)
 
 onMounted(async () => {
+  const base = `/partner/invoice-pay/${invoiceNumber.value}`
+
+  // Always fetch invoice first so the price card is available before any redirect.
   try {
-    invoice.value = await subPayApi.fetchInvoice(invoiceNumber.value)
+    const res = await subPayApi.fetchInvoice(invoiceNumber.value)
+    invoice.value = res.invoice
+
+    // Guard 1: localStorage session (cleared by confirmChange on cancel)
+    const stored = paymentStore.getSession(invoiceNumber.value)
+    if (stored) {
+      const expired = stored.expires_at
+        ? new Date(stored.expires_at).getTime() < Date.now()
+        : false
+      if (!expired) {
+        const m = stored.payment_method as string
+        if (m.startsWith('va_')) { router.replace(`${base}/va`); return }
+        if (m === 'qris') { router.replace(`${base}/qris`); return }
+        router.replace(`${base}/ewallet`)
+        return
+      }
+      paymentStore.clearSession(invoiceNumber.value)
+    }
+
+    // Guard 2: server-side active session (fallback for hard refresh)
+    const session = res.active_payment_session
+    if (session && !session.is_expired) {
+      const m = session.payment_method
+      if (m.startsWith('va_')) { router.replace(`${base}/va`); return }
+      if (m === 'qris') { router.replace(`${base}/qris`); return }
+      router.replace(`${base}/ewallet`)
+    }
   } catch {
     fetchError.value = 'Failed to load invoice. Go back to billing and try again.'
   }

@@ -65,7 +65,7 @@ async function select(clientId: number) {
             {{ partner.activeClient?.name ?? 'Partner' }}
           </p>
           <p class="text-xs text-slate-400 truncate">
-            {{ partner.activeClient?.slug ? `${partner.activeClient.slug}.drillspace.id` : '' }}
+            {{ partner.activeClient?.slug ? `drillspace.id/${partner.activeClient.slug}` : '' }}
           </p>
         </div>
 
@@ -134,7 +134,7 @@ async function select(clientId: number) {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5 truncate">{{ client.slug }}.drillspace.id</p>
+            <p class="text-xs text-slate-400 mt-0.5 truncate">drillspace.id/{{ client.slug }}</p>
           </div>
 
           <!-- Subscription status badge -->

@@ -142,6 +142,12 @@ async function checkStatus() {
   }
 }
 
+// Change Payment Method
+const { showConfirmModal, isChanging, openConfirmModal, closeConfirmModal, confirmChange } = useChangePaymentMethod(
+  { type: 'order', orderNumber: orderNumber.value, methodSelectionPath: `/orders/${orderNumber.value}/payment` },
+  { isPaid: computed(() => showSuccessOverlay.value), isExpired }
+)
+
 onMounted(() => {
   // Start polling once mounted on client
   pollTimer = setTimeout(checkStatus, POLL_INTERVAL_MS)
@@ -426,17 +432,18 @@ const bankInstructions = computed<BankInstruction | null>(() => {
   <!-- VA Payment Detail — shows immediately from store session, refreshes when order fetched -->
   <div v-else class="max-w-2xl mx-auto px-4 py-8 space-y-5">
 
-    <!-- Back link -->
-    <NuxtLink
+    <!-- Change Payment Method button -->
+    <button
       v-if="!isExpired"
-      :to="`/orders/${orderNumber}/payment`"
+      type="button"
       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition-colors group"
+      @click="openConfirmModal"
     >
       <svg class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
       Change payment method
-    </NuxtLink>
+    </button>
 
     <!-- Expired alert -->
     <div v-if="isExpired" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
@@ -701,6 +708,18 @@ const bankInstructions = computed<BankInstruction | null>(() => {
         Create New Order
       </BaseButton>
 
+      <BaseButton
+        v-if="!isExpired"
+        variant="secondary"
+        size="lg"
+        block
+        :loading="isChanging"
+        :disabled="isChanging"
+        @click="openConfirmModal"
+      >
+        Change Payment Method
+      </BaseButton>
+
       <BaseButton variant="ghost" size="lg" block :to="`/orders/${orderNumber}`">
         Back to Order Details
       </BaseButton>
@@ -713,6 +732,19 @@ const bankInstructions = computed<BankInstruction | null>(() => {
       Secure &amp; SSL 256-bit encrypted transaction
     </p>
   </div>
+
+  <!-- Change Payment Method Confirmation Modal -->
+  <BaseModal v-model="showConfirmModal" title="Change Payment Method?" size="sm" @close="closeConfirmModal">
+    <p class="text-sm text-slate-600">
+      The Virtual Account number that was created will expire and can no longer be used for payment.
+    </p>
+    <template #footer>
+      <div class="flex gap-3 justify-end">
+        <BaseButton variant="ghost" size="sm" :disabled="isChanging" @click="closeConfirmModal">Cancel</BaseButton>
+        <BaseButton variant="primary" size="sm" :loading="isChanging" @click="confirmChange">Yes, Change Method</BaseButton>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>

@@ -18,6 +18,7 @@ const PAGE_SIZE = 10
 // ── Query state (synced to URL) ────────────────────────────────────────────
 const currentPage   = computed(() => Number(route.query.page  ?? 1))
 const activeStatus  = computed(() => (route.query.status as string) ?? '')
+const activeSource  = computed(() => (route.query.source as string) ?? '')
 const searchQuery   = computed(() => (route.query.search as string) ?? '')
 
 // Local draft for the search input (committed on submit / clear)
@@ -37,6 +38,10 @@ function setStatus(val: string) {
   navigate({ status: val || undefined, page: undefined, search: searchQuery.value || undefined })
 }
 
+function setSource(val: string) {
+  navigate({ source: val || undefined, page: undefined })
+}
+
 function goPage(p: number) {
   const clamped = Math.max(1, Math.min(totalPages.value, p))
   navigate({ page: clamped > 1 ? String(clamped) : undefined })
@@ -45,8 +50,9 @@ function goPage(p: number) {
 
 function navigate(patch: Record<string, string | undefined>) {
   const current: Record<string, string> = {}
-  if (activeStatus.value)  current.status = activeStatus.value
-  if (searchQuery.value)   current.search = searchQuery.value
+  if (activeStatus.value)    current.status = activeStatus.value
+  if (activeSource.value)    current.source = activeSource.value
+  if (searchQuery.value)     current.search = searchQuery.value
   if (currentPage.value > 1) current.page = String(currentPage.value)
   const merged: Record<string, string> = { ...current }
   for (const [k, v] of Object.entries(patch)) {
@@ -58,15 +64,15 @@ function navigate(patch: Record<string, string | undefined>) {
 
 // ── Data fetching ──────────────────────────────────────────────────────────
 const queryKey = computed(() =>
-  `my-courses:${currentPage.value}:${activeStatus.value}:${searchQuery.value}`
+  `my-courses:${currentPage.value}:${activeStatus.value}:${activeSource.value}:${searchQuery.value}`
 )
 
 const { data: page, pending, error, refresh } = await useAsyncData<PurchasedCoursesPage>(
   queryKey.value,
   () => myCoursesApi.getMyPurchasedCourses(
-    currentPage.value, PAGE_SIZE, activeStatus.value, searchQuery.value
+    currentPage.value, PAGE_SIZE, activeStatus.value, activeSource.value, searchQuery.value
   ),
-  { watch: [currentPage, activeStatus, searchQuery] }
+  { watch: [currentPage, activeStatus, activeSource, searchQuery] }
 )
 
 const courses    = computed(() => page.value?.data ?? [])
@@ -154,6 +160,25 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
         </form>
       </div>
 
+      <!-- Source filter chips -->
+      <div class="flex items-center gap-2 px-4 py-2.5 border-b border-slate-100">
+        <span class="text-xs text-slate-400 font-medium flex-shrink-0">Type:</span>
+        <button
+          v-for="chip in [{ value: '', label: 'All' }, { value: 'purchased', label: 'Purchased' }, { value: 'free', label: 'Free' }]"
+          :key="chip.value"
+          type="button"
+          :class="[
+            'px-3 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0',
+            activeSource === chip.value
+              ? 'bg-primary-500 text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          ]"
+          @click="setSource(chip.value)"
+        >
+          {{ chip.label }}
+        </button>
+      </div>
+
       <!-- Status tabs -->
       <div class="flex overflow-x-auto" style="scrollbar-width:none">
         <button
@@ -234,7 +259,7 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
       title="No courses found"
       :description="searchQuery ? `No courses matching &quot;${searchQuery}&quot;.` : `No ${activeStatus} courses.`"
       cta-label="Clear Filters"
-      @cta-click="navigate({ status: undefined, search: undefined, page: undefined })"
+      @cta-click="navigate({ status: undefined, source: undefined, search: undefined, page: undefined })"
     />
 
     <!-- Course list -->

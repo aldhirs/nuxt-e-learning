@@ -16,6 +16,7 @@ export function useMyCoursesApi() {
     page = 1,
     limit = 10,
     status = '',
+    source = '',
     search = ''
   ): Promise<PurchasedCoursesPage> {
     const headers: Record<string, string> = {}
@@ -25,6 +26,7 @@ export function useMyCoursesApi() {
 
     const query: Record<string, string | number> = { page, limit }
     if (status) query.status = status
+    if (source) query.source = source
     if (search) query.search = search
 
     const res = await $fetch<{
