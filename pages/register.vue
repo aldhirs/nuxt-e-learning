@@ -3,7 +3,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, minLength, sameAs, helpers } from '@vuelidate/validators'
 
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'default', middleware: 'guest' })
 
 useSeoMeta({ title: 'Create Account' })
 

@@ -207,15 +207,34 @@ export const usePartnerStore = defineStore('partner', () => {
   }
 
   // ─── Refresh after new registration ──────────────────────────────────────
-  // Force-clear the cached client list and re-fetch with a specific active client.
-  // Called after partner registration or onboard-as-partner so the dashboard
-  // immediately shows the newly created client.
-  async function refreshClients(newActiveClientId?: number): Promise<void> {
+  // Force-clear ALL cached data and re-fetch everything for the newly created
+  // client. Mirrors switchClient's full reset so the dashboard never shows
+  // stale subscription/stats/profile from a previous client session.
+  async function refreshForNewClient(newActiveClientId?: number): Promise<void> {
     if (newActiveClientId) {
       _clientIdCookie.value = newActiveClientId
     }
+    // Reset everything — same fields switchClient resets
     clients.value = []
+    subscriptionView.value = null
+    stats.value = null
+    profile.value = null
+
+    // Re-fetch client list first so activeClient + clientHeaders() are correct
     await fetchClients()
+
+    // Eagerly reload all client-scoped data for the new client so the dashboard
+    // renders correct content immediately without waiting for layout onMounted
+    await Promise.all([
+      fetchSubscription(),
+      fetchStats(),
+      fetchProfile(),
+    ])
+  }
+
+  // Keep old name as alias so verify.vue still compiles without changes
+  async function refreshClients(newActiveClientId?: number): Promise<void> {
+    return refreshForNewClient(newActiveClientId)
   }
 
   // ─── Cancel Subscription ──────────────────────────────────────────────────
@@ -248,6 +267,6 @@ export const usePartnerStore = defineStore('partner', () => {
     subscription, subscriptionStatus, plan, usage,
     isActive, isSuspended, isCancelled, isPastDue, isTrialActive, trialDaysLeft, canAccessLms, pendingInvoiceNumber,
     // actions
-    fetchClients, switchClient, refreshClients, fetchSubscription, fetchInvoiceHistory, fetchProfile, fetchStats, cancelSubscription, reset,
+    fetchClients, switchClient, refreshClients, refreshForNewClient, fetchSubscription, fetchInvoiceHistory, fetchProfile, fetchStats, cancelSubscription, reset,
   }
 })

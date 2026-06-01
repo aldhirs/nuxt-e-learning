@@ -101,18 +101,18 @@ const vaBanks = [
 // E-wallet rows
 const ewallets = [
   {
-    value: 'ewallet_ovo' as PaymentMethod,
-    name: 'OVO',
-    logo: '/images/payment/ovo.svg',
-    desc: 'Pay directly from OVO balance',
-    accent: 'hover:border-purple-300 hover:shadow-purple-100',
-  },
-  {
     value: 'ewallet_dana' as PaymentMethod,
     name: 'DANA',
     logo: '/images/payment/dana.svg',
     desc: 'Pay directly from DANA balance',
     accent: 'hover:border-blue-300 hover:shadow-blue-100',
+  },
+  {
+    value: 'ewallet_shopeepay' as PaymentMethod,
+    name: 'ShopeePay',
+    logo: '/images/payment/shopeepay.svg',
+    desc: 'Pay directly from ShopeePay balance',
+    accent: 'hover:border-orange-300 hover:shadow-orange-100',
   },
 ]
 </script>

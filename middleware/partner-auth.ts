@@ -7,8 +7,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo({ path: '/login', query: { redirect: to.fullPath } })
   }
 
-  // Hydrate user if not yet loaded (SSR or hard refresh)
-  if (!auth.user) {
+  const isOnboarding = to.query.onboarding === 'true'
+
+  // Always re-fetch /me after onboarding so active_client_id + roles are current.
+  // On normal navigations, skip if user is already hydrated.
+  if (!auth.user || isOnboarding) {
     await auth.fetchMe()
   }
 
@@ -21,7 +24,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const hasPartnerRole =
     !!auth.user?.active_client_id &&
     (auth.user?.roles ?? []).some(r =>
-      r.role_name === 'ADMIN' && r.client_id != null
+      r.role_name === 'CLIENT_OWNER' && r.client_id != null
     )
 
   if (!hasPartnerRole) {
@@ -29,9 +32,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo('/partner')
   }
 
-  // Ensure client list is loaded before pages mount. Pages call clientHeaders()
-  // in their onMounted hooks — which run BEFORE the layout's onMounted in Vue 3's
-  // lifecycle order. Without this, pages fetch without X-Client-ID and get empty data.
+  // Ensure client list is loaded before pages mount.
+  // On onboarding, refreshForNewClient already ran in register.vue — the list is
+  // fresh and activeClient points to the new client. Skip re-fetch to avoid a
+  // redundant round-trip that could briefly flip activeClient back to an old value.
   const partner = usePartnerStore()
   if (!partner.clients.length) {
     await partner.fetchClients()

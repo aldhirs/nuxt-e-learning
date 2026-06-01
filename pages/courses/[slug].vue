@@ -78,7 +78,7 @@ const hasPriceSet = computed(() => course.value?.price !== null && course.value?
 
 // ─── Enrollment check (purchased?) ──────────────────────────────────────────
 // Only run when authenticated — guests never have enrollment
-const { data: enrollmentCheck } = await useAsyncData<EnrollmentCheckResponse | null>(
+const { data: enrollmentCheck, refresh: refreshEnrollment } = await useAsyncData<EnrollmentCheckResponse | null>(
   () => `enrollment-check:${slug.value}:${auth.isAuthenticated}`,
   async () => {
     if (!auth.isAuthenticated || !course.value?.id) return null
@@ -147,6 +147,8 @@ async function handleFreeEnroll() {
   try {
     await enrollmentApi.enrollFree(course.value.id)
     enrollSuccess.value = 'You have successfully enrolled in this course. Enjoy learning!'
+    // Re-fetch enrollment so the button switches immediately to "Start Learning"
+    await refreshEnrollment()
   } catch (err: unknown) {
     const e = err as { status?: number; reason?: string; message?: string }
     const reason = (e.reason || '').toLowerCase()

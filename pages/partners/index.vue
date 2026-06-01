@@ -14,28 +14,58 @@ const partnersApi = usePartnersApi()
 
 const PAGE_SIZE = 16
 
-const filters = computed<PartnerListFilters>(() => ({
+// `offset` is NOT URL-backed — Load More manages it internally.
+// Refreshing the page always restarts from the first batch.
+const filters = computed<Omit<PartnerListFilters, 'limit' | 'offset'>>(() => ({
   search: (route.query.search as string) || undefined,
   sort:   (route.query.sort as PartnerSort) || undefined,
-  limit:  PAGE_SIZE,
-  offset: route.query.offset ? Number(route.query.offset) : 0,
 }))
 
-const currentPage = computed(() => Math.floor((filters.value.offset ?? 0) / PAGE_SIZE) + 1)
-
+// ── Load More state ───────────────────────────────────────────────────────────
+const allPartners    = ref<Partner[]>([])
+const totalCount     = ref(0)
+const isLoadingMore  = ref(false)
+const loadMoreError  = ref('')
 
 const queryKey = computed(() => `partners-list:${JSON.stringify(filters.value)}`)
 const { data: page, pending, error, refresh } = await useAsyncData<Paginated<Partner>>(
   queryKey.value,
-  () => partnersApi.listPartners(filters.value),
+  () => partnersApi.listPartners({ ...filters.value, limit: PAGE_SIZE, offset: 0 }),
   { watch: [filters] }
 )
 
-const partners   = computed(() => page.value?.data ?? [])
-const totalCount = computed(() => page.value?.meta?.total ?? 0)
-const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / PAGE_SIZE)))
-const hasPrev    = computed(() => currentPage.value > 1)
-const hasNext    = computed(() => currentPage.value < totalPages.value)
+// Sync accumulated list on first-page fetch (initial load + every filter change).
+watch(page, (p) => {
+  allPartners.value  = p?.data ?? []
+  totalCount.value   = p?.meta?.total ?? 0
+  loadMoreError.value = ''
+}, { immediate: true })
+
+const partners       = computed(() => allPartners.value)
+const hasMore        = computed(() => allPartners.value.length < totalCount.value)
+const remainingCount = computed(() => Math.max(0, totalCount.value - allPartners.value.length))
+
+async function loadMore() {
+  if (!hasMore.value || isLoadingMore.value) return
+  isLoadingMore.value = true
+  loadMoreError.value = ''
+  try {
+    const next = await partnersApi.listPartners({
+      ...filters.value,
+      limit:  PAGE_SIZE,
+      offset: allPartners.value.length,
+    })
+    const existing = new Set(allPartners.value.map(p => p.slug))
+    const fresh = (next.data ?? []).filter(p => !existing.has(p.slug))
+    allPartners.value = [...allPartners.value, ...fresh]
+    totalCount.value  = next.meta?.total ?? totalCount.value
+  } catch (err) {
+    loadMoreError.value = (err as { message?: string }).message
+      || 'Failed to load more partners. Please try again.'
+  } finally {
+    isLoadingMore.value = false
+  }
+}
 
 const sortOptions = [
   { value: '',             label: 'Default' },
@@ -43,7 +73,7 @@ const sortOptions = [
   { value: 'alphabetical', label: 'A → Z' },
 ]
 
-const hasActiveFilter = computed(() => Boolean(filters.value.search || filters.value.sort))
+const hasActiveFilter   = computed(() => Boolean(filters.value.search || filters.value.sort))
 const activeFilterCount = computed(() => [filters.value.search, filters.value.sort].filter(Boolean).length)
 
 function updateQuery(partial: Record<string, string | number | boolean | undefined>) {
@@ -59,20 +89,13 @@ function updateQuery(partial: Record<string, string | number | boolean | undefin
 }
 
 function clearFilters() {
-  searchInput.value = ''
   router.push({ query: {} })
 }
 
-function goPage(p: number) {
-  const clamped = Math.max(1, Math.min(totalPages.value, p))
-  updateQuery({ offset: (clamped - 1) * PAGE_SIZE })
-  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
 // ── Filter drawer — local buffered state ──────────────────────────────────────
-const filterOpen   = ref(false)
-const localSearch  = ref('')
-const localSort    = ref('')
+const filterOpen  = ref(false)
+const localSearch = ref('')
+const localSort   = ref('')
 
 function openFilter() {
   localSearch.value = filters.value.search || ''
@@ -86,7 +109,6 @@ function applyFilters() {
   updateQuery({
     search: localSearch.value || undefined,
     sort:   localSort.value   || undefined,
-    offset: undefined,
   })
   filterOpen.value = false
 }
@@ -113,21 +135,72 @@ onMounted(() => {
 <template>
   <div id="main-content">
 
-    <!-- ── Page header ──────────────────────────────────────────────────────── -->
-    <div class="bg-white border-b border-slate-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <nav class="flex items-center gap-2 text-xs text-slate-400 mb-3" aria-label="Breadcrumb">
-          <NuxtLink to="/" class="hover:text-primary-500 transition-colors">Home</NuxtLink>
+    <!-- ── Hero (page header + sell CTA unified) ─────────────────────────────── -->
+    <div class="relative bg-gradient-to-br from-primary-50 via-white to-primary-100 overflow-hidden border-b border-primary-100">
+      <!-- Background decorations -->
+      <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary-200/40 blur-3xl"></div>
+        <div class="absolute -bottom-24 left-1/3 w-80 h-80 rounded-full bg-primary-100/60 blur-3xl"></div>
+        <svg class="absolute inset-0 w-full h-full opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
+          <defs><pattern id="partner-dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.5" fill="#2f7ed0"/></pattern></defs>
+          <rect width="100%" height="100%" fill="url(#partner-dots)"/>
+        </svg>
+      </div>
+
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-xs text-slate-400 mb-5" aria-label="Breadcrumb">
+          <NuxtLink to="/" class="hover:text-primary-600 transition-colors">Home</NuxtLink>
           <span aria-hidden="true">/</span>
           <span class="text-slate-600 font-medium">Training Partners</span>
         </nav>
-        <h1 class="text-3xl font-extrabold text-slate-900">Training <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Partners</span></h1>
-        <p class="text-slate-500 mt-1.5 text-sm">Trusted maritime education & training institutions partnering with DrillSpace</p>
+
+        <div class="flex flex-col lg:flex-row lg:items-end gap-8 lg:gap-16">
+
+          <!-- Left: title + description -->
+          <div class="flex-1 min-w-0">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-2">
+              Training <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Partners</span>
+            </h1>
+            <p class="text-slate-500 text-sm max-w-md">
+              Trusted maritime education & training institutions partnering with DrillSpace
+            </p>
+          </div>
+
+          <!-- Right: sell CTA card -->
+          <div class="flex-shrink-0 bg-white border border-primary-100 shadow-sm rounded-2xl px-6 py-5 flex flex-col sm:flex-row lg:flex-col gap-4 lg:gap-3 lg:w-80">
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-bold text-primary-600 uppercase tracking-widest mb-1.5">For Training Organizations</p>
+              <p class="text-sm font-semibold text-slate-800 leading-snug mb-1">Have expertise to share?</p>
+              <p class="text-xs text-slate-500 leading-relaxed">Launch your branded platform, reach maritime professionals, earn revenue.</p>
+            </div>
+            <div class="flex flex-row gap-2 flex-shrink-0 items-start sm:items-center lg:items-start">
+              <NuxtLink
+                to="/partner/register"
+                class="inline-flex items-center gap-1.5 bg-primary-500 hover:bg-primary-600 text-white font-bold px-4 py-2 rounded-xl shadow-sm shadow-primary-500/20 transition-all active:scale-95 text-xs whitespace-nowrap"
+              >
+                Start Free Trial
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                </svg>
+              </NuxtLink>
+              <NuxtLink
+                to="/partner"
+                class="inline-flex items-center border border-slate-200 text-slate-600 hover:bg-primary-50 hover:border-primary-200 hover:text-primary-600 font-medium px-4 py-2 rounded-xl transition-all text-xs whitespace-nowrap"
+              >
+                Learn More
+              </NuxtLink>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
 
     <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
-    <div class="sticky top-28 z-30 bg-white/95 backdrop-blur border-b border-slate-100 shadow-sm">
+    <!-- top-16: category bar is hidden on partner pages, navbar is single-row (64px) -->
+    <div class="sticky top-16 z-30 bg-white/95 backdrop-blur border-b border-slate-100 shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
 
         <div class="flex items-center gap-3">
@@ -168,8 +241,10 @@ onMounted(() => {
         <span v-if="filters.search"
           class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
           "{{ filters.search }}"
-          <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors" @click="searchInput = ''; updateQuery({ search: undefined })">
-            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Remove search"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          <button type="button" class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors"
+            aria-label="Remove search filter"
+            @click="updateQuery({ search: undefined })">
+            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </span>
         <button type="button" class="text-xs text-slate-400 hover:text-red-500 transition-colors underline underline-offset-2" @click="clearFilters">
@@ -247,7 +322,6 @@ onMounted(() => {
                   <h3 class="font-bold text-slate-800 text-sm leading-snug group-hover:text-primary-600 transition-colors line-clamp-2">
                     {{ partner.name }}
                   </h3>
-                  <p v-if="partner.description" class="text-xs text-slate-400 mt-1 line-clamp-2">{{ partner.description }}</p>
                 </div>
 
                 <!-- Course count badge -->
@@ -262,31 +336,36 @@ onMounted(() => {
           </div>
         </Transition>
 
-        <!-- Pagination -->
-        <div v-if="totalPages > 1" class="mt-12 flex flex-col items-center gap-4">
+        <!-- Load More -->
+        <div v-if="totalCount > 0" class="mt-12 flex flex-col items-center gap-3">
           <p class="text-sm text-slate-400">
-            Page <span class="font-semibold text-slate-700">{{ currentPage }}</span> of {{ totalPages }}
-            · {{ partners.length }} of {{ totalCount }} partners
+            Showing <span class="font-semibold text-slate-700">{{ partners.length }}</span>
+            of <span class="font-semibold text-slate-700">{{ totalCount }}</span> partners
           </p>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              :disabled="!hasPrev || pending"
-              :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all', hasPrev && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
-              @click="goPage(currentPage - 1)"
+
+          <p v-if="loadMoreError" class="text-xs text-red-600">{{ loadMoreError }}</p>
+
+          <button
+            v-if="hasMore"
+            type="button"
+            :disabled="isLoadingMore"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border-2 border-primary-200 text-primary-700 text-sm font-bold hover:border-primary-400 hover:bg-primary-50 hover:shadow-lg hover:shadow-primary-100 active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none"
+            @click="loadMore"
+          >
+            <svg
+              v-if="!isLoadingMore"
+              class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              Previous
-            </button>
-            <button
-              type="button"
-              :disabled="!hasNext || pending"
-              :class="['inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all', hasNext && !pending ? 'border-slate-200 text-slate-700 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 active:scale-95' : 'border-slate-100 text-slate-300 cursor-not-allowed']"
-              @click="goPage(currentPage + 1)"
-            >
-              Next
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </button>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+            </svg>
+            <span v-else class="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            {{ isLoadingMore ? 'Loading...' : `Load ${Math.min(PAGE_SIZE, remainingCount)} more` }}
+          </button>
+
+          <div v-else-if="totalCount > PAGE_SIZE" class="flex items-center gap-3 text-xs text-slate-400 mt-1">
+            <span class="h-px w-12 bg-slate-200"></span>
+            You've reached the end
+            <span class="h-px w-12 bg-slate-200"></span>
           </div>
         </div>
       </div>

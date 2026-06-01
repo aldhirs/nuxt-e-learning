@@ -1,3 +1,17 @@
+// Shared core: POST to /api/sso/generate then open the exchange URL in a new tab.
+// Used by both student (learn path) and partner (admin path) flows.
+export async function ssoOpen(
+  clientSlug: string,
+  userId: number,
+  redirectPath: string
+): Promise<void> {
+  const result = await $fetch<{ exchange_url: string }>('/api/sso/generate', {
+    method: 'POST',
+    body: { user_id: userId, client_slug: clientSlug, redirect_path: redirectPath },
+  })
+  window.open(result.exchange_url, '_blank', 'noopener,noreferrer')
+}
+
 export function useSsoRedirect() {
   const { error: toastError } = useToast()
 
@@ -15,12 +29,7 @@ export function useSsoRedirect() {
     loadingEnrollmentId.value = enrollmentId
 
     try {
-      const redirectPath = `/${clientSlug}/learn/${courseId}/${enrollmentId}`
-      const result = await $fetch<{ exchange_url: string }>('/api/sso/generate', {
-        method: 'POST',
-        body: { user_id: userId, client_slug: clientSlug, redirect_path: redirectPath }
-      })
-      window.location.href = result.exchange_url
+      await ssoOpen(clientSlug, userId, `/${clientSlug}/learn/${courseId}/${enrollmentId}`)
     } catch {
       toastError('Failed to open the learning page. Please try again.')
     } finally {

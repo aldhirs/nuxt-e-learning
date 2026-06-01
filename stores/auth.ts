@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type {
   User,
   LoginRequest,
+  Login2FARequired,
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
@@ -33,10 +34,37 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = u
   }
 
-  async function login(payload: LoginRequest): Promise<LoginResponse> {
-    const data = await api.post<LoginResponse>('/auth/storefront/login', payload)
+  async function login(payload: LoginRequest): Promise<LoginResponse | Login2FARequired> {
+    const data = await api.post<LoginResponse | Login2FARequired>('/auth/storefront/login', payload)
+
+    // 2FA required — return without setting token; caller handles OTP step.
+    if ('requires_2fa' in data && data.requires_2fa) return data
+
+    // Normal login — set token + user.
+    const resp = data as LoginResponse
+    setToken(resp.access_token)
+    if (resp.user) {
+      setUser(resp.user)
+    } else if (typeof resp.id === 'number' && resp.email) {
+      setUser({
+        id: resp.id,
+        email: resp.email,
+        full_name: resp.full_name ?? null,
+        username: resp.username ?? null,
+        is_student: resp.is_student
+      })
+    }
+    try { await fetchMe() } catch { /* non-fatal */ }
+    return resp
+  }
+
+  // Step 2 of 2FA login: verify email OTP + complete authentication.
+  async function login2FA(preAuthToken: string, code: string): Promise<LoginResponse> {
+    const data = await api.post<LoginResponse>('/public/auth/login/2fa', {
+      pre_auth_token: preAuthToken,
+      otp_code: code,
+    })
     setToken(data.access_token)
-    // BE returns user fields flat; contract has nested `user`. Accept both.
     if (data.user) {
       setUser(data.user)
     } else if (typeof data.id === 'number' && data.email) {
@@ -48,9 +76,16 @@ export const useAuthStore = defineStore('auth', () => {
         is_student: data.is_student
       })
     }
-    // Fetch canonical /me to fill the rest of the profile fields.
     try { await fetchMe() } catch { /* non-fatal */ }
     return data
+  }
+
+  // Resend login OTP during the 2FA step.
+  async function resendOtp(preAuthToken: string): Promise<{ message: string; email_masked: string; remaining_resends: number; otp_expires_at?: string }> {
+    return await api.post('/public/auth/2fa/resend-code', {
+      purpose: 'login',
+      pre_auth_token: preAuthToken,
+    })
   }
 
   async function register(payload: RegisterRequest): Promise<RegisterResponse> {
@@ -83,11 +118,11 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const me = await api.get<User>('/auth/storefront/me')
       setUser(me)
-      // Set active client cookie from the first ADMIN-scoped role.
+      // Set active client cookie from the first CLIENT_OWNER-scoped role.
       // Using role filter (not active_client_id) prevents student/teacher
       // client IDs from being used as the partner portal context.
       const adminRole = (me.roles ?? []).find(
-        r => r.role_name === 'ADMIN' && r.client_id != null
+        r => r.role_name === 'CLIENT_OWNER' && r.client_id != null
       )
       if (adminRole?.client_id && !_clientIdCookie.value) {
         _clientIdCookie.value = adminRole.client_id
@@ -125,6 +160,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isLoadingMe,
     login,
+    login2FA,
+    resendOtp,
     register,
     activate,
     forgotPassword,

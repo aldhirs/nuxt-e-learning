@@ -25,14 +25,20 @@ function submitSearch() {
 // Row 1 right-side links
 const quickLinks = [
   { label: 'My Courses', to: '/my/courses', authenticated: true },
-  { label: 'Orders',     to: '/orders', authenticated: true },
   { label: 'Partners',   to: '/partners', authenticated: false },
   { label: 'Contact',    to: '/contact-us', authenticated: false },
 ]
 
 const hasPartnerRole = computed(() =>
   !!auth.user?.active_client_id &&
-  (auth.user?.roles ?? []).some(r => r.role_name === 'ADMIN' && r.client_id != null)
+  (auth.user?.roles ?? []).some(r => r.role_name === 'CLIENT_OWNER' && r.client_id != null)
+)
+
+// Hide course category bar on partner-context pages
+const isPartnerContext = computed(() =>
+  route.path === '/partners' ||
+  route.path === '/partner' ||
+  route.path.startsWith('/partner/')
 )
 
 // Row 2 category bar
@@ -119,7 +125,7 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
           Sell Courses
         </NuxtLink>
 
-        <!-- Partner Portal link — shown to users with ADMIN role on a client -->
+        <!-- Partner Portal link — shown to users with CLIENT_OWNER role on a client -->
         <NuxtLink
           v-if="hasPartnerRole"
           to="/partner/dashboard"
@@ -184,7 +190,7 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
     </div>
 
     <!-- ── Row 2: Category bar (desktop only) ───────────────────────────────── -->
-    <div class="hidden md:block border-t border-slate-100 bg-white">
+    <div v-if="!isPartnerContext" class="hidden md:block border-t border-slate-100 bg-white">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center gap-3">
         <!-- Pill buttons -->
         <div class="flex items-center gap-2 flex-shrink-0">
@@ -248,7 +254,7 @@ watch(() => route.path, () => { mobileMenuOpen.value = false })
         </div>
 
         <!-- Category pills mobile -->
-        <div class="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+        <div v-if="!isPartnerContext" class="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
           <NuxtLink v-for="pill in categoryPills" :key="pill.label"
             :to="pill.to"
             :class="['flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold',

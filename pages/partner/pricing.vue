@@ -15,11 +15,10 @@ const { data: plans, status, refresh } = await useFetch<SubscriptionPlan[]>(
 )
 const isLoading = computed(() => status.value === 'pending')
 
-const COMMISSION_BY_CODE: Record<string, string> = { trial: '10%', starter: '10%', pro: '7%', enterprise: '5%' }
 const featureRows = [
   { label: 'Max Courses', key: 'max_courses' as const, format: (v: number) => v === -1 ? 'Unlimited' : String(v) },
   { label: 'Max Students', key: 'max_students' as const, format: (v: number) => v === -1 ? 'Unlimited' : String(v) },
-  { label: 'Platform Commission', static: (plan: SubscriptionPlan) => COMMISSION_BY_CODE[plan.code] ?? '—' },
+  { label: 'Platform Commission', static: (plan: SubscriptionPlan) => plan.commission_rate_percent != null ? `${plan.commission_rate_percent}%` : '—' },
   { label: 'Custom Subdomain', static: '✓' },
   { label: 'Analytics Dashboard', static: (plan: SubscriptionPlan) => plan.code === 'trial' ? '—' : '✓' },
   { label: 'Priority Support', static: (plan: SubscriptionPlan) => ['pro', 'enterprise'].includes(plan.code) ? '✓' : '—' },

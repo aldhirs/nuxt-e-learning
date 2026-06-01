@@ -398,6 +398,15 @@ export interface LoginRequest {
   device_name?: string
 }
 
+// Returned by /auth/storefront/login when user has 2FA enabled.
+// pre_auth_token is ephemeral (Redis, TTL 5 min). Client must call
+// POST /auth/login/2fa with {pre_auth_token, code} to complete login.
+export interface Login2FARequired {
+  requires_2fa: true
+  pre_auth_token: string
+  expires_in: number // seconds until pre_auth_token + OTP expire
+}
+
 // BE deployed returns user fields FLAT (no nested `user`), plus refresh_token + roles flags.
 // Contract had `{user, access_token, ...}`. We accept both.
 export interface LoginResponse {

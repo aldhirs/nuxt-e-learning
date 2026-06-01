@@ -13,8 +13,7 @@ const cycleSuffix = computed(() => price.value === 0 ? '14 days' : props.cycle =
 const maxCourses = computed(() => props.plan.max_courses === -1 ? 'Unlimited' : String(props.plan.max_courses))
 const maxStudents = computed(() => props.plan.max_students === -1 ? 'Unlimited' : String(props.plan.max_students))
 
-const COMMISSION_BY_CODE: Record<string, string> = { trial: '10', starter: '10', pro: '7', enterprise: '5' }
-const commission = computed(() => COMMISSION_BY_CODE[props.plan.code] ?? String(props.plan.commission_rate_percent ?? '—'))
+const commission = computed(() => props.plan.commission_rate_percent != null ? String(props.plan.commission_rate_percent) : '—')
 
 const features = computed(() => [
   { label: `${maxCourses.value} courses`, icon: '📚' },

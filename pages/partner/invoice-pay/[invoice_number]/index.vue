@@ -47,8 +47,8 @@ const VA_BANKS: MethodItem[] = [
 ]
 
 const EWALLETS: MethodItem[] = [
-  { id: 'ewallet_ovo',       name: 'OVO',       desc: 'Pay from OVO balance',       logo: '/images/payment/ovo.svg',  accent: 'hover:border-purple-300 hover:shadow-purple-50' },
   { id: 'ewallet_dana',      name: 'DANA',      desc: 'Pay from DANA balance',      logo: '/images/payment/dana.svg', accent: 'hover:border-blue-300 hover:shadow-blue-50' },
+  { id: 'ewallet_shopeepay', name: 'ShopeePay', desc: 'Pay from ShopeePay balance', logo: '/images/payment/shopeepay.svg', accent: 'hover:border-orange-300 hover:shadow-orange-50' },
 ]
 
 async function selectAndProceed(method: SubscriptionPaymentMethod) {

@@ -76,43 +76,42 @@ onMounted(() => {
   <div class="overflow-x-hidden">
 
     <!-- ═══════════════════════════════════════════════════════════
-         HERO — dark navy gradient, centered, B2B SaaS feel
-         Deliberately different from homepage's light slate-100 card
+         HERO — light blue, logo-matched palette
     ═══════════════════════════════════════════════════════════ -->
-    <section class="relative bg-gradient-to-br from-slate-950 via-[#0a1628] to-slate-900 overflow-hidden">
+    <section class="relative bg-gradient-to-br from-primary-50 via-white to-primary-100 overflow-hidden border-b border-primary-100">
 
-      <!-- Subtle grid overlay -->
+      <!-- Decorations -->
       <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <svg class="absolute inset-0 w-full h-full opacity-[0.035]" xmlns="http://www.w3.org/2000/svg">
+        <svg class="absolute inset-0 w-full h-full opacity-[0.055]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="partner-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="1"/>
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#2f7ed0" stroke-width="1"/>
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#partner-grid)"/>
         </svg>
-        <div class="absolute top-0 left-1/3 w-[480px] h-[480px] rounded-full bg-primary-600/10 blur-3xl -translate-y-1/2"></div>
-        <div class="absolute bottom-0 right-1/4 w-[360px] h-[360px] rounded-full bg-primary-500/8 blur-3xl translate-y-1/3"></div>
+        <div class="absolute top-0 left-1/3 w-[480px] h-[480px] rounded-full bg-primary-200/50 blur-3xl -translate-y-1/2"></div>
+        <div class="absolute bottom-0 right-1/4 w-[360px] h-[360px] rounded-full bg-primary-100/70 blur-3xl translate-y-1/3"></div>
       </div>
 
       <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-28 lg:pt-28 lg:pb-36 text-center">
 
         <!-- Eyebrow badge -->
-        <div class="inline-flex items-center gap-2 bg-white/[0.07] border border-white/[0.12] text-primary-300 text-xs font-bold px-4 py-2 rounded-full mb-8 animate-fade-in-up">
-          <span class="w-2 h-2 rounded-full bg-primary-400 animate-pulse-dot"></span>
+        <div class="inline-flex items-center gap-2 bg-primary-100 border border-primary-200 text-primary-700 text-xs font-bold px-4 py-2 rounded-full mb-8 animate-fade-in-up">
+          <span class="w-2 h-2 rounded-full bg-primary-500 animate-pulse-dot"></span>
           Partner Program · 14-Day Free Trial
         </div>
 
         <!-- Headline -->
-        <h1 class="text-4xl sm:text-5xl lg:text-[3.6rem] font-black leading-[1.07] text-white mb-6 animate-fade-in-up stagger-1">
+        <h1 class="text-4xl sm:text-5xl lg:text-[3.6rem] font-black leading-[1.07] text-slate-900 mb-6 animate-fade-in-up stagger-1">
           Launch Your Course Platform<br class="hidden sm:block"/>
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-primary-300 to-sky-300">
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">
             Without the Overhead
           </span>
         </h1>
 
         <!-- Subtitle -->
-        <p class="text-slate-400 text-base sm:text-lg leading-relaxed mb-10 max-w-xl mx-auto animate-fade-in-up stagger-2">
+        <p class="text-slate-500 text-base sm:text-lg leading-relaxed mb-10 max-w-xl mx-auto animate-fade-in-up stagger-2">
           Your own branded subdomain, full LMS, and payment gateway — ready in minutes. Start free, grow on your terms.
         </p>
 
@@ -120,7 +119,7 @@ onMounted(() => {
         <div class="flex flex-wrap gap-3 justify-center mb-12 animate-fade-in-up stagger-3">
           <NuxtLink
             to="/partner/register"
-            class="inline-flex items-center gap-2 bg-primary-500 hover:bg-primary-400 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-primary-500/25 hover:shadow-primary-400/30 transition-all duration-200 active:scale-95 text-sm"
+            class="inline-flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-primary-500/25 hover:shadow-primary-600/30 transition-all duration-200 active:scale-95 text-sm"
           >
             Start Free Trial
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -129,7 +128,7 @@ onMounted(() => {
           </NuxtLink>
           <a
             href="#pricing"
-            class="inline-flex items-center gap-2 border border-white/[0.18] text-slate-300 hover:text-white hover:bg-white/[0.06] font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 text-sm"
+            class="inline-flex items-center gap-2 border border-slate-300 text-slate-700 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 text-sm"
           >
             View Plans
           </a>
@@ -145,19 +144,34 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Plan tier preview — mini badges, gives a taste of pricing before scroll -->
+        <!-- Plan tier preview — rendered from API -->
         <div class="mt-14 flex flex-wrap items-center justify-center gap-2 animate-fade-in-up stagger-3">
-          <span class="text-xs text-slate-600 mr-1">Plans:</span>
-          <span v-for="(tier, i) in [
-            { label: 'Trial', sub: 'Free 14 days', color: 'bg-slate-800 border-slate-700 text-slate-300' },
-            { label: 'Starter', sub: 'Rp 299K/mo', color: 'bg-slate-800 border-slate-700 text-slate-300' },
-            { label: 'Pro', sub: 'Rp 599K/mo', color: 'bg-primary-500/15 border-primary-500/30 text-primary-300' },
-            { label: 'Enterprise', sub: 'Rp 1.499K/mo', color: 'bg-slate-800 border-slate-700 text-slate-300' },
-          ]" :key="i"
-            :class="['inline-flex flex-col items-center px-3.5 py-2 rounded-xl border text-center transition-all duration-200', tier.color]"
+          <span class="text-xs text-slate-400 mr-1">Plans:</span>
+
+          <!-- Skeleton while loading -->
+          <template v-if="plansLoading">
+            <span v-for="i in 4" :key="i" class="inline-flex flex-col items-center px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-100 gap-1 w-24 animate-pulse">
+              <span class="h-3 w-12 bg-slate-200 rounded"></span>
+              <span class="h-2 w-16 bg-slate-200 rounded"></span>
+            </span>
+          </template>
+
+          <!-- Live badges from API -->
+          <span
+            v-else
+            v-for="plan in (plans ?? [])"
+            :key="plan.id"
+            :class="[
+              'inline-flex flex-col items-center px-3.5 py-2 rounded-xl border text-center transition-all duration-200',
+              plan.code === 'pro'
+                ? 'bg-primary-100 border-primary-300 text-primary-700'
+                : 'bg-slate-100 border-slate-200 text-slate-600'
+            ]"
           >
-            <span class="text-xs font-bold leading-none">{{ tier.label }}</span>
-            <span class="text-[10px] mt-0.5 opacity-70 leading-none">{{ tier.sub }}</span>
+            <span class="text-xs font-bold leading-none">{{ plan.name }}</span>
+            <span class="text-[10px] mt-0.5 opacity-70 leading-none">
+              {{ plan.monthly_fee === 0 ? 'Free 14 days' : `Rp ${plan.monthly_fee.toLocaleString('id-ID')}/mo` }}
+            </span>
           </span>
         </div>
       </div>

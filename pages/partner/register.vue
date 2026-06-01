@@ -14,12 +14,12 @@ const router = useRouter()
 const isLoggedIn = computed(() => auth.isAuthenticated)
 const alreadyPartner = computed(() =>
   !!auth.user?.active_client_id &&
-  (auth.user?.roles ?? []).some(r => r.role_name === 'ADMIN' && r.client_id != null)
+  (auth.user?.roles ?? []).some(r => r.role_name === 'CLIENT_OWNER' && r.client_id != null)
 )
 
 // Name of current active partner org for the notice banner
 const currentPartnerName = computed(() => {
-  const role = (auth.user?.roles ?? []).find(r => r.role_name === 'ADMIN' && r.client_id != null)
+  const role = (auth.user?.roles ?? []).find(r => r.role_name === 'CLIENT_OWNER' && r.client_id != null)
   return role?.client_name ?? null
 })
 
@@ -124,15 +124,21 @@ async function submitOnboard() {
   onboardLoading.value = true
   try {
     const res = await api.post<OnboardAsPartnerResponse>('/auth/onboard-as-partner', onboardForm)
-    // Update auth state — new token + active_client_id
+
+    // 1. Swap in the new JWT so all subsequent API calls use the new token
     const cookie = useAuthCookie()
     cookie.value = res.access_token
+
+    // 2. Re-fetch /me so auth.user reflects the new active_client_id and roles
     await auth.fetchMe()
-    // Force-refresh client list with the new client as active.
-    // Required because partner.clients may already be cached from a previous partner
-    // session — the middleware would skip fetchClients() if list is non-empty.
+
+    // 3. Full reset + eager reload of ALL partner data for the new client.
+    //    refreshForNewClient resets clients/subscription/stats/profile, then
+    //    re-fetches all of them so the dashboard never shows stale data from
+    //    any previous partner session.
     const partner = usePartnerStore()
-    await partner.refreshClients(res.active_client_id)
+    await partner.refreshForNewClient(res.active_client_id)
+
     await router.push('/partner/dashboard?onboarding=true')
   } catch (err: unknown) {
     const { global, perField } = mapApiError(err, ['organization_name', 'subdomain_slug', 'agree_tos'])

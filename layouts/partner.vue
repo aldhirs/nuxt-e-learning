@@ -6,11 +6,9 @@ const router = useRouter()
 const config = useRuntimeConfig()
 
 onMounted(async () => {
-  // fetchClients is already called in partner-auth middleware (before pages mount),
-  // so activeClient is ready. Here we only need subscription data for the status badge.
-  if (partner.subscriptionView === null) {
-    await partner.fetchSubscription()
-  }
+  // Always refetch subscription on every partner-layout mount so the status badge
+  // and plan info reflect the latest state (e.g. after invoice payment).
+  await partner.fetchSubscription()
 })
 
 const { openLmsAdmin, isRedirecting: lmsRedirecting } = usePartnerLmsRedirect()

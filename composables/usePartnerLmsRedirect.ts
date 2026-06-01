@@ -1,5 +1,7 @@
+import { ssoOpen } from '~/composables/useSsoRedirect'
+
 export function usePartnerLmsRedirect() {
-  const auth = useAuthStore()
+  const auth    = useAuthStore()
   const partner = usePartnerStore()
   const { error: toastError } = useToast()
 
@@ -10,12 +12,9 @@ export function usePartnerLmsRedirect() {
     isRedirecting.value = true
 
     try {
-      // Ensure activeClient is loaded before attempting SSO
-      if (!partner.activeClient) {
-        await partner.fetchClients()
-      }
+      if (!partner.activeClient) await partner.fetchClients()
 
-      const userId = auth.user?.id
+      const userId     = auth.user?.id
       const clientSlug = partner.activeClient?.slug
 
       if (!userId || !clientSlug) {
@@ -23,11 +22,7 @@ export function usePartnerLmsRedirect() {
         return
       }
 
-      const result = await $fetch<{ exchange_url: string }>('/api/sso/generate', {
-        method: 'POST',
-        body: { user_id: userId, client_slug: clientSlug, redirect_path: '/client' },
-      })
-      window.open(result.exchange_url, '_blank')
+      await ssoOpen(clientSlug, userId, '/client')
     } catch {
       toastError('Failed to open the LMS admin page. Please try again.')
     } finally {
