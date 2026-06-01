@@ -16,6 +16,7 @@ onMounted(async () => {
 
 const route = useRoute()
 const showOnboarding = ref(false)
+const showUpgradeModal = ref(false)
 
 onMounted(() => {
   showOnboarding.value = route.query.onboarding === 'true' || !localStorage.getItem('ds_onboarding_dismissed')
@@ -34,8 +35,8 @@ const onboardingSteps = computed(() => {
     { key: 'profile', label: 'Complete profile (name, contact)', completed: !!(p?.name && p?.phone && p?.address), cta_label: 'Complete Profile', cta_href: '/partner/profile' },
     { key: 'course', label: 'Create your first course', completed: (s?.courses_published ?? 0) > 0, cta_label: 'Create Course in LMS', cta_lms: true },
     { key: 'student', label: 'Invite your first student', completed: (s?.students_active ?? 0) > 0, cta_label: 'Invite Students in LMS', cta_lms: true },
-    { key: 'plan', label: 'Choose a paid plan', completed: partner.subscription?.plan?.code !== 'trial', cta_label: 'View Plans', cta_href: '/partner/pricing', cta_lms: false },
-  ] satisfies { key: string; label: string; completed: boolean; cta_label: string; cta_href?: string; cta_lms?: boolean }[]
+    { key: 'plan', label: 'Choose a paid plan', completed: partner.subscription?.plan?.code !== 'trial', cta_label: 'View Plans', cta_modal: true, cta_lms: false },
+  ] satisfies { key: string; label: string; completed: boolean; cta_label: string; cta_href?: string; cta_lms?: boolean; cta_modal?: boolean }[]
 })
 const onboardingCompleted = computed(() => onboardingSteps.value.filter(s => s.completed).length)
 const allDone = computed(() => onboardingCompleted.value === onboardingSteps.value.length)
@@ -139,6 +140,9 @@ const planHighlight = computed(() => {
             <button v-if="step.cta_lms" type="button" class="text-xs font-medium text-primary-600 hover:underline whitespace-nowrap" @click="openLmsAdmin">
               {{ step.cta_label }} →
             </button>
+            <button v-else-if="step.cta_modal" type="button" class="text-xs font-medium text-primary-600 hover:underline whitespace-nowrap" @click="showUpgradeModal = true">
+              {{ step.cta_label }} →
+            </button>
             <NuxtLink v-else :to="step.cta_href ?? '/partner'" class="text-xs font-medium text-primary-600 hover:underline whitespace-nowrap">
               {{ step.cta_label }} →
             </NuxtLink>
@@ -161,4 +165,9 @@ const planHighlight = computed(() => {
 
     </template><!-- end v-else switching -->
   </div>
+
+  <PartnerUpgradePlanModal
+    v-model:open="showUpgradeModal"
+    @changed="partner.fetchStats()"
+  />
 </template>

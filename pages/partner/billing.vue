@@ -211,9 +211,9 @@ const planStatusClass = computed(() => {
           </template>
           <template v-else>
             <p class="text-sm text-slate-600">No active subscription yet.</p>
-            <NuxtLink to="/partner/pricing" class="text-sm font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-xl transition-colors">
+            <button type="button" class="text-sm font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-xl transition-colors" @click="showUpgradeModal = true">
               View Plans &amp; Start Trial →
-            </NuxtLink>
+            </button>
           </template>
         </div>
       </template>
