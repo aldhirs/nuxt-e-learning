@@ -265,7 +265,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
     <!-- ═══════════════════════════════════════════════════════════
          STATS
     ═══════════════════════════════════════════════════════════ -->
-    <section ref="statsRef" class="bg-[var(--color-bg)] py-12">
+    <section ref="statsRef" class="bg-[var(--color-bg)] py-8 sm:py-12">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
           :class="['grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 transition-all duration-700', revealed.stats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
@@ -273,16 +273,16 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
           <div
             v-for="(stat, i) in displayStats"
             :key="stat.label"
-            :class="['bg-white rounded-2xl border border-slate-100 p-6 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300', revealed.stats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
+            :class="['bg-white rounded-2xl border border-slate-100 p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-2 sm:gap-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300', revealed.stats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
             :style="{ transitionDelay: `${i * 80}ms` }"
           >
-            <div class="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0">
-              <svg class="w-6 h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="stat.icon"/>
               </svg>
             </div>
-            <div>
-              <p class="text-2xl font-extrabold text-slate-800 tabular-nums leading-none">
+            <div class="text-center sm:text-left">
+              <p class="text-xl sm:text-2xl font-extrabold text-slate-800 tabular-nums leading-none">
                 {{ stat.current.toLocaleString('en-US') }}<span class="text-primary-500">{{ stat.suffix }}</span>
               </p>
               <p class="text-xs text-slate-500 mt-1">{{ stat.label }}</p>
@@ -295,18 +295,18 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
     <!-- ═══════════════════════════════════════════════════════════
          FEATURED COURSES
     ═══════════════════════════════════════════════════════════ -->
-    <section ref="coursesRef" class="py-20 bg-[var(--color-bg)]">
+    <section ref="coursesRef" class="py-12 sm:py-20 bg-[var(--color-bg)]">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div
           :class="['flex items-end justify-between mb-4 transition-all duration-700', revealed.courses ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8']"
         >
-          <div>
+          <div class="min-w-0">
             <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-2">Best Curriculum</p>
-            <h2 class="text-3xl font-extrabold text-slate-800">Featured <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Courses</span></h2>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">Featured <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-700">Courses</span></h2>
             <p class="text-slate-500 text-sm mt-1.5">Most popular courses this week, curated by expert instructors</p>
           </div>
-          <BaseButton variant="ghost" to="/courses" size="sm" class="hidden sm:flex !text-primary-600 !font-semibold gap-1">
+          <BaseButton variant="ghost" to="/courses" size="sm" class="hidden sm:flex flex-shrink-0 !text-primary-600 !font-semibold gap-1 whitespace-nowrap">
             View all
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -450,8 +450,13 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
 
                 <div class="flex items-center gap-3 pt-3 border-t border-white/10">
                   <div class="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
-                    <img v-if="t.author_avatar_url" :src="t.author_avatar_url" :alt="t.author_name" class="w-full h-full object-cover"/>
-                    <span v-else>{{ t.author_name.charAt(0) }}</span>
+                    <BaseImage
+                      type="avatar"
+                      :src="t.author_avatar_url"
+                      :alt="t.author_name"
+                      :initial="t.author_name.charAt(0)"
+                      img-class="w-full h-full object-cover"
+                    />
                   </div>
                   <div class="min-w-0">
                     <p class="text-sm font-semibold text-white truncate">{{ t.author_name }}</p>
@@ -547,8 +552,11 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
               :to="`/partners/${partner.slug}`"
               class="flex-shrink-0 w-44 h-30 bg-[var(--color-bg)] rounded-2xl border border-slate-100 flex items-center justify-center p-4 hover:border-primary-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
-              <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="max-h-20 max-w-full object-contain grayscale group-hover:grayscale-0 transition-all duration-300"/>
-              <span v-else class="text-sm font-semibold text-slate-500 text-center leading-tight group-hover:text-primary-600 transition-colors">{{ partner.name }}</span>
+              <BaseImage :src="partner.logo_url" :alt="partner.name" img-class="max-h-20 max-w-full object-contain grayscale group-hover:grayscale-0 transition-all duration-300">
+                <template #placeholder>
+                  <span class="text-sm font-semibold text-slate-500 text-center leading-tight group-hover:text-primary-600 transition-colors">{{ partner.name }}</span>
+                </template>
+              </BaseImage>
             </NuxtLink>
           </div>
         </div>

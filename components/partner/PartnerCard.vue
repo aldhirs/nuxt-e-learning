@@ -16,8 +16,13 @@ defineProps<Props>()
         class="w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold overflow-hidden flex-shrink-0"
         :style="{ background: partner.theme_primary ?? '#2F80D2', color: '#fff' }"
       >
-        <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="w-full h-full object-contain" />
-        <span v-else>{{ partner.name[0] }}</span>
+        <BaseImage
+          type="partner"
+          :src="partner.logo_url"
+          :alt="partner.name"
+          :initial="partner.name[0]"
+          img-class="w-full h-full object-contain"
+        />
       </div>
 
       <div class="flex-1">

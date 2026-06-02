@@ -107,9 +107,18 @@ async function handleStartLearning() {
 
 // ─── Image lightbox ─────────────────────────────────────────────────────────
 const lightboxOpen = ref(false)
+const thumbnailBroken = ref(false)
+const sidebarImgEl = ref<HTMLImageElement | null>(null)
+
 function openLightbox() {
-  if (course.value?.thumbnail_url) lightboxOpen.value = true
+  if (course.value?.thumbnail_url && !thumbnailBroken.value) lightboxOpen.value = true
 }
+
+onMounted(() => {
+  if (sidebarImgEl.value?.complete && sidebarImgEl.value.naturalWidth === 0) {
+    thumbnailBroken.value = true
+  }
+})
 function closeLightbox() { lightboxOpen.value = false }
 
 // Close on Esc key — only bound on client when modal is open.
@@ -255,8 +264,17 @@ onMounted(() => {
             :to="`/partners/${partner.slug}`"
             class="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-white border border-primary-200 text-sm font-medium text-primary-700 hover:border-primary-400 hover:shadow-sm transition-all"
           >
-            <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="w-5 h-5 object-contain rounded" />
-            <div v-else class="w-5 h-5 rounded bg-primary-100 text-primary-600 text-[10px] font-bold flex items-center justify-center">{{ partner.name.charAt(0) }}</div>
+            <BaseImage
+              type="partner"
+              :src="partner.logo_url"
+              :alt="partner.name"
+              :initial="partner.name.charAt(0)"
+              img-class="w-5 h-5 object-contain rounded"
+            >
+              <template #placeholder>
+                <div class="w-5 h-5 rounded bg-primary-100 text-primary-600 text-[10px] font-bold flex items-center justify-center">{{ partner.name.charAt(0) }}</div>
+              </template>
+            </BaseImage>
             <span>{{ partner.name }}</span>
             <svg class="w-3 h-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
           </NuxtLink>
@@ -375,8 +393,17 @@ onMounted(() => {
                 class="flex items-center gap-5 p-5 bg-white rounded-2xl border border-slate-200 hover:border-primary-300 hover:shadow-xl transition-all duration-300 group"
               >
                 <div class="w-20 h-20 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="w-full h-full object-contain p-2" />
-                  <span v-else class="text-3xl font-bold text-slate-200">{{ partner.name.charAt(0) }}</span>
+                  <BaseImage
+                    type="partner"
+                    :src="partner.logo_url"
+                    :alt="partner.name"
+                    :initial="partner.name.charAt(0)"
+                    img-class="w-full h-full object-contain p-2"
+                  >
+                    <template #placeholder>
+                      <span class="text-3xl font-bold text-slate-200">{{ partner.name.charAt(0) }}</span>
+                    </template>
+                  </BaseImage>
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-lg font-bold text-slate-800 group-hover:text-primary-600 transition-colors">{{ partner.name }}</p>
@@ -479,16 +506,18 @@ onMounted(() => {
 
                 <!-- Thumbnail -->
                 <button
-                  v-if="course.thumbnail_url"
+                  v-if="course.thumbnail_url && !thumbnailBroken"
                   type="button"
                   class="relative aspect-video bg-slate-200 overflow-hidden group cursor-zoom-in w-full block focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-300"
                   aria-label="Preview course image"
                   @click="openLightbox"
                 >
                   <img
+                    ref="sidebarImgEl"
                     :src="course.thumbnail_url"
                     :alt="course.title"
                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    @error="thumbnailBroken = true"
                   />
                   <div class="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors flex items-center justify-center">
                     <div class="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
@@ -686,6 +715,7 @@ onMounted(() => {
                 :src="course.thumbnail_url"
                 :alt="course.title"
                 class="block max-h-[80vh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
+                @error="closeLightbox"
               />
               <figcaption class="mt-3 text-center text-sm text-white/80 font-medium px-4 line-clamp-2">
                 {{ course.title }}

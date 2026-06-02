@@ -222,7 +222,7 @@ async function placeOrder() {
             <h2 class="text-sm font-semibold text-slate-700 mb-3">Ordered Course</h2>
             <div class="flex gap-3">
               <div class="w-16 h-12 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
-                <img v-if="course?.thumbnail_url" :src="course.thumbnail_url" :alt="course.title" class="w-full h-full object-cover" />
+                <BaseImage type="course" :src="course?.thumbnail_url" :alt="course?.title" img-class="w-full h-full object-cover" />
               </div>
               <div class="flex-1 min-w-0">
                 <p v-if="course?.partner?.name || course?.client?.name" class="text-xs text-primary-600">

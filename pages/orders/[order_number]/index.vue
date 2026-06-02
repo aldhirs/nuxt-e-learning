@@ -207,11 +207,11 @@ async function confirmCancel() {
         <h2 class="text-sm font-semibold text-slate-700 mb-4">Ordered Course</h2>
         <div class="flex gap-3">
           <div class="w-16 h-12 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
-            <img
-              v-if="order.course?.thumbnail_url"
-              :src="order.course.thumbnail_url"
-              :alt="order.course.title ?? `Course #${order.course_id}`"
-              class="w-full h-full object-cover"
+            <BaseImage
+              type="course"
+              :src="order.course?.thumbnail_url"
+              :alt="order.course?.title ?? `Course #${order.course_id}`"
+              img-class="w-full h-full object-cover"
             />
           </div>
           <div class="flex-1 min-w-0">

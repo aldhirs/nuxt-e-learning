@@ -123,8 +123,13 @@ const bannerStyle = computed(() => {
           </NuxtLink>
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             <div class="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold bg-white/20 flex-shrink-0 overflow-hidden">
-              <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="w-full h-full object-contain" />
-              <span v-else>{{ partner.name[0] }}</span>
+              <BaseImage
+                type="partner"
+                :src="partner.logo_url"
+                :alt="partner.name"
+                :initial="partner.name[0]"
+                img-class="w-full h-full object-contain"
+              />
             </div>
             <div class="min-w-0">
               <h1 class="text-2xl font-bold">{{ partner.name }}</h1>

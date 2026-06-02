@@ -212,7 +212,7 @@ const difficultyOptions = [
     </div>
 
     <!-- ── Sticky toolbar ───────────────────────────────────────────────────── -->
-    <div class="sticky top-28 z-30 bg-white/95 backdrop-blur border-b border-slate-100 shadow-sm">
+    <div class="sticky top-16 z-30 bg-white/95 backdrop-blur border-b border-slate-100 shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
 
         <!-- Filter button + count -->

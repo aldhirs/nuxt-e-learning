@@ -305,16 +305,19 @@ onMounted(() => {
                   class="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm"
                   :style="{ background: partner.theme_primary ?? '#EFF6FF' }"
                 >
-                  <img
-                    v-if="partner.logo_url"
+                  <BaseImage
+                    type="partner"
                     :src="partner.logo_url"
                     :alt="partner.name"
-                    class="w-full h-full object-contain"
-                    loading="lazy"
-                  />
-                  <span v-else class="text-2xl font-black" :style="{ color: partner.theme_primary ? '#fff' : '#2f7ed0' }">
-                    {{ partner.name.charAt(0) }}
-                  </span>
+                    :initial="partner.name.charAt(0)"
+                    img-class="w-full h-full object-contain"
+                  >
+                    <template #placeholder>
+                      <span class="text-2xl font-black" :style="{ color: partner.theme_primary ? '#fff' : '#2f7ed0' }">
+                        {{ partner.name.charAt(0) }}
+                      </span>
+                    </template>
+                  </BaseImage>
                 </div>
 
                 <!-- Name -->

@@ -142,8 +142,17 @@ function cancel() {
           <h2 class="text-sm font-semibold text-slate-700 mb-4">Organization Logo</h2>
           <div class="flex items-center gap-5">
             <div class="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 flex-shrink-0 overflow-hidden flex items-center justify-center bg-slate-50">
-              <img v-if="logoPreview" :src="logoPreview" alt="Logo preview" class="w-full h-full object-contain" />
-              <span v-else class="text-slate-400 text-3xl font-bold">{{ (form.name || '?')[0]?.toUpperCase() }}</span>
+              <BaseImage
+                type="partner"
+                :src="logoPreview"
+                alt="Logo preview"
+                :initial="(form.name || '?')[0]?.toUpperCase()"
+                img-class="w-full h-full object-contain"
+              >
+                <template #placeholder>
+                  <span class="text-slate-400 text-3xl font-bold">{{ (form.name || '?')[0]?.toUpperCase() }}</span>
+                </template>
+              </BaseImage>
             </div>
             <div class="space-y-1.5">
               <label class="cursor-pointer text-sm font-medium text-primary-600 hover:text-primary-700">

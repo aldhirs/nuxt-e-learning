@@ -7,6 +7,15 @@ const { transformUrl } = useFileUrl()
 
 const open = ref(false)
 const switching = ref<number | null>(null)
+const activeLogoFailed = ref(false)
+const failedClientIds = reactive(new Set<number>())
+const activeLogoEl = ref<HTMLImageElement | null>(null)
+
+onMounted(() => {
+  if (activeLogoEl.value?.complete && activeLogoEl.value.naturalWidth === 0) {
+    activeLogoFailed.value = true
+  }
+})
 
 function statusBadge(status?: SubscriptionStatus | null): { label: string; severity: 'success' | 'warn' | 'danger' | 'info' | 'default' } | null {
   switch (status) {
@@ -50,10 +59,12 @@ async function select(clientId: number) {
       <div class="flex items-center gap-2.5">
         <div class="w-10 h-10 rounded-full flex-shrink-0 shadow-md overflow-hidden bg-primary-500">
           <img
-            v-if="partner.activeClient?.logo"
+            v-if="partner.activeClient?.logo && !activeLogoFailed"
+            ref="activeLogoEl"
             :src="transformUrl(partner.activeClient.logo)"
             :alt="partner.activeClient.name"
             class="w-full h-full object-cover"
+            @error="activeLogoFailed = true"
           />
           <div v-else class="w-full h-full flex items-center justify-center text-white font-bold text-base select-none">
             {{ (partner.activeClient?.name || 'P').charAt(0).toUpperCase() }}
@@ -106,8 +117,13 @@ async function select(clientId: number) {
                 </svg>
               </div>
             </template>
-            <template v-else-if="client.logo">
-              <img :src="transformUrl(client.logo)" :alt="client.name" class="w-full h-full object-cover" />
+            <template v-else-if="client.logo && !failedClientIds.has(client.id)">
+              <img
+                :src="transformUrl(client.logo)"
+                :alt="client.name"
+                class="w-full h-full object-cover"
+                @error="failedClientIds.add(client.id)"
+              />
             </template>
             <template v-else>
               <div :class="[
