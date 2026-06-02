@@ -37,6 +37,7 @@ export function useSubscriptionPaymentApi() {
     return api.get<{
       invoice_number: string
       invoice_status: string
+      payment_attempt_status: 'pending' | 'paid' | 'failed' | null
       amount: number
       has_payment_session?: boolean
       payment_method?: string
@@ -49,9 +50,8 @@ export function useSubscriptionPaymentApi() {
       `/clients/subscription/invoices/${encodeURIComponent(invoiceNumber)}/payment/status`,
       { headers: clientHeaders() },
     ).then(r => ({
-      // Normalised field used by polling code
       status: r.invoice_status,
-      // Full fields for session hydration on hard refresh
+      payment_attempt_status: r.payment_attempt_status ?? null,
       amount: r.amount,
       has_payment_session: r.has_payment_session ?? false,
       payment_method: r.payment_method,

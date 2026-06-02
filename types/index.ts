@@ -356,6 +356,7 @@ export type StoredPaymentSession = PaymentSession & { order_number: string }
 export interface PaymentStatusSnapshot {
   order_number: string
   status: PaymentStatus
+  payment_attempt_status: 'pending' | 'paid' | 'failed' | null
   payment_method: PaymentMethod | null
   total_amount: number
   currency: string

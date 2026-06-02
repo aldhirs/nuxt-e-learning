@@ -49,15 +49,16 @@ async function tickStatus() {
   try {
     const snap = await paymentApi.getStatus(orderNumber.value)
     snapshot.value = snap
-    if (snap.status === 'paid') {
+    if (snap.payment_attempt_status === 'paid') {
       state.value = 'paid'
       paymentStore.clearSession(orderNumber.value)
       stopPolling()
       return
     }
+    if (snap.payment_attempt_status === 'failed') { state.value = 'failed'; stopPolling(); return }
+    // Order-level terminal states — not retryable
     if (snap.status === 'expired') { state.value = 'expired'; stopPolling(); return }
     if (snap.status === 'cancelled') { state.value = 'cancelled'; stopPolling(); return }
-    if (snap.status === 'failed') { state.value = 'failed'; stopPolling(); return }
   } catch (err: unknown) {
     pollError.value = (err as { message?: string }).message || 'Failed to check status. Try again.'
   }

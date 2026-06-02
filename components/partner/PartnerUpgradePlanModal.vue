@@ -30,16 +30,18 @@ watch(() => props.open, (v) => { if (v) fetchPlans() })
 // ─── State ────────────────────────────────────────────────────────────────────
 
 type Step = 'select' | 'confirm' | 'success'
-const step        = ref<Step>('select')
-const cycle       = ref<'monthly' | 'yearly'>(
+const step             = ref<Step>('select')
+const cycle            = ref<'monthly' | 'yearly'>(
   (partner.subscription?.billing_cycle as 'monthly' | 'yearly') ?? 'monthly'
 )
-const selected    = ref<SubscriptionPlan | null>(null)
-const submitting  = ref(false)
-const serverError = ref('')
+const selected         = ref<SubscriptionPlan | null>(null)
+const chosenEffective  = ref<'immediate' | 'next_cycle'>('immediate')
+const submitting       = ref(false)
+const serverError      = ref('')
 
 function resetState() {
   step.value = 'select'; selected.value = null; serverError.value = ''
+  chosenEffective.value = 'immediate'
   cycle.value = (partner.subscription?.billing_cycle as 'monthly' | 'yearly') ?? 'monthly'
 }
 
@@ -80,12 +82,41 @@ function changeLabel(plan: SubscriptionPlan): { text: string; cls: string } | nu
   return null
 }
 
-function effective(plan: SubscriptionPlan): 'immediate' | 'next_cycle' {
+const isTrial = computed(() => partner.plan?.code === 'trial')
+
+// Date 7 days before the current period ends — shown in the next_cycle ticker.
+const invoiceScheduledDate = computed(() => {
+  const end = partner.subscription?.current_period_end
+  if (!end) return null
+  const d = new Date(end)
+  d.setDate(d.getDate() - 7)
+  return d
+})
+
+function formatDate(d: Date) {
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Whether the selected plan is a downgrade (rank lower than current).
+// Downgrades cannot be immediate — server rejects that combination.
+const isDowngrade = computed(() => {
+  if (!selected.value) return false
+  const currentRank = PLAN_RANK[partner.plan?.code ?? ''] ?? 0
+  const newRank     = PLAN_RANK[selected.value.code] ?? 0
+  return newRank < currentRank
+})
+
+// Keep default effective in sync whenever the selected plan changes.
+watch(selected, (plan) => {
+  if (!plan) return
+  if (isTrial.value) {
+    chosenEffective.value = 'immediate'
+    return
+  }
   const currentRank = PLAN_RANK[partner.plan?.code ?? ''] ?? 0
   const newRank     = PLAN_RANK[plan.code] ?? 0
-  // Downgrades must be next_cycle (server rejects immediate downgrades)
-  return newRank >= currentRank ? 'immediate' : 'next_cycle'
-}
+  chosenEffective.value = newRank < currentRank ? 'next_cycle' : 'immediate'
+})
 
 // Plans the user can actually select (not the exact current plan+cycle combo)
 const selectablePlans = computed(() => plans.value.filter(p => !isCurrentPlan(p)))
@@ -110,7 +141,7 @@ async function submit() {
       {
         target_plan_code: selected.value.code,
         billing_cycle:    cycle.value,
-        effective:        effective(selected.value),
+        effective:        chosenEffective.value,
       },
       { headers: clientId ? { 'X-Client-ID': String(clientId) } : {} },
     )
@@ -118,10 +149,10 @@ async function submit() {
     await partner.fetchSubscription()
     emit('changed')
 
-    // If an upgrade prorate invoice was generated, redirect to pay it
+    // Immediate upgrade: redirect to pay the full invoice for the new plan period
     if (res?.prorate_invoice?.invoice_number && res.prorate_invoice.status === 'pending') {
       close()
-      toast.info('Plan upgraded — please pay the prorated invoice to activate.')
+      toast.info('Plan upgraded — complete payment to activate your new plan.')
       await router.push(`/partner/invoice-pay/${res.prorate_invoice.invoice_number}`)
       return
     }
@@ -268,32 +299,117 @@ async function submit() {
               Rp {{ price(selected).toLocaleString('id-ID') }}/{{ cycle === 'yearly' ? 'year' : 'month' }}
             </span>
           </div>
-          <div class="flex justify-between px-4 py-3 text-sm">
-            <span class="text-slate-500">Effective</span>
-            <span :class="['font-medium', effective(selected) === 'immediate' ? 'text-green-600' : 'text-amber-600']">
-              {{ effective(selected) === 'immediate' ? 'Immediately' : 'Next billing cycle' }}
-            </span>
+        </div>
+
+        <!-- ── Effective selector ─────────────────────────────────────────── -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">When should this take effect?</p>
+            <span v-if="isTrial" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Trial — immediate only</span>
+          </div>
+          <div class="space-y-2">
+
+            <!-- Option: Immediately -->
+            <button
+              type="button"
+              :disabled="isDowngrade"
+              :class="[
+                'w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all',
+                isDowngrade
+                  ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                  : chosenEffective === 'immediate'
+                    ? 'border-green-400 bg-green-50 ring-1 ring-green-300'
+                    : 'border-slate-200 hover:border-green-300 bg-white'
+              ]"
+              @click="!isDowngrade && (chosenEffective = 'immediate')"
+            >
+              <div :class="[
+                'mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors',
+                isDowngrade ? 'border-slate-200' : chosenEffective === 'immediate' ? 'border-green-500 bg-green-500' : 'border-slate-300'
+              ]">
+                <div v-if="chosenEffective === 'immediate' && !isDowngrade" class="w-2 h-2 rounded-full bg-white" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p :class="['text-sm font-semibold', isDowngrade ? 'text-slate-400' : 'text-slate-800']">Immediately</p>
+                  <span v-if="isDowngrade" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Not available for downgrade</span>
+                </div>
+                <p :class="['text-xs mt-0.5', isDowngrade ? 'text-slate-400' : 'text-slate-500']">
+                  Your new plan activates today and a <span class="font-medium text-slate-700">full invoice</span> for the new billing period will be generated — you'll be redirected to pay it now.
+                </p>
+              </div>
+            </button>
+
+            <!-- Option: Next billing cycle — disabled on trial (no paid billing cycle to defer to) -->
+            <button
+              type="button"
+              :disabled="isTrial"
+              :class="[
+                'w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all',
+                isTrial
+                  ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                  : chosenEffective === 'next_cycle'
+                    ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-300'
+                    : 'border-slate-200 hover:border-amber-300 bg-white'
+              ]"
+              @click="!isTrial && (chosenEffective = 'next_cycle')"
+            >
+              <div :class="[
+                'mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors',
+                isTrial ? 'border-slate-200' : chosenEffective === 'next_cycle' ? 'border-amber-500 bg-amber-500' : 'border-slate-300'
+              ]">
+                <div v-if="chosenEffective === 'next_cycle' && !isTrial" class="w-2 h-2 rounded-full bg-white" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p :class="['text-sm font-semibold', isTrial ? 'text-slate-400' : 'text-slate-800']">Next Billing Cycle</p>
+                  <span v-if="isTrial" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Not available on trial</span>
+                  <span v-else-if="isDowngrade" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">Required for downgrade</span>
+                </div>
+                <p :class="['text-xs mt-0.5', isTrial ? 'text-slate-400' : 'text-slate-500']">
+                  <template v-if="isTrial">
+                    Not available — trial has no active billing cycle to defer to.
+                  </template>
+                  <template v-else-if="isDowngrade">
+                    Downgrades can only take effect at the next billing cycle — you keep full access to your current plan until then.
+                  </template>
+                  <template v-else>
+                    No extra charge now. The new plan activates at the start of your next billing period. Good option if you want to evaluate first.
+                  </template>
+                </p>
+              </div>
+            </button>
+
           </div>
         </div>
 
-        <!-- Upgrade notice (prorate) -->
-        <div v-if="effective(selected) === 'immediate'" class="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700">
-          <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Consequence alert for selected option -->
+        <div v-if="chosenEffective === 'immediate'" class="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700">
+          <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Upgrading immediately may generate a prorated invoice for the remainder of your current billing period. You'll be redirected to pay it.
+          <span>After clicking <strong>Confirm</strong>, a full invoice for the new plan will be created and your billing period resets from today. You'll be redirected to the payment page — <strong>have your payment method ready.</strong></span>
         </div>
-
-        <!-- Downgrade notice -->
-        <div v-else class="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-          <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-else class="flex items-start gap-2.5 p-3 bg-red-100 border border-red-500 rounded-xl text-xs text-red-700">
+          <svg class="w-4 h-4 mt-0.5 flex-shrink-0 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Downgrades take effect at the start of your next billing period. You'll continue on your current plan until then.
+          <span>
+            The plan change will be applied automatically at the start of your next billing period. No charge now. You can cancel this pending change before the period ends.
+            <template v-if="invoiceScheduledDate">
+              <br />
+              <span class="inline-flex items-center gap-1 mt-1.5 font-semibold text-red-800">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Invoice will be sent on {{ formatDate(invoiceScheduledDate) }} — 7 days before your current period ends.
+              </span>
+            </template>
+          </span>
         </div>
 
         <div v-if="serverError" class="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
-          <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           {{ serverError }}
@@ -315,7 +431,7 @@ async function submit() {
             Your subscription has been updated to
             <strong class="text-slate-700">{{ selected?.name }}</strong>.
           </p>
-          <p v-if="effective(selected!) === 'next_cycle'" class="text-xs text-amber-600 mt-2">
+          <p v-if="chosenEffective === 'next_cycle'" class="text-xs text-amber-600 mt-2">
             The new plan will activate at the start of your next billing period.
           </p>
         </div>
