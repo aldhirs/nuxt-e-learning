@@ -55,7 +55,15 @@ export const usePartnerStore = defineStore('partner', () => {
   )
   const isSuspended = computed(() => subscriptionStatus.value === 'suspended')
   const isCancelled = computed(() => subscriptionStatus.value === 'cancelled')
-  const isPastDue = computed(() => subscriptionStatus.value === 'past_due')
+  const isPastDue   = computed(() => subscriptionStatus.value === 'past_due')
+  // auto_renew=false + status masih aktif = "end_of_period" cancel terjadwal.
+  // Subscription berjalan normal sampai current_period_end, lalu berhenti.
+  const isScheduledToCancel = computed(() =>
+    subscription.value != null &&
+    subscription.value.auto_renew === false &&
+    !isSuspended.value &&
+    !isCancelled.value
+  )
   const isTrialActive = computed(() => {
     if (subscriptionStatus.value !== 'trial') return false
     const sub = subscription.value
@@ -245,7 +253,10 @@ export const usePartnerStore = defineStore('partner', () => {
       { reason, effective },
       { headers: clientHeaders() },
     )
-    await fetchSubscription()
+    // fetchSubscription returns null for cancelled (BE excludes it from active query).
+    // fetchClients re-fetches /me/clients which uses StatusByClientIDs — includes all
+    // statuses — so activeClient.subscription_status becomes "cancelled" immediately.
+    await Promise.all([fetchSubscription(), fetchClients()])
   }
 
   // ─── Reset ────────────────────────────────────────────────────────────────
@@ -265,7 +276,7 @@ export const usePartnerStore = defineStore('partner', () => {
     isLoadingClients, isLoadingSubscription, isLoadingProfile, isLoadingStats, isSwitchingClient,
     // computed
     subscription, subscriptionStatus, plan, usage,
-    isActive, isSuspended, isCancelled, isPastDue, isTrialActive, trialDaysLeft, canAccessLms, pendingInvoiceNumber,
+    isActive, isSuspended, isCancelled, isPastDue, isScheduledToCancel, isTrialActive, trialDaysLeft, canAccessLms, pendingInvoiceNumber,
     // actions
     fetchClients, switchClient, refreshClients, refreshForNewClient, fetchSubscription, fetchInvoiceHistory, fetchProfile, fetchStats, cancelSubscription, reset,
   }

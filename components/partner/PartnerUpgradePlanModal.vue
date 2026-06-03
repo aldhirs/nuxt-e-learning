@@ -69,6 +69,7 @@ function price(plan: SubscriptionPlan) {
 }
 
 function changeLabel(plan: SubscriptionPlan): { text: string; cls: string } | null {
+  if (isCancelled.value) return { text: 'Subscribe', cls: 'text-green-600 bg-green-50 border-green-200' }
   if (isCurrentPlan(plan)) return { text: 'Current Plan', cls: 'text-primary-600 bg-primary-50 border-primary-200' }
   if (isSamePlanDifferentCycle(plan)) {
     return cycle.value === 'yearly'
@@ -82,7 +83,8 @@ function changeLabel(plan: SubscriptionPlan): { text: string; cls: string } | nu
   return null
 }
 
-const isTrial = computed(() => partner.plan?.code === 'trial')
+const isTrial      = computed(() => partner.plan?.code === 'trial')
+const isCancelled  = computed(() => partner.isCancelled)
 
 // Date 7 days before the current period ends — shown in the next_cycle ticker.
 const invoiceScheduledDate = computed(() => {
@@ -107,9 +109,10 @@ const isDowngrade = computed(() => {
 })
 
 // Keep default effective in sync whenever the selected plan changes.
+// Trial and cancelled have no active billing cycle — immediate only.
 watch(selected, (plan) => {
   if (!plan) return
-  if (isTrial.value) {
+  if (isTrial.value || isCancelled.value) {
     chosenEffective.value = 'immediate'
     return
   }
@@ -167,7 +170,7 @@ async function submit() {
 </script>
 
 <template>
-  <BaseModal :model-value="open" title="Change Subscription Plan" size="lg" @update:model-value="close">
+  <BaseModal :model-value="open" :title="isCancelled ? 'Resubscribe to a Plan' : 'Change Subscription Plan'" size="lg" @update:model-value="close">
 
     <!-- ── Step: select ──────────────────────────────────────────────────── -->
     <template v-if="step === 'select'">
@@ -305,7 +308,8 @@ async function submit() {
         <div>
           <div class="flex items-center justify-between mb-2">
             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">When should this take effect?</p>
-            <span v-if="isTrial" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Trial — immediate only</span>
+            <span v-if="isCancelled" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Cancelled — immediate only</span>
+            <span v-else-if="isTrial" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Trial — immediate only</span>
           </div>
           <div class="space-y-2">
 
@@ -340,34 +344,38 @@ async function submit() {
               </div>
             </button>
 
-            <!-- Option: Next billing cycle — disabled on trial (no paid billing cycle to defer to) -->
+            <!-- Option: Next billing cycle — disabled on trial/cancelled (no active billing cycle to defer to) -->
             <button
               type="button"
-              :disabled="isTrial"
+              :disabled="isTrial || isCancelled"
               :class="[
                 'w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all',
-                isTrial
+                (isTrial || isCancelled)
                   ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
                   : chosenEffective === 'next_cycle'
                     ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-300'
                     : 'border-slate-200 hover:border-amber-300 bg-white'
               ]"
-              @click="!isTrial && (chosenEffective = 'next_cycle')"
+              @click="!isTrial && !isCancelled && (chosenEffective = 'next_cycle')"
             >
               <div :class="[
                 'mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors',
-                isTrial ? 'border-slate-200' : chosenEffective === 'next_cycle' ? 'border-amber-500 bg-amber-500' : 'border-slate-300'
+                (isTrial || isCancelled) ? 'border-slate-200' : chosenEffective === 'next_cycle' ? 'border-amber-500 bg-amber-500' : 'border-slate-300'
               ]">
-                <div v-if="chosenEffective === 'next_cycle' && !isTrial" class="w-2 h-2 rounded-full bg-white" />
+                <div v-if="chosenEffective === 'next_cycle' && !isTrial && !isCancelled" class="w-2 h-2 rounded-full bg-white" />
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <p :class="['text-sm font-semibold', isTrial ? 'text-slate-400' : 'text-slate-800']">Next Billing Cycle</p>
-                  <span v-if="isTrial" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Not available on trial</span>
+                  <p :class="['text-sm font-semibold', (isTrial || isCancelled) ? 'text-slate-400' : 'text-slate-800']">Next Billing Cycle</p>
+                  <span v-if="isCancelled" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Not available — no active cycle</span>
+                  <span v-else-if="isTrial" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">Not available on trial</span>
                   <span v-else-if="isDowngrade" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">Required for downgrade</span>
                 </div>
-                <p :class="['text-xs mt-0.5', isTrial ? 'text-slate-400' : 'text-slate-500']">
-                  <template v-if="isTrial">
+                <p :class="['text-xs mt-0.5', (isTrial || isCancelled) ? 'text-slate-400' : 'text-slate-500']">
+                  <template v-if="isCancelled">
+                    Not available — subscription is cancelled, no active billing period to defer to.
+                  </template>
+                  <template v-else-if="isTrial">
                     Not available — trial has no active billing cycle to defer to.
                   </template>
                   <template v-else-if="isDowngrade">

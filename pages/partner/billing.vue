@@ -82,10 +82,12 @@ const showUpgradeModal = ref(false)
 const showCancelModal  = ref(false)
 
 const planStatusLabel = computed(() => {
+  if (partner.isScheduledToCancel) return 'Cancels ' + renewalDate.value
   const m: Record<string, string> = { trial: 'Trial', active: 'Active', past_due: 'Overdue', suspended: 'Suspended', cancelled: 'Cancelled' }
   return m[partner.subscriptionStatus ?? ''] ?? '—'
 })
 const planStatusClass = computed(() => {
+  if (partner.isScheduledToCancel) return 'bg-amber-100 text-amber-700'
   const m: Record<string, string> = {
     trial: 'bg-blue-100 text-blue-700',
     active: 'bg-green-100 text-green-700',
@@ -100,6 +102,22 @@ const planStatusClass = computed(() => {
 <template>
   <div class="space-y-6 pb-20 md:pb-0">
     <h1 class="text-xl font-bold text-slate-900">Billing & Subscription</h1>
+
+    <!-- Scheduled-to-cancel ticker -->
+    <div
+      v-if="partner.isScheduledToCancel"
+      class="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm font-medium"
+      role="alert"
+    >
+      <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p class="flex-1">
+        Your subscription is scheduled to end on <strong>{{ renewalDate }}</strong>.
+        Platform access remains active until then, but will not auto-renew.
+        To continue, choose a new plan before that date.
+      </p>
+    </div>
 
     <!-- Suspended ticker -->
     <div
@@ -154,7 +172,7 @@ const planStatusClass = computed(() => {
               </span>
             </p>
             <p class="text-xs text-slate-500">
-              {{ partner.isSuspended ? 'Suspended since' : 'Renews on' }}: {{ renewalDate }}
+              {{ partner.isSuspended ? 'Suspended since' : partner.isScheduledToCancel ? 'Access until' : 'Renews on' }}: {{ renewalDate }}
             </p>
           </div>
           <div class="space-y-3">
@@ -180,9 +198,9 @@ const planStatusClass = computed(() => {
             Change Plan
           </button>
 
-          <!-- Cancel Subscription -->
+          <!-- Cancel Subscription — hidden when already scheduled to cancel -->
           <button
-            v-if="partner.isActive && !partner.isCancelled"
+            v-if="partner.isActive && !partner.isCancelled && !partner.isScheduledToCancel"
             type="button"
             :disabled="partner.isSuspended"
             :title="partner.isSuspended ? 'Account suspended — contact support to reactivate' : undefined"
@@ -208,6 +226,13 @@ const planStatusClass = computed(() => {
           </template>
           <template v-else-if="partner.isCancelled">
             <p class="text-sm text-slate-600">Your subscription has been cancelled.</p>
+            <button
+              type="button"
+              class="text-sm font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-xl transition-colors"
+              @click="showUpgradeModal = true"
+            >
+              Resubscribe to a Plan →
+            </button>
           </template>
           <template v-else>
             <p class="text-sm text-slate-600">No active subscription yet.</p>

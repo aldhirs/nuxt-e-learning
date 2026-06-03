@@ -56,7 +56,7 @@ const renewalLabel = computed(() => {
 
 const planHighlight = computed(() => {
   if (partner.isSuspended || partner.isCancelled) return 'error' as const
-  if (partner.isPastDue) return 'warning' as const
+  if (partner.isPastDue || partner.isScheduledToCancel) return 'warning' as const
   return null
 })
 </script>
@@ -75,10 +75,25 @@ const planHighlight = computed(() => {
     <template v-else>
     <h1 class="text-xl font-bold text-slate-900">Dashboard</h1>
 
+    <!-- Scheduled-to-cancel banner -->
+    <div
+      v-if="partner.isScheduledToCancel"
+      class="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm font-medium"
+      role="alert"
+    >
+      <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p class="flex-1">
+        Your subscription ends on <strong>{{ renewalLabel }}</strong> and will not auto-renew.
+        <NuxtLink to="/partner/billing" class="underline underline-offset-2 hover:no-underline font-semibold ml-1">Choose a new plan →</NuxtLink>
+      </p>
+    </div>
+
     <!-- Stats -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <PartnerStatsWidget label="Current Plan" :value="partner.plan?.name ?? '—'" :sub="partner.subscription?.billing_cycle === 'monthly' ? 'per month' : 'per year'" :loading="partner.isLoadingSubscription" :highlight="planHighlight" />
-      <PartnerStatsWidget label="Renewal / Ends" :value="renewalLabel" :loading="partner.isLoadingSubscription" :highlight="partner.isPastDue || partner.isSuspended ? 'warning' : null" />
+      <PartnerStatsWidget label="Renewal / Ends" :value="renewalLabel" :loading="partner.isLoadingSubscription" :highlight="partner.isPastDue || partner.isSuspended || partner.isScheduledToCancel ? 'warning' : null" />
       <PartnerStatsWidget label="Published Courses" :value="stats?.courses_published ?? '—'" :sub="`of ${partner.plan?.max_courses === -1 ? '∞' : partner.plan?.max_courses ?? '—'} max`" :loading="isLoadingStats" />
       <PartnerStatsWidget label="Active Students" :value="stats?.students_active ?? '—'" :sub="`of ${partner.plan?.max_students === -1 ? '∞' : partner.plan?.max_students ?? '—'} max`" :loading="isLoadingStats" />
     </div>
