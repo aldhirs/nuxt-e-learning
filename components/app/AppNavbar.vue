@@ -34,11 +34,15 @@ const hasPartnerRole = computed(() =>
   (auth.user?.roles ?? []).some(r => r.role_name === 'CLIENT_OWNER' && r.client_id != null)
 )
 
-// Hide course category bar on partner-context pages
+// Hide course category bar on partner-context pages and auth/account pages
 const isPartnerContext = computed(() =>
   route.path === '/partners' ||
   route.path === '/partner' ||
-  route.path.startsWith('/partner/')
+  route.path.startsWith('/partner/') ||
+  route.path === '/login' ||
+  route.path === '/register' ||
+  route.path === '/forgot-password' ||
+  route.path === '/reset-password'
 )
 
 // Row 2 category bar

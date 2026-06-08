@@ -43,7 +43,7 @@ const slugRegex = helpers.withMessage('Use lowercase letters, numbers, and hyphe
 
 // ── Scenario A: visitor full form ─────────────────────────────────────────────
 const form = reactive<PartnerRegisterRequest & { phone: string }>({
-  full_name: '', email: '', password: '', password_confirmation: '',
+  full_name: '', username: '', email: '', password: '', password_confirmation: '',
   organization_name: '', subdomain_slug: '', phone: '', agree_tos: false,
 })
 const isLoading = ref(false)
@@ -52,8 +52,18 @@ const fieldErrors = ref<Record<string, string>>({})
 const successEmail = ref('')
 
 const phoneRegex = helpers.withMessage('Invalid format. Use +628...', helpers.regex(/^(\+62[0-9]{8,13})?$/))
+const usernameFormat = helpers.withMessage(
+  'Username may only contain letters, numbers, dots, underscores, or dashes',
+  helpers.regex(/^[a-z0-9_.-]+$/i)
+)
 const rulesA = {
   full_name: { required, min: minLength(2), max: maxLength(100) },
+  username: {
+    required,
+    min: minLength(3),
+    max: maxLength(50),
+    usernameFormat,
+  },
   email: { required, email },
   password: {
     required, min: minLength(8),
@@ -68,6 +78,12 @@ const rulesA = {
 }
 const v$ = useVuelidate(rulesA, form)
 
+watch(() => form.email, (val) => {
+  if (!form.username && val.includes('@')) {
+    const guess = val.split('@')[0].toLowerCase().replace(/[^a-z0-9_.-]/g, '')
+    if (guess.length >= 3) form.username = guess
+  }
+})
 watch(() => form.subdomain_slug, (val) => {
   form.subdomain_slug = val.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '')
   checkSlug(form.subdomain_slug)
@@ -273,6 +289,15 @@ async function submitOnboard() {
         <form class="space-y-4" @submit.prevent="submit">
           <BaseInput v-model="form.full_name" label="Full Name" placeholder="Your full name" required :error="fieldErrors.full_name || (v$.full_name.$error ? 'Name must be at least 2 characters' : '')" @blur="v$.full_name.$touch" />
           <BaseInput v-model="form.email" type="email" label="Email" placeholder="you@yourorg.com" required :error="fieldErrors.email || (v$.email.$error ? 'Enter a valid email address' : '')" @blur="v$.email.$touch" />
+          <BaseInput
+            v-model="form.username"
+            label="Username"
+            placeholder="e.g. john_doe"
+            required
+            hint="Auto-filled from email, can be changed."
+            :error="fieldErrors.username || (v$.username.$error ? (v$.username.$errors[0]?.$message as string ?? 'Username must be at least 3 characters') : '')"
+            @blur="v$.username.$touch"
+          />
 
           <div>
             <BaseInput v-model="form.password" type="password" label="Password" placeholder="Min. 8 characters" required :error="fieldErrors.password || (v$.password.$error ? (v$.password.$errors[0]?.$message as string) || 'Invalid password' : '')" @blur="v$.password.$touch" />

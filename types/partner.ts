@@ -101,6 +101,7 @@ export interface InvoiceHistoryResponse {
 
 export interface PartnerRegisterRequest {
   full_name: string
+  username: string
   email: string
   password: string
   password_confirmation: string
