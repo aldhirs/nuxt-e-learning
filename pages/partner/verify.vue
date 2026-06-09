@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'default', middleware: 'auth' })
 useSeoMeta({ title: 'Email Verification — DrillSpace' })
 
 const route = useRoute()
@@ -10,7 +10,10 @@ const auth = useAuthStore()
 const token = route.query.token as string | undefined
 type VerifyState = 'checking' | 'success' | 'expired' | 'waiting'
 const state = ref<VerifyState>(token ? 'checking' : 'waiting')
-const resendEmail = ref((route.query.email as string) ?? '')
+
+// Always read-only — page is auth-protected so email always comes from auth.user
+const resendEmail = computed(() => auth.user?.email ?? '')
+
 const resendLoading = ref(false)
 const resendMessage = ref('')
 const resendError = ref('')
@@ -26,6 +29,15 @@ function startCooldown() {
   }, 1000)
 }
 onUnmounted(() => { if (cooldownTimer) clearInterval(cooldownTimer) })
+
+// Populate auth.user on hard refresh (plugin may not have run yet during SSR hydration),
+// then auto-trigger resend when user lands here without a token (e.g. from "Verify Now" ticker).
+onMounted(async () => {
+  if (!auth.user) await auth.fetchMe()
+  if (!token && auth.user?.email && resendCount.value === 0) {
+    await resend({ silent: true })
+  }
+})
 
 if (token) {
   onMounted(async () => {
@@ -47,18 +59,18 @@ if (token) {
   })
 }
 
-async function resend() {
+async function resend({ silent = false } = {}) {
   if (!resendEmail.value || resendCooldown.value > 0 || resendCount.value >= 3) return
-  resendLoading.value = true
+  if (!silent) resendLoading.value = true
   resendMessage.value = ''
   resendError.value = ''
   try {
     await api.post('/public/partner/resend-verification', { email: resendEmail.value.trim() })
-    resendMessage.value = 'Verification link resent. Check your inbox.'
+    resendMessage.value = 'Verification link sent. Check your inbox (and spam folder).'
     resendCount.value++
     startCooldown()
   } catch (err: unknown) {
-    resendError.value = (err as { message?: string }).message || 'Failed to resend. Please try again.'
+    if (!silent) resendError.value = (err as { message?: string }).message || 'Failed to resend. Please try again.'
   } finally {
     resendLoading.value = false
   }
@@ -102,7 +114,7 @@ async function resend() {
       <h1 class="text-2xl font-bold text-slate-900">Link Expired</h1>
       <p class="text-slate-500 text-sm">Verification links are only valid for 24 hours after registration.</p>
       <div class="mt-4 space-y-3">
-        <BaseInput v-model="resendEmail" type="email" placeholder="Your registered email" label="Email" />
+        <BaseInput :model-value="resendEmail" type="email" placeholder="Your registered email" label="Email" disabled />
         <p v-if="resendMessage" class="text-sm text-green-600">{{ resendMessage }}</p>
         <p v-if="resendError" class="text-sm text-red-600">{{ resendError }}</p>
         <p v-if="resendCount >= 3" class="text-xs text-slate-400">Resend limit reached. Please contact support.</p>
@@ -125,7 +137,7 @@ async function resend() {
       <p class="text-xs text-slate-400">Check your spam folder if it doesn't appear in your inbox.</p>
       <div class="pt-2 border-t border-slate-100 space-y-3">
         <p class="text-sm text-slate-500">Didn't receive the email?</p>
-        <BaseInput v-model="resendEmail" type="email" placeholder="Enter your email" label="Email" />
+        <BaseInput :model-value="resendEmail" type="email" placeholder="Enter your email" label="Email" disabled />
         <p v-if="resendMessage" class="text-sm text-green-600">{{ resendMessage }}</p>
         <p v-if="resendError" class="text-sm text-red-600">{{ resendError }}</p>
         <BaseButton variant="secondary" block :loading="resendLoading" :disabled="resendLoading || resendCooldown > 0 || resendCount >= 3" @click="resend">

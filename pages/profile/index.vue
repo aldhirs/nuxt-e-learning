@@ -12,6 +12,17 @@ const refreshing = ref(false)
 const loadError = ref('')
 const enableProfileEdit = computed(() => Boolean(config.public.enableProfileEdit))
 
+const missingProfileFields = computed(() => {
+  const u = auth.user
+  if (!u) return []
+  const missing: string[] = []
+  if (!u.full_name) missing.push('full name')
+  if (!u.phone) missing.push('phone number')
+  if (!u.date_of_birth) missing.push('date of birth')
+  return missing
+})
+const isProfileIncomplete = computed(() => missingProfileFields.value.length > 0)
+
 onMounted(async () => {
   if (!auth.user) await refresh()
 })
@@ -86,6 +97,24 @@ async function doLogout() {
 
     <!-- Profile -->
     <div v-else-if="auth.user" class="space-y-6">
+
+      <!-- Incomplete profile ticker -->
+      <div v-if="isProfileIncomplete && enableProfileEdit" class="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl" role="alert">
+        <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-amber-800">Complete your profile to receive certificates</p>
+          <p class="text-sm text-amber-700 mt-0.5">
+            Your profile information — including your full name and date of birth — will appear on your course certificates.
+            Missing: <span class="font-medium">{{ missingProfileFields.join(', ') }}</span>.
+          </p>
+          <NuxtLink to="/profile/edit" class="inline-block mt-2 text-sm font-semibold text-amber-800 hover:underline">
+            Complete profile →
+          </NuxtLink>
+        </div>
+      </div>
+
       <BaseCard padding="lg" class="border border-slate-200">
         <div class="flex items-start gap-4">
           <div class="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-2xl font-bold flex-shrink-0">
@@ -119,6 +148,13 @@ async function doLogout() {
           <div>
             <dt class="text-slate-500">Phone Number</dt>
             <dd class="text-slate-800 font-medium mt-1">{{ auth.user.phone || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-slate-500">Date of Birth</dt>
+            <dd class="mt-1">
+              <span v-if="auth.user.date_of_birth" class="text-slate-800 font-medium">{{ formatDate(auth.user.date_of_birth) }}</span>
+              <span v-else class="text-amber-600 text-sm font-medium">Not set — required for certificates</span>
+            </dd>
           </div>
           <div>
             <dt class="text-slate-500">Last Login</dt>

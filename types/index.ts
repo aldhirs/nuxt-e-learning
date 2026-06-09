@@ -383,6 +383,7 @@ export interface User {
   full_name: string | null
   username?: string | null
   phone?: string | null
+  date_of_birth?: string | null  // YYYY-MM-DD; required for certificate generation
   status?: UserStatus
   role?: string | null
   roles?: UserRoleEntry[]
@@ -468,7 +469,8 @@ export interface UpdateProfileRequest {
   full_name?: string
   email?: string
   username?: string
-  phone?: string  // "" = clear (set NULL), "+62..." = update, absent = skip
+  phone?: string          // "" = clear (set NULL), "+62..." = update, absent = skip
+  date_of_birth?: string  // YYYY-MM-DD, "" = clear
 }
 
 // ─── API Response ─────────────────────────────────────────────────────────────

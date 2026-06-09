@@ -25,14 +25,25 @@ const serverError = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 const initialReady = ref(false)
 
+const today = new Date().toISOString().slice(0, 10)
+
 const form = reactive({
   full_name: '',
   username: '',
   email: '',
-  phone: ''
+  phone: '',
+  date_of_birth: ''
 })
 
 const usernameFormat = helpers.regex(/^[a-zA-Z0-9_.-]+$/)
+const validDate = helpers.withMessage(
+  'Enter a valid date (YYYY-MM-DD)',
+  (v: string) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v)
+)
+const notFuture = helpers.withMessage(
+  'Date of birth cannot be in the future',
+  (v: string) => !v || v <= today
+)
 const rules = {
   full_name: { required, minLength: minLength(3) },
   username: {
@@ -44,7 +55,8 @@ const rules = {
     )
   },
   email: { required, email },
-  phone: { phoneValidator }
+  phone: { phoneValidator },
+  date_of_birth: { validDate, notFuture }
 }
 const v$ = useVuelidate(rules, form)
 
@@ -55,6 +67,7 @@ async function hydrate() {
     form.username = auth.user.username || ''
     form.email = auth.user.email || ''
     form.phone = auth.user.phone || ''
+    form.date_of_birth = auth.user.date_of_birth || ''
   }
   initialReady.value = true
 }
@@ -74,10 +87,12 @@ async function submit() {
     const username = form.username.trim().toLowerCase()
     const emailNew = form.email.trim().toLowerCase()
     const phone = form.phone.trim()
+    const dob = form.date_of_birth.trim()
     if (fullName !== (auth.user?.full_name || '')) payload.full_name = fullName
     if (username !== (auth.user?.username || '')) payload.username = username
     if (emailNew !== (auth.user?.email || '').toLowerCase()) payload.email = emailNew
     if (phone !== (auth.user?.phone || '')) payload.phone = phone
+    if (dob !== (auth.user?.date_of_birth || '')) payload.date_of_birth = dob
 
     if (Object.keys(payload).length === 0) {
       toast.info('No changes to save.')
@@ -95,7 +110,7 @@ async function submit() {
       router.push('/login?redirect=/profile/edit')
       return
     }
-    const { global, perField } = mapApiError(err, ['full_name', 'username', 'email', 'phone'])
+    const { global, perField } = mapApiError(err, ['full_name', 'username', 'email', 'phone', 'date_of_birth'])
     fieldErrors.value = perField
     serverError.value = global
   } finally {
@@ -160,6 +175,14 @@ async function submit() {
           placeholder="08123456789 or +628123456789"
           :error="fieldErrors.phone || (v$.phone.$error ? (v$.phone.$errors[0]?.$message as string) : '')"
           @blur="v$.phone.$touch"
+        />
+        <BaseDatePicker
+          v-model="form.date_of_birth"
+          label="Date of Birth"
+          :max="today"
+          hint="Used to generate your course certificates. Must match your ID card."
+          :error="fieldErrors.date_of_birth || (v$.date_of_birth.$error ? (v$.date_of_birth.$errors[0]?.$message as string) : '')"
+          @blur="v$.date_of_birth.$touch"
         />
 
         <div class="flex flex-col sm:flex-row gap-3 pt-2">
