@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePartnersApi } from '~/composables/api/usePartnersApi'
 import { useCoursesApi } from '~/composables/api/useCoursesApi'
+import { useEnrollmentApi } from '~/composables/api/useEnrollmentApi'
 import type { Partner, Paginated, CourseListItem } from '~/types'
 
 definePageMeta({ layout: 'default' })
@@ -9,6 +10,10 @@ const route = useRoute()
 const router = useRouter()
 const partnersApi = usePartnersApi()
 const coursesApi = useCoursesApi()
+const enrollmentApi = useEnrollmentApi()
+const authStore = useAuthStore()
+
+const enrolledCourseIds = ref<Set<number>>(new Set())
 
 const slug = computed(() => route.params.slug as string)
 const COURSES_PER_PAGE = 12
@@ -61,6 +66,12 @@ const bannerStyle = computed(() => {
   const primary = partner.value?.theme_primary ?? '#2F80D2'
   const secondary = partner.value?.theme_secondary ?? '#1a5fa0'
   return { background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)` }
+})
+
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    enrolledCourseIds.value = await enrollmentApi.getEnrolledCourseIds()
+  }
 })
 </script>
 
@@ -167,7 +178,7 @@ const bannerStyle = computed(() => {
         <!-- Courses success -->
         <div v-else>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <CourseCard v-for="course in courses" :key="course.id" :course="course" />
+            <CourseCard v-for="course in courses" :key="course.id" :course="course" :is-enrolled="enrolledCourseIds.has(course.id)" />
           </div>
 
           <div v-if="totalPages > 1" class="flex items-center justify-between mt-10 gap-4 flex-wrap">

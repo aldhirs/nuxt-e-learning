@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useMyCoursesApi } from '~/composables/api/useMyCoursesApi'
 import type { PurchasedCoursesPage } from '~/composables/api/useMyCoursesApi'
+import type nuxtConfig from '~/nuxt.config'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'profile', middleware: 'auth' })
@@ -304,7 +305,16 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
                     img-class="w-4 h-4 rounded-full object-cover flex-shrink-0"
                   />
                   <p class="text-xs text-slate-400 truncate">
+                    <NuxtLink
+                      v-if="item.course?.client?.slug"
+                      :to="`/partners/${item.course.client.slug}`"
+                      class="hover:underline"
+                    >
                     {{ item.course?.client?.name ?? 'DrillSpace' }}
+                    </NuxtLink>
+                    <span v-else>
+                      {{ item.course?.client?.name ?? 'DrillSpace' }}
+                    </span>
                   </p>
                 </div>
 
