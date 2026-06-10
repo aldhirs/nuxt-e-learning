@@ -605,7 +605,7 @@ onMounted(() => {
                       <BaseButton v-else variant="ghost" size="lg" block disabled>
                         Price not available
                       </BaseButton>
-                      <BaseButton v-if="!auth.isAuthenticated" variant="ghost" size="md" block to="/login">
+                      <BaseButton v-if="!auth.isAuthenticated" variant="ghost" size="md" block :to="`/login?redirect=${encodeURIComponent(route.fullPath)}`">
                         Already have an account? Sign In
                       </BaseButton>
                     </template>
