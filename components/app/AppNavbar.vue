@@ -42,7 +42,12 @@ const isPartnerContext = computed(() =>
   route.path === '/login' ||
   route.path === '/register' ||
   route.path === '/forgot-password' ||
-  route.path === '/reset-password'
+  route.path === '/reset-password' ||
+  route.path === '/terms' ||
+  route.path === '/privacy' ||
+  route.path.startsWith('/profile') ||
+  route.path.startsWith('/my/') ||
+  route.path.startsWith('/orders')
 )
 
 // Row 2 category bar

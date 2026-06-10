@@ -40,11 +40,13 @@
 
 <script setup lang="ts">
 const quickLinks = [
-  { label: 'Home',     to: '/' },
-  { label: 'Courses',  to: '/courses' },
-  { label: 'Partners', to: '/partners' },
-  { label: 'About Us', to: '/tentang' },
-  { label: 'Contact',  to: '/contact-us' }
+  { label: 'Home',              to: '/' },
+  { label: 'Courses',           to: '/courses' },
+  { label: 'Partners',          to: '/partners' },
+  { label: 'About Us',          to: '/tentang' },
+  { label: 'Contact',           to: '/contact-us' },
+  { label: 'Terms & Conditions', to: '/terms' },
+  { label: 'Privacy Policy',    to: '/privacy' },
 ]
 
 const socials = [

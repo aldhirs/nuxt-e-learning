@@ -197,9 +197,9 @@ async function submit() {
 
           <p class="text-xs text-slate-500">
             By registering, you agree to our
-            <NuxtLink to="/syarat" class="text-primary-600 hover:underline">Terms & Conditions</NuxtLink>
+            <NuxtLink to="/terms" class="text-primary-600 hover:underline">Terms & Conditions</NuxtLink>
             and
-            <NuxtLink to="/privasi" class="text-primary-600 hover:underline">Privacy Policy</NuxtLink>.
+            <NuxtLink to="/privacy" class="text-primary-600 hover:underline">Privacy Policy</NuxtLink>.
           </p>
 
           <BaseButton
