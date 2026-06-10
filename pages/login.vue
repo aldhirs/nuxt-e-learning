@@ -209,13 +209,11 @@ async function submitOtp() {
   } catch (err: unknown) {
     const e = err as { code?: string; status?: number; message?: string }
     clearOtp()
-    if (e.code === 'OTP_EXPIRED' || e.status === 422 && (e.message ?? '').toLowerCase().includes('kedaluwarsa')) {
-      otpError.value = 'Verification code has expired. Click Resend to get a new one.'
-    } else if (e.code === 'PRE_AUTH_TOKEN_INVALID' || e.status === 401) {
-      otpError.value = 'Your login session has expired. Please sign in again.'
+    if (e.code === 'PRE_AUTH_TOKEN_INVALID' || e.status === 401) {
+      otpError.value = e.message || 'Your login session has expired. Please sign in again.'
       setTimeout(() => backToCredentials(), 2000)
     } else {
-      otpError.value = 'Incorrect code. Please check your email and try again.'
+      otpError.value = e.message || 'Incorrect code. Please check your email and try again.'
     }
   } finally {
     isOtpLoading.value = false
@@ -233,11 +231,14 @@ async function resendOtp() {
     startResendCooldown(60)
     clearOtp()
   } catch (err: unknown) {
-    const e = err as { code?: string; message?: string }
-    if (e.code === 'OTP_RESEND_RATE_LIMIT') {
-      otpError.value = 'Too many resend attempts. Please wait a moment.'
+    const e = err as { code?: string; status?: number; message?: string }
+    if (e.code === 'OTP_RESEND_RATE_LIMIT' || e.status === 429) {
+      otpError.value = 'Too many resend attempts. Please wait a moment before trying again.'
+    } else if (e.code === 'PRE_AUTH_TOKEN_INVALID' || e.status === 401) {
+      otpError.value = 'Your session is no longer valid. Please sign in again.'
+      setTimeout(() => backToCredentials(), 2000)
     } else {
-      otpError.value = e.message || 'Failed to resend code. Please try again.'
+      otpError.value = 'Failed to resend the code. Please try again or sign in from the beginning.'
     }
   }
 }

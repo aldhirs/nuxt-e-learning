@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCoursesApi, type CourseListFilters, type CourseSort } from '~/composables/api/useCoursesApi'
 import { usePartnersApi } from '~/composables/api/usePartnersApi'
+import { useEnrollmentApi } from '~/composables/api/useEnrollmentApi'
 import type { Paginated, CourseListItem, Partner } from '~/types'
 
 definePageMeta({ layout: 'default' })
@@ -11,8 +12,20 @@ useSeoMeta({
 
 const route  = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const coursesApi  = useCoursesApi()
 const partnersApi = usePartnersApi()
+const enrollmentApi = useEnrollmentApi()
+
+// ── Enrolled course IDs (client-side only — skip on SSR) ──────────────────────
+// Fetched once after mount so the public listing stays cacheable.
+// Fail-safe: falls back to empty Set if unauthenticated or request fails.
+const enrolledCourseIds = ref<Set<number>>(new Set())
+onMounted(async () => {
+  if (auth.isAuthenticated) {
+    enrolledCourseIds.value = await enrollmentApi.getEnrolledCourseIds()
+  }
+})
 
 const PAGE_SIZE = 12
 
@@ -363,7 +376,7 @@ const difficultyOptions = [
               class="animate-fade-in-up h-full"
               :style="{ animationDelay: `${i * 45}ms` }"
             >
-              <CourseCard :course="course"/>
+              <CourseCard :course="course" :is-enrolled="enrolledCourseIds.has(course.id)"/>
             </div>
           </div>
         </Transition>

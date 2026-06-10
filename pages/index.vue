@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useHomepageApi } from '~/composables/api/useHomepageApi'
+import { useEnrollmentApi } from '~/composables/api/useEnrollmentApi'
 import type { FeaturedHomepage, Testimonial } from '~/types'
 
 definePageMeta({ layout: 'default' })
@@ -9,6 +10,15 @@ useSeoMeta({
 })
 
 const homepage = useHomepageApi()
+const auth = useAuthStore()
+const enrollmentApi = useEnrollmentApi()
+
+const enrolledCourseIds = ref<Set<number>>(new Set())
+onMounted(async () => {
+  if (auth.isAuthenticated) {
+    enrolledCourseIds.value = await enrollmentApi.getEnrolledCourseIds()
+  }
+})
 
 const { data: featured, pending: featuredPending, error: featuredError, refresh: refreshFeatured } =
   await useAsyncData<FeaturedHomepage>('featured-homepage', () => homepage.getFeatured())
@@ -343,7 +353,7 @@ onUnmounted(() => { if (carouselTimer) clearInterval(carouselTimer) })
             :class="['transition-all duration-700', revealed.courses ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10']"
             :style="{ transitionDelay: `${80 + i * 70}ms` }"
           >
-            <CourseCard :course="course"/>
+            <CourseCard :course="course" :is-enrolled="enrolledCourseIds.has(course.id)"/>
           </div>
         </div>
 

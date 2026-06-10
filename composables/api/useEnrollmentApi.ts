@@ -14,6 +14,18 @@ export function useEnrollmentApi() {
     // Returns { enrolled: false } when not enrolled — never 404.
     checkEnrollment(courseId: number) {
       return api.get<EnrollmentCheckResponse>(`/my/courses/${courseId}/enrollment`)
-    }
+    },
+
+    // Returns a Set of course IDs the authenticated user is actively enrolled in.
+    // Calls the thin GET /my/enrolled-course-ids endpoint — single query, no pagination.
+    // Fail-safe: returns empty Set on any error so the listing still renders.
+    async getEnrolledCourseIds(): Promise<Set<number>> {
+      try {
+        const res = await api.get<{ course_ids: number[] }>('/my/enrolled-course-ids')
+        return new Set(res.course_ids ?? [])
+      } catch {
+        return new Set()
+      }
+    },
   }
 }

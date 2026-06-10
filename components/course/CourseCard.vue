@@ -3,6 +3,7 @@ import type { CourseListItem } from '~/types'
 
 interface Props {
   course: CourseListItem
+  isEnrolled?: boolean
 }
 
 defineProps<Props>()
@@ -56,6 +57,15 @@ function toggleWishlist(e: MouseEvent) {
 
         <!-- Badges top-left -->
         <div class="absolute top-3 left-3 flex gap-1.5">
+          <span
+            v-if="isEnrolled"
+            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide bg-primary-600 text-white shadow-sm"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+            Enrolled
+          </span>
           <span
             v-if="course.is_free"
             class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide bg-emerald-500 text-white shadow-sm"
