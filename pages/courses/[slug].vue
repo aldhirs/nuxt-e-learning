@@ -334,9 +334,7 @@ onMounted(() => {
                 <div class="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br from-primary-50 to-transparent opacity-60 pointer-events-none"></div>
 
                 <div class="relative p-6 sm:p-7">
-                  <div class="text-slate-700 leading-relaxed text-[15px] whitespace-pre-line">
-                    {{ course.description }}
-                  </div>
+                  <CommonMarkdownViewer :content="course.description ?? ''" />
 
                   <!-- Footer chip row — meta cues -->
                   <div v-if="course.difficulty || totalLessons > 0 || totalDuration > 0" class="mt-5 pt-5 border-t border-slate-100 flex flex-wrap items-center gap-2">

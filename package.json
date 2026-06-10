@@ -15,19 +15,21 @@
   "dependencies": {
     "@fontsource/inter": "^5.2.0",
     "@pinia/nuxt": "^0.11.0",
-    "pinia": "^3.0.0",
+    "@toast-ui/editor": "^3.2.2",
     "@vuelidate/core": "^2.0.3",
     "@vuelidate/validators": "^2.0.4",
+    "marked": "^18.0.5",
     "nuxt": "^3.16.0",
+    "pinia": "^3.0.0",
     "vue": "^3.5.0",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.0",
-    "@tailwindcss/typography": "^0.5.15",
-    "tailwindcss": "^4.1.0",
     "@playwright/test": "^1.44.0",
-    "typescript": "^5.5.0",
-    "prettier": "^3.3.0"
+    "@tailwindcss/typography": "^0.5.15",
+    "@tailwindcss/vite": "^4.1.0",
+    "prettier": "^3.3.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.5.0"
   }
 }

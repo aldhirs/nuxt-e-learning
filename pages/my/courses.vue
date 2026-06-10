@@ -275,14 +275,21 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
             <div class="p-4 flex gap-4 items-start">
 
               <!-- Thumbnail -->
-              <div class="w-24 h-[72px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                <BaseImage
-                  type="course"
-                  :src="item.course?.thumbnail_url"
-                  :alt="item.course?.title"
-                  img-class="w-full h-full object-cover"
-                />
-              </div>
+               <NuxtLink
+                v-if="item.course?.slug"
+                :to="`/courses/${item.course.slug}`"
+                class="w-24 h-[72px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0"
+              >
+                <div class="w-24 h-[72px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+                  <BaseImage
+                    type="course"
+                    :src="item.course?.thumbnail_url"
+                    :alt="item.course?.title"
+                    img-class="w-full h-full object-cover"
+                  />
+                </div>
+              </NuxtLink>
+              <div v-else class="w-24 h-[72px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0" />
 
               <!-- Info -->
               <div class="flex-1 min-w-0">
@@ -303,7 +310,12 @@ const enrollmentStatusConfig: Record<string, { label: string; cls: string }> = {
 
                 <!-- Title -->
                 <p class="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug mb-2">
-                  {{ item.course?.title ?? 'Course unavailable' }}
+                  <NuxtLink v-if="item.course?.slug" :to="`/courses/${item.course.slug}`">
+                    {{ item.course?.title ?? 'Course unavailable' }}
+                  </NuxtLink>
+                  <span v-else>
+                    {{ item.course?.title ?? 'Course unavailable' }}
+                  </span>
                 </p>
 
                 <!-- Meta chips -->

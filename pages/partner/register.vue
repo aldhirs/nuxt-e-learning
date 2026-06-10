@@ -181,86 +181,116 @@ async function submitOnboard() {
     <!-- Scenario B: logged-in user → one-click (first or additional partner) -->
     <div v-else-if="isLoggedIn" class="w-full max-w-md">
 
-      <!-- Notice: user already has a partner — informational only, not blocking -->
-      <div v-if="alreadyPartner" class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3">
-        <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <div class="text-sm">
-          <p class="font-semibold text-amber-800">
-            You have an existing partner account 
-            <span v-if="currentPartnerName" class="font-bold"> "{{ currentPartnerName }}"</span>.
-          </p>
-          <p class="text-amber-700 mt-0.5">You can still create a new partner under the same account.</p>
-          <NuxtLink to="/partner/dashboard" class="text-amber-800 font-semibold hover:underline text-xs mt-1 inline-block">
-            Back to partner dashboard →
-          </NuxtLink>
+      <!-- Block state: multi-org creation is currently disabled.
+           To re-enable, remove this v-if block and the v-else wrapper below,
+           then restore the original amber notice inside the form card. -->
+      <div v-if="alreadyPartner" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center space-y-5">
+        <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto">
+          <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
         </div>
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">Organization already exists</h1>
+          <p class="text-sm text-slate-500 mt-1.5">
+            Your account is linked to
+            <strong v-if="currentPartnerName">"{{ currentPartnerName }}"</strong><span v-else>an organization</span>.
+          </p>
+          <p class="text-sm text-slate-400 mt-1">Creating an additional organization is not available at this time.</p>
+        </div>
+        <NuxtLink
+          to="/partner/dashboard"
+          class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors"
+        >
+          Open Partner Portal
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+          </svg>
+        </NuxtLink>
       </div>
 
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="bg-primary-700 text-white px-8 py-6">
-          <div class="flex items-center gap-3 mb-2">
-            <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-bold text-sm">
-              {{ (auth.user?.full_name || 'U')[0].toUpperCase() }}
-            </div>
-            <div>
-              <p class="font-semibold text-sm">{{ auth.user?.full_name }}</p>
-              <p class="text-xs text-primary-200">{{ auth.user?.email }}</p>
-            </div>
+      <!-- One-click onboarding form — shown only when user has no org yet.
+           Wrapped in v-else so it's preserved; to re-enable multi-org,
+           remove the v-else and restore the amber notice below. -->
+      <template v-else>
+        <!-- Notice: user already has a partner — preserved for multi-org re-enable
+        <div v-if="alreadyPartner" class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3">
+          <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div class="text-sm">
+            <p class="font-semibold text-amber-800">
+              You have an existing partner account
+              <span v-if="currentPartnerName" class="font-bold"> "{{ currentPartnerName }}"</span>.
+            </p>
+            <p class="text-amber-700 mt-0.5">You can still create a new partner under the same account.</p>
+            <NuxtLink to="/partner/dashboard" class="text-amber-800 font-semibold hover:underline text-xs mt-1 inline-block">
+              Back to partner dashboard →
+            </NuxtLink>
           </div>
-          <h1 class="text-lg font-bold mt-3">
-            {{ alreadyPartner ? 'Create New Partner' : 'Open Your Course Store' }}
-          </h1>
-          <p class="text-sm text-primary-200 mt-1">
-            {{ alreadyPartner ? 'Add a new organization to your account.' : 'One step — no new account needed. Your 14-day trial starts now.' }}
-          </p>
         </div>
+        -->
 
-        <div class="p-8 space-y-4">
-          <div v-if="onboardError" class="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700" role="alert">{{ onboardError }}</div>
-
-          <form class="space-y-4" @submit.prevent="submitOnboard">
-            <BaseInput
-              v-model="onboardForm.organization_name"
-              label="Organization / Store Name"
-              placeholder="e.g. Maritime Academy"
-              required
-              :error="onboardFieldErrors.organization_name || (vB$.organization_name.$error ? 'Name must be at least 3 characters' : '')"
-              @blur="vB$.organization_name.$touch"
-            />
-
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1.5">Subdomain <span class="text-red-500">*</span></label>
-              <div class="flex items-center gap-2">
-                <span class="flex-shrink-0 text-sm text-slate-500 whitespace-nowrap">drillspace.id/</span>
-                <BaseInput
-                  v-model="onboardForm.subdomain_slug"
-                  placeholder="your-name"
-                  class="flex-1"
-                  :error="onboardFieldErrors.subdomain_slug || (vB$.subdomain_slug.$error ? 'Invalid slug format' : '') || (slugStatus === 'taken' ? 'Slug already taken' : '')"
-                  @blur="vB$.subdomain_slug.$touch"
-                />
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="bg-primary-700 text-white px-8 py-6">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-bold text-sm">
+                {{ (auth.user?.full_name || 'U')[0].toUpperCase() }}
               </div>
-              <p v-if="onboardForm.subdomain_slug && slugStatus === 'available'" class="text-xs text-green-600 mt-1">✓ Slug available</p>
-              <p v-else-if="slugStatus === 'checking'" class="text-xs text-slate-400 mt-1">Checking availability...</p>
-              <p v-else-if="onboardForm.subdomain_slug" class="text-xs text-slate-400 mt-1">Preview: drillspace.id/{{ onboardForm.subdomain_slug }}</p>
+              <div>
+                <p class="font-semibold text-sm">{{ auth.user?.full_name }}</p>
+                <p class="text-xs text-primary-200">{{ auth.user?.email }}</p>
+              </div>
             </div>
+            <h1 class="text-lg font-bold mt-3">Open Your Course Store</h1>
+            <p class="text-sm text-primary-200 mt-1">One step — no new account needed. Your 14-day trial starts now.</p>
+          </div>
 
-            <div class="flex items-start gap-3 pt-1">
-              <input id="agree-tos-b" v-model="onboardForm.agree_tos" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" @blur="vB$.agree_tos.$touch" />
-              <label for="agree-tos-b" class="text-sm text-slate-600">
-                I agree to the <a href="/terms" target="_blank" class="text-primary-600 hover:underline font-medium">Terms & Conditions</a>
-                <span v-if="vB$.agree_tos.$error" class="block text-xs text-red-600 mt-0.5">You must agree to the Terms & Conditions</span>
-              </label>
-            </div>
+          <div class="p-8 space-y-4">
+            <div v-if="onboardError" class="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700" role="alert">{{ onboardError }}</div>
 
-            <BaseButton type="submit" variant="primary" block :loading="onboardLoading" :disabled="onboardLoading || slugStatus === 'taken'">
-              Start My Free Trial
-            </BaseButton>
-          </form>
+            <form class="space-y-4" @submit.prevent="submitOnboard">
+              <BaseInput
+                v-model="onboardForm.organization_name"
+                label="Organization / Store Name"
+                placeholder="e.g. Maritime Academy"
+                required
+                :error="onboardFieldErrors.organization_name || (vB$.organization_name.$error ? 'Name must be at least 3 characters' : '')"
+                @blur="vB$.organization_name.$touch"
+              />
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Subdomain <span class="text-red-500">*</span></label>
+                <div class="flex items-center gap-2">
+                  <span class="flex-shrink-0 text-sm text-slate-500 whitespace-nowrap">drillspace.id/</span>
+                  <BaseInput
+                    v-model="onboardForm.subdomain_slug"
+                    placeholder="your-name"
+                    class="flex-1"
+                    :error="onboardFieldErrors.subdomain_slug || (vB$.subdomain_slug.$error ? 'Invalid slug format' : '') || (slugStatus === 'taken' ? 'Slug already taken' : '')"
+                    @blur="vB$.subdomain_slug.$touch"
+                  />
+                </div>
+                <p v-if="onboardForm.subdomain_slug && slugStatus === 'available'" class="text-xs text-green-600 mt-1">✓ Slug available</p>
+                <p v-else-if="slugStatus === 'checking'" class="text-xs text-slate-400 mt-1">Checking availability...</p>
+                <p v-else-if="onboardForm.subdomain_slug" class="text-xs text-slate-400 mt-1">Preview: drillspace.id/{{ onboardForm.subdomain_slug }}</p>
+              </div>
+
+              <div class="flex items-start gap-3 pt-1">
+                <input id="agree-tos-b" v-model="onboardForm.agree_tos" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" @blur="vB$.agree_tos.$touch" />
+                <label for="agree-tos-b" class="text-sm text-slate-600">
+                  I agree to the <a href="/terms" target="_blank" class="text-primary-600 hover:underline font-medium">Terms & Conditions</a>
+                  <span v-if="vB$.agree_tos.$error" class="block text-xs text-red-600 mt-0.5">You must agree to the Terms & Conditions</span>
+                </label>
+              </div>
+
+              <BaseButton type="submit" variant="primary" block :loading="onboardLoading" :disabled="onboardLoading || slugStatus === 'taken'">
+                Start My Free Trial
+              </BaseButton>
+            </form>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <!-- Scenario A: visitor full form -->

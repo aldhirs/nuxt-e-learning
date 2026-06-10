@@ -195,6 +195,7 @@ async function select(clientId: number) {
         </p>
       </div>
 
+      <!-- Add Organization CTA — disabled; to re-enable uncomment the template below
       <template #footer>
         <NuxtLink
           to="/partner/register"
@@ -207,6 +208,7 @@ async function select(clientId: number) {
           Add Organization
         </NuxtLink>
       </template>
+      -->
     </BaseModal>
   </div>
 </template>
