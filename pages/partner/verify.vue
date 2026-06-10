@@ -1,5 +1,7 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'default', middleware: 'auth' })
+// No auth middleware — this page is reached from an email link; new partners
+// have no JWT yet. verify-email and resend-verification are both public endpoints.
+definePageMeta({ layout: 'default' })
 useSeoMeta({ title: 'Email Verification — DrillSpace' })
 
 const route = useRoute()
@@ -8,12 +10,14 @@ const api = useApi()
 const auth = useAuthStore()
 
 const token = route.query.token as string | undefined
-type VerifyState = 'checking' | 'success' | 'expired' | 'waiting'
-const state = ref<VerifyState>(token ? 'checking' : 'waiting')
+type VerifyState = 'ready' | 'checking' | 'success' | 'expired' | 'waiting'
+const state = ref<VerifyState>(token ? 'ready' : 'waiting')
 
-// Always read-only — page is auth-protected so email always comes from auth.user
-const resendEmail = computed(() => auth.user?.email ?? '')
+// Editable — pre-filled from auth.user if already logged in,
+// otherwise user types their email manually (unauthenticated flow from email link).
+const resendEmail = ref('')
 
+const verifyLoading = ref(false)
 const resendLoading = ref(false)
 const resendMessage = ref('')
 const resendError = ref('')
@@ -30,38 +34,36 @@ function startCooldown() {
 }
 onUnmounted(() => { if (cooldownTimer) clearInterval(cooldownTimer) })
 
-// Populate auth.user on hard refresh (plugin may not have run yet during SSR hydration),
-// then auto-trigger resend when user lands here without a token (e.g. from "Verify Now" ticker).
+// Try to pre-fill email from session if available (authenticated user via banner).
 onMounted(async () => {
   if (!auth.user) await auth.fetchMe()
-  if (!token && auth.user?.email && resendCount.value === 0) {
-    await resend({ silent: true })
-  }
+  if (auth.user?.email) resendEmail.value = auth.user.email
 })
 
-if (token) {
-  onMounted(async () => {
-    try {
-      const data = await api.post<{ access_token: string }>('/public/partner/verify-email', { token })
-      if (data.access_token) {
-        useAuthCookie().value = data.access_token
-        await auth.fetchMe()
-        // Pre-load the client list so the dashboard has the correct active client
-        // immediately on mount. fetchMe() already sets ds_active_client_id cookie
-        // via the adminRole lookup, so refreshClients() without an explicit ID
-        // will restore to the newly verified client.
-        const partner = usePartnerStore()
-        await partner.refreshClients()
-      }
-      state.value = 'success'
-      setTimeout(() => router.push('/partner/dashboard?onboarding=true'), 2500)
-    } catch { state.value = 'expired' }
-  })
+async function verifyNow() {
+  if (!token || verifyLoading.value) return
+  verifyLoading.value = true
+  state.value = 'checking'
+  try {
+    const data = await api.post<{ access_token: string }>('/public/partner/verify-email', { token })
+    if (data.access_token) {
+      useAuthCookie().value = data.access_token
+      await auth.fetchMe()
+      const partner = usePartnerStore()
+      await partner.refreshClients()
+    }
+    state.value = 'success'
+    setTimeout(() => router.push('/partner/dashboard?onboarding=true'), 2500)
+  } catch {
+    state.value = 'expired'
+  } finally {
+    verifyLoading.value = false
+  }
 }
 
-async function resend({ silent = false } = {}) {
+async function resend() {
   if (!resendEmail.value || resendCooldown.value > 0 || resendCount.value >= 3) return
-  if (!silent) resendLoading.value = true
+  resendLoading.value = true
   resendMessage.value = ''
   resendError.value = ''
   try {
@@ -70,7 +72,7 @@ async function resend({ silent = false } = {}) {
     resendCount.value++
     startCooldown()
   } catch (err: unknown) {
-    if (!silent) resendError.value = (err as { message?: string }).message || 'Failed to resend. Please try again.'
+    resendError.value = (err as { message?: string }).message || 'Failed to resend. Please try again.'
   } finally {
     resendLoading.value = false
   }
@@ -80,8 +82,22 @@ async function resend({ silent = false } = {}) {
 <template>
   <div class="min-h-[calc(100vh-12rem)] flex items-center justify-center px-4 py-12">
   <div class="w-full max-w-md text-center">
-    <!-- Checking -->
-    <div v-if="state === 'checking'" class="space-y-4">
+    <!-- Ready (has token, waiting for user action) -->
+    <div v-if="state === 'ready'" class="space-y-5">
+      <div class="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center mx-auto">
+        <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900">Verify Your Email</h1>
+      <p class="text-slate-500 text-sm">Click the button below to verify your email address and activate your partner account.</p>
+      <BaseButton variant="primary" block :loading="verifyLoading" :disabled="verifyLoading" @click="verifyNow">
+        Verify Now
+      </BaseButton>
+    </div>
+
+    <!-- Checking (verification in progress) -->
+    <div v-else-if="state === 'checking'" class="space-y-4">
       <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto animate-pulse">
         <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -114,11 +130,11 @@ async function resend({ silent = false } = {}) {
       <h1 class="text-2xl font-bold text-slate-900">Link Expired</h1>
       <p class="text-slate-500 text-sm">Verification links are only valid for 24 hours after registration.</p>
       <div class="mt-4 space-y-3">
-        <BaseInput :model-value="resendEmail" type="email" placeholder="Your registered email" label="Email" disabled />
+        <BaseInput v-model="resendEmail" type="email" placeholder="Your registered email" label="Email" />
         <p v-if="resendMessage" class="text-sm text-green-600">{{ resendMessage }}</p>
         <p v-if="resendError" class="text-sm text-red-600">{{ resendError }}</p>
         <p v-if="resendCount >= 3" class="text-xs text-slate-400">Resend limit reached. Please contact support.</p>
-        <BaseButton variant="primary" block :loading="resendLoading" :disabled="resendLoading || resendCooldown > 0 || resendCount >= 3" @click="resend">
+        <BaseButton variant="primary" block :loading="resendLoading" :disabled="resendLoading || resendCooldown > 0 || resendCount >= 3 || !resendEmail" @click="resend()">
           {{ resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend Verification Link' }}
         </BaseButton>
         <NuxtLink to="/partner/register" class="block text-sm text-slate-500 hover:text-primary-600 transition-colors">← Back to registration</NuxtLink>
@@ -137,11 +153,11 @@ async function resend({ silent = false } = {}) {
       <p class="text-xs text-slate-400">Check your spam folder if it doesn't appear in your inbox.</p>
       <div class="pt-2 border-t border-slate-100 space-y-3">
         <p class="text-sm text-slate-500">Didn't receive the email?</p>
-        <BaseInput :model-value="resendEmail" type="email" placeholder="Enter your email" label="Email" disabled />
+        <BaseInput v-model="resendEmail" type="email" placeholder="Enter your email" label="Email" />
         <p v-if="resendMessage" class="text-sm text-green-600">{{ resendMessage }}</p>
         <p v-if="resendError" class="text-sm text-red-600">{{ resendError }}</p>
-        <BaseButton variant="secondary" block :loading="resendLoading" :disabled="resendLoading || resendCooldown > 0 || resendCount >= 3" @click="resend">
-          {{ resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend Email' }}
+        <BaseButton variant="secondary" block :loading="resendLoading" :disabled="resendLoading || resendCooldown > 0 || resendCount >= 3 || !resendEmail" @click="resend()">
+          {{ resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend Verification Email' }}
         </BaseButton>
       </div>
     </div>

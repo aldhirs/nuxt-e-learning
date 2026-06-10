@@ -8,6 +8,7 @@ definePageMeta({ layout: 'default', middleware: 'guest' })
 useSeoMeta({ title: 'Sign In' })
 
 const auth = useAuthStore()
+const partner = usePartnerStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -140,6 +141,12 @@ async function submit() {
 
   isLoading.value = true
   try {
+    // Reset partner state before login so stale client data from a previous
+    // session does not bleed into the new user's context. This also clears
+    // ds_active_client_id cookie so fetchMe() (called inside auth.login) can
+    // set the correct client ID for the new user.
+    partner.reset()
+
     const result = await auth.login({
       email: form.email.trim().toLowerCase(),
       password: form.password,
@@ -156,6 +163,7 @@ async function submit() {
       return
     }
 
+    await partner.fetchClients()
     postLoginRedirect()
   } catch (err: unknown) {
     const e = err as { status?: number; code?: string; reason?: string; payload?: { redirect_to_activation?: boolean } }
@@ -196,6 +204,7 @@ async function submitOtp() {
   try {
     await auth.login2FA(preAuthToken.value, otpCode.value)
     if (countdownTimer) clearInterval(countdownTimer)
+    await partner.fetchClients()
     postLoginRedirect()
   } catch (err: unknown) {
     const e = err as { code?: string; status?: number; message?: string }

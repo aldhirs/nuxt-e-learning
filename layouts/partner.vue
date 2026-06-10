@@ -6,8 +6,9 @@ const router = useRouter()
 const config = useRuntimeConfig()
 
 onMounted(async () => {
-  // Always refetch subscription on every partner-layout mount so the status badge
-  // and plan info reflect the latest state (e.g. after invoice payment).
+  // Always refetch clients + subscription on every partner-layout mount so the
+  // client list, status badge, and plan info reflect the latest state.
+  await partner.fetchClients()
   await partner.fetchSubscription()
 })
 
