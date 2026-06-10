@@ -282,11 +282,6 @@ onMounted(() => {
           <!-- Title -->
           <h1 class="text-3xl sm:text-4xl lg:text-[2.5rem] font-extrabold text-slate-900 leading-tight mb-5 max-w-3xl">{{ course.title }}</h1>
 
-          <!-- Description preview -->
-          <p v-if="course.description" class="text-base text-slate-600 max-w-2xl leading-relaxed mb-7">
-            {{ course.description.split('\n')[0] }}
-          </p>
-
           <!-- Meta badges -->
           <div class="flex flex-wrap items-center gap-2.5">
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold" :class="difficultyColor[course.difficulty] ?? 'bg-slate-100 text-slate-600'">
