@@ -17,6 +17,10 @@ on:
                     - staging
                     - production
 
+permissions:
+    contents: read
+    packages: write
+
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
@@ -31,23 +35,30 @@ jobs:
                   if [[ "${{ github.event.inputs.environment }}" == "staging" ]] || [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
                     echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
                     echo "DOCKER_TAG=staging" >> $GITHUB_ENV
+                    echo "IMAGE=ghcr.io/${{ github.repository_owner }}/nuxt-e-learning" >> $GITHUB_ENV
                     echo "SERVICE_NAME=nuxt-e-learning-staging" >> $GITHUB_ENV
+                    echo "DEPLOY_PATH=/root/e-learning/staging" >> $GITHUB_ENV
+                    echo "SSH_PORT=22" >> $GITHUB_ENV
                     echo "API_BASE_URL=https://api.staging.drillspace.id/api/v1" >> $GITHUB_ENV
                   else
                     echo "DEPLOY_ENV=production" >> $GITHUB_ENV
                     echo "DOCKER_TAG=production" >> $GITHUB_ENV
+                    echo "IMAGE=ghcr.io/${{ github.repository_owner }}/nuxt-e-learning" >> $GITHUB_ENV
                     echo "SERVICE_NAME=nuxt-e-learning-production" >> $GITHUB_ENV
+                    echo "DEPLOY_PATH=/opt/drillspace/production" >> $GITHUB_ENV
+                    echo "SSH_PORT=2222" >> $GITHUB_ENV
                     echo "API_BASE_URL=https://api.drillspace.id/api/v1" >> $GITHUB_ENV
                   fi
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v2
 
-            - name: Login to Docker Hub
+            - name: Login to GitHub Container Registry
               uses: docker/login-action@v2
               with:
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Build and push Docker image
               uses: docker/build-push-action@v4
@@ -55,15 +66,15 @@ jobs:
                   context: .
                   push: true
                   tags: |
-                      tecnoduct/nuxt-e-learning:${{ env.DOCKER_TAG }}
-                      tecnoduct/nuxt-e-learning:${{ env.DOCKER_TAG }}-${{ github.sha }}
+                      ${{ env.IMAGE }}:${{ env.DOCKER_TAG }}
+                      ${{ env.IMAGE }}:${{ env.DOCKER_TAG }}-${{ github.sha }}
                   build-args: |
                       NUXT_PUBLIC_API_BASE_URL=${{ env.API_BASE_URL }}
                       NUXT_PUBLIC_ANALYTICS_ENABLED=${{ env.DEPLOY_ENV == 'production' }}
                       NUXT_PUBLIC_ENABLE_PROFILE_EDIT=true
                       BUILD_VERSION=${{ github.sha }}
                       BUILD_TIME=${{ github.event.head_commit.timestamp }}
-                  cache-from: type=registry,ref=tecnoduct/nuxt-e-learning:${{ env.DOCKER_TAG }}
+                  cache-from: type=registry,ref=${{ env.IMAGE }}:${{ env.DOCKER_TAG }}
                   cache-to: type=inline
                   labels: |
                       environment=${{ env.DEPLOY_ENV }}
@@ -75,7 +86,7 @@ jobs:
             - name: Run security scan
               uses: aquasecurity/trivy-action@master
               with:
-                  image-ref: tecnoduct/nuxt-e-learning:${{ env.DOCKER_TAG }}
+                  image-ref: ${{ env.IMAGE }}:${{ env.DOCKER_TAG }}
                   format: 'table'
                   severity: 'CRITICAL,HIGH'
 
@@ -85,9 +96,10 @@ jobs:
                   host: ${{ secrets.VPS_HOST }}
                   username: ${{ secrets.VPS_USER }}
                   key: ${{ secrets.VPS_SSH_KEY }}
-                  port: 22
+                  port: ${{ env.SSH_PORT }}
                   script: |
-                      cd e-learning/${{ env.DEPLOY_ENV }}
+                      echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+                      cd ${{ env.DEPLOY_PATH }}
                       docker compose pull ${{ env.SERVICE_NAME }}
                       docker compose up -d ${{ env.SERVICE_NAME }}
                       echo "Waiting for service to be ready..."
@@ -99,9 +111,9 @@ jobs:
                   host: ${{ secrets.VPS_HOST }}
                   username: ${{ secrets.VPS_USER }}
                   key: ${{ secrets.VPS_SSH_KEY }}
-                  port: 22
+                  port: ${{ env.SSH_PORT }}
                   script: |
-                      cd e-learning/${{ env.DEPLOY_ENV }}
+                      cd ${{ env.DEPLOY_PATH }}
                       for i in {1..5}; do
                         echo "Health check attempt $i/5..."
                         RESPONSE=$(docker compose exec -T ${{ env.SERVICE_NAME }} curl -sf http://127.0.0.1:3000/ 2>&1 | head -c 200)
@@ -139,7 +151,7 @@ jobs:
                       🌿 Branch: `${{ github.ref }}`
                       👤 Author: ${{ github.actor }}
                       🕐 Time: ${{ github.event.head_commit.timestamp }}
-                      🐳 Docker Tag: `${{ env.DOCKER_TAG }}`
+                      🐳 Image: `${{ env.IMAGE }}:${{ env.DOCKER_TAG }}`
 
                       [View Commit](${{ github.event.head_commit.url }})
 
@@ -159,7 +171,7 @@ jobs:
                       🌿 Branch: `${{ github.ref }}`
                       👤 Author: ${{ github.actor }}
                       🕐 Time: ${{ github.event.head_commit.timestamp }}
-                      🐳 Docker Tag: `${{ env.DOCKER_TAG }}`
+                      🐳 Image: `${{ env.IMAGE }}:${{ env.DOCKER_TAG }}`
 
                       ⚠️ Please check the logs immediately!
                       [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
