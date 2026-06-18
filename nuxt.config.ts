@@ -25,7 +25,7 @@ export default defineNuxtConfig({
       // MinIO URL transform: replace internal host with public CDN host.
       // Must match VITE_FILE_URL_TRANSFORM_TO in vue-e-learning.
       fileUrlTransformFrom: process.env.NUXT_PUBLIC_FILE_URL_TRANSFORM_FROM || 'minio:9000',
-      fileUrlTransformTo: process.env.NUXT_PUBLIC_FILE_URL_TRANSFORM_TO || 's3.minio.imaremaritimjakarta.id'
+      fileUrlTransformTo: process.env.NUXT_PUBLIC_FILE_URL_TRANSFORM_TO || 's3.drillspace.id'
     }
   },
 
