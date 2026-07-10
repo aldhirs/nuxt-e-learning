@@ -103,15 +103,10 @@ async function selectAndProceed(method: PaymentMethod) {
   }
 }
 
-// VA bank rows
+// VA bank rows.
+// NOTE: BCA (va_bca) is intentionally hidden per business requirement — do not
+// re-add without sign-off. Keep the others as-is.
 const vaBanks = [
-  {
-    value: 'va_bca' as PaymentMethod,
-    name: 'BCA',
-    logo: '/images/payment/bca.svg',
-    desc: 'BCA Virtual Account — ATM / BCA Mobile / KlikBCA',
-    accent: 'hover:border-blue-300 hover:shadow-blue-100',
-  },
   {
     value: 'va_mandiri' as PaymentMethod,
     name: 'Mandiri',
@@ -135,7 +130,8 @@ const vaBanks = [
   },
 ]
 
-// E-wallet rows
+// E-wallet rows. `comingSoon` methods render disabled with a "Coming soon"
+// badge and cannot be selected.
 const ewallets = [
   {
     value: 'ewallet_dana' as PaymentMethod,
@@ -143,6 +139,7 @@ const ewallets = [
     logo: '/images/payment/dana.svg',
     desc: 'Pay directly from DANA balance',
     accent: 'hover:border-blue-300 hover:shadow-blue-100',
+    comingSoon: false,
   },
   {
     value: 'ewallet_shopeepay' as PaymentMethod,
@@ -150,8 +147,12 @@ const ewallets = [
     logo: '/images/payment/shopeepay.svg',
     desc: 'Pay directly from ShopeePay balance',
     accent: 'hover:border-orange-300 hover:shadow-orange-100',
+    comingSoon: true,
   },
 ]
+
+// QRIS is temporarily unavailable — rendered disabled with a "Coming soon" badge.
+const qrisComingSoon = true
 </script>
 
 <template>
@@ -189,11 +190,11 @@ const ewallets = [
         <BaseSkeleton class="h-8 w-48" />
         <BaseSkeleton class="h-14 rounded-xl" />
         <BaseSkeleton class="h-5 w-36 mt-4" />
-        <BaseSkeleton v-for="i in 4" :key="i" class="h-20 rounded-2xl" />
+        <BaseSkeleton v-for="i in 3" :key="i" class="h-20 rounded-2xl" />
         <BaseSkeleton class="h-5 w-24 mt-2" />
         <BaseSkeleton class="h-20 rounded-2xl" />
         <BaseSkeleton class="h-5 w-28 mt-2" />
-        <BaseSkeleton v-for="i in 3" :key="`ew-${i}`" class="h-20 rounded-2xl" />
+        <BaseSkeleton v-for="i in 2" :key="`ew-${i}`" class="h-20 rounded-2xl" />
       </div>
       <div><BaseSkeleton class="h-56 rounded-2xl" /></div>
     </div>
@@ -319,16 +320,22 @@ const ewallets = [
 
           <button
             type="button"
-            :disabled="isLoading"
-            class="group w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-2xl border-2 border-slate-100 hover:border-red-300 hover:shadow-md hover:shadow-red-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            @click="selectAndProceed('qris')"
+            :disabled="isLoading || qrisComingSoon"
+            :aria-disabled="qrisComingSoon"
+            :class="[
+              'group w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-2xl border-2 border-slate-100 transition-all duration-200',
+              qrisComingSoon
+                ? 'opacity-60 cursor-not-allowed'
+                : 'hover:border-red-300 hover:shadow-md hover:shadow-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
+            ]"
+            @click="qrisComingSoon ? null : selectAndProceed('qris')"
           >
             <!-- QRIS logo -->
             <div class="w-24 h-10 flex items-center justify-center flex-shrink-0">
               <img
                 src="/images/payment/qris.svg"
                 alt="QRIS"
-                class="max-h-9 max-w-[88px] w-auto object-contain"
+                :class="['max-h-9 max-w-[88px] w-auto object-contain', qrisComingSoon ? 'grayscale' : '']"
                 loading="lazy"
               />
             </div>
@@ -338,11 +345,22 @@ const ewallets = [
               <p class="text-xs text-slate-400 mt-0.5">GoPay · OVO · DANA · LinkAja · mobile banking · & more</p>
             </div>
 
-            <div class="flex-shrink-0 w-7 flex items-center justify-center">
-              <span v-if="isLoading && selectedMethod === 'qris'" class="animate-spin w-5 h-5 border-2 border-red-400 border-t-transparent rounded-full block"></span>
-              <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
+            <div class="flex-shrink-0 flex items-center justify-center">
+              <span
+                v-if="qrisComingSoon"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-[11px] font-semibold whitespace-nowrap"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Coming soon
+              </span>
+              <template v-else>
+                <span v-if="isLoading && selectedMethod === 'qris'" class="animate-spin w-5 h-5 border-2 border-red-400 border-t-transparent rounded-full block"></span>
+                <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </template>
             </div>
           </button>
         </div>
@@ -362,20 +380,22 @@ const ewallets = [
               v-for="wallet in ewallets"
               :key="wallet.value"
               type="button"
-              :disabled="isLoading"
+              :disabled="isLoading || wallet.comingSoon"
+              :aria-disabled="wallet.comingSoon"
               :class="[
-                'group w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-2xl border-2 border-slate-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
-                'hover:shadow-md',
-                wallet.accent
+                'group w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-2xl border-2 border-slate-100 transition-all duration-200',
+                wallet.comingSoon
+                  ? 'opacity-60 cursor-not-allowed'
+                  : ['hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed', wallet.accent]
               ]"
-              @click="selectAndProceed(wallet.value)"
+              @click="wallet.comingSoon ? null : selectAndProceed(wallet.value)"
             >
               <!-- Logo -->
               <div class="w-24 h-10 flex items-center justify-center flex-shrink-0">
                 <img
                   :src="wallet.logo"
                   :alt="wallet.name"
-                  class="max-h-9 max-w-[88px] w-auto object-contain"
+                  :class="['max-h-9 max-w-[88px] w-auto object-contain', wallet.comingSoon ? 'grayscale' : '']"
                   loading="lazy"
                 />
               </div>
@@ -385,14 +405,25 @@ const ewallets = [
                 <p class="text-xs text-slate-400 mt-0.5">{{ wallet.desc }}</p>
               </div>
 
-              <div class="flex-shrink-0 w-7 flex items-center justify-center">
+              <div class="flex-shrink-0 flex items-center justify-center">
                 <span
-                  v-if="isLoading && selectedMethod === wallet.value"
-                  class="animate-spin w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full block"
-                ></span>
-                <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-primary-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
+                  v-if="wallet.comingSoon"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-[11px] font-semibold whitespace-nowrap"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Coming soon
+                </span>
+                <template v-else>
+                  <span
+                    v-if="isLoading && selectedMethod === wallet.value"
+                    class="animate-spin w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full block"
+                  ></span>
+                  <svg v-else class="w-5 h-5 text-slate-300 group-hover:text-primary-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </template>
               </div>
             </button>
           </div>
