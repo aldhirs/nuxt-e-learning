@@ -24,6 +24,8 @@ export interface CoursePartner {
   logo_url: string | null
 }
 
+export type CourseType = 'training' | 'exam'
+
 // Shape /public/courses list item. price nullable saat course belum di-set harga.
 export interface CourseListItem {
   id: number
@@ -32,6 +34,8 @@ export interface CourseListItem {
   description: string
   thumbnail_url: string | null
   difficulty: Difficulty
+  /** Tag only (training | exam) — content, price and certificate are the same. */
+  course_type?: CourseType
   price: number | null
   currency: string
   compare_at_price: number | null
@@ -72,6 +76,8 @@ export interface Course {
   description: string
   thumbnail_url: string | null
   difficulty: Difficulty
+  /** Tag only (training | exam) — content, price and certificate are the same. */
+  course_type?: CourseType
   status: CourseStatus
   learning_method?: string
   price: number | null

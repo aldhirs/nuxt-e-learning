@@ -8,34 +8,9 @@ useSeoMeta({
   description: "We'd love to hear from you. Send us a message and we'll respond as soon as possible.",
 })
 
-// ── Contact information (single source of truth) ─────────────────────────────
-const SUPPORT_EMAIL    = 'support@drillspace.id'
-const SUPPORT_PHONE    = '+62 889 7336 1315'
-const WHATSAPP_NUMBER  = '628897336131' // E.164 without +, used in wa.me URLs
-const BUSINESS_HOURS   = 'Monday - Friday: 08:00 - 16:30 WIB'
-
-// ── Business-hours "Open Now" indicator ──────────────────────────────────────
-const now = ref(new Date())
-let clockTimer: ReturnType<typeof setInterval> | null = null
-onMounted(() => {
-  if (!import.meta.client) return
-  // Update every minute so the badge flips at the boundary without a refresh.
-  clockTimer = setInterval(() => { now.value = new Date() }, 60_000)
-})
-onBeforeUnmount(() => {
-  if (clockTimer) clearInterval(clockTimer)
-})
-
-// WIB (UTC+7). Monday–Friday 08:00–16:30.
-const isOpenNow = computed(() => {
-  const d = now.value
-  // Convert to WIB regardless of user's locale
-  const wib = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
-  const dow = wib.getDay() // 0=Sun, 6=Sat
-  if (dow === 0 || dow === 6) return false
-  const mins = wib.getHours() * 60 + wib.getMinutes()
-  return mins >= 8 * 60 && mins < 16 * 60 + 30
-})
+// ── Contact information (PRD #16 — managed by SYSADMIN in the LMS) ────────────
+const { info, status: infoStatus, error: infoError, refresh: refreshInfo, hasHours, isOpenNow, hoursSummary, whatsappLink, mapsLink } = usePlatformContactInfo()
+const infoLoading = computed(() => infoStatus.value === 'pending' && !info.value)
 
 // ── Form state ───────────────────────────────────────────────────────────────
 const form = reactive({
@@ -67,8 +42,8 @@ function sendViaWhatsApp() {
     `*Message:*`,
     form.message.trim(),
   ].join('\n')
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(body)}`
-  if (import.meta.client) window.open(url, '_blank', 'noopener,noreferrer')
+  const url = whatsappLink(body)
+  if (url && import.meta.client) window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 async function submit() {
@@ -85,9 +60,9 @@ async function submit() {
 
 // Direct "Send Email" + "WhatsApp" buttons on the info card
 const mailtoHref = computed(() =>
-  `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Question about DrillSpace')}`,
+  info.value?.email ? `mailto:${info.value.email}?subject=${encodeURIComponent('Question about DrillSpace')}` : '',
 )
-const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
+const whatsappHref = computed(() => whatsappLink())
 </script>
 
 <template>
@@ -118,9 +93,18 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
             <h2 class="text-lg font-bold text-slate-800 mb-1">Get in Touch</h2>
             <p class="text-sm text-slate-500 mb-6">Have questions? We're here to help. Reach out through any of the following channels.</p>
 
-            <div class="space-y-5">
+            <!-- Loading / error states for the contact data -->
+            <div v-if="infoLoading" class="space-y-4" aria-busy="true">
+              <div v-for="n in 3" :key="n" class="h-12 rounded-xl bg-slate-100 animate-pulse"></div>
+            </div>
+            <div v-else-if="infoError && !info" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <p>We couldn't load our contact details right now.</p>
+              <BaseButton class="mt-3" variant="secondary" size="sm" @click="refreshInfo()">Try again</BaseButton>
+            </div>
+
+            <div v-else-if="info" class="space-y-5">
               <!-- Email -->
-              <div class="flex gap-4">
+              <div v-if="info.email" class="flex gap-4">
                 <div class="w-10 h-10 rounded-xl bg-primary-50 text-primary-500 flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -128,7 +112,7 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-bold text-slate-800">Email Us</p>
-                  <p class="text-sm text-slate-500 truncate">{{ SUPPORT_EMAIL }}</p>
+                  <p class="text-sm text-slate-500 truncate">{{ info.email }}</p>
                   <a
                     :href="mailtoHref"
                     class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors"
@@ -142,7 +126,7 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
               </div>
 
               <!-- Phone / WhatsApp -->
-              <div class="flex gap-4">
+              <div v-if="info.phone || info.whatsapp" class="flex gap-4">
                 <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -150,8 +134,9 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-bold text-slate-800">Call Us</p>
-                  <p class="text-sm text-slate-500">{{ SUPPORT_PHONE }}</p>
+                  <p v-if="info.phone" class="text-sm text-slate-500">{{ info.phone }}</p>
                   <a
+                    v-if="whatsappHref"
                     :href="whatsappHref"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -165,8 +150,25 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
                 </div>
               </div>
 
+              <!-- Address -->
+              <div v-if="info.address" class="flex gap-4">
+                <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-bold text-slate-800">Visit Us</p>
+                  <p class="text-sm text-slate-500 whitespace-pre-line">{{ info.address }}</p>
+                  <a v-if="mapsLink" :href="mapsLink" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-sky-600 hover:text-sky-700 transition-colors">
+                    Open in Google Maps
+                  </a>
+                </div>
+              </div>
+
               <!-- Business Hours -->
-              <div class="flex gap-4">
+              <div v-if="hasHours" class="flex gap-4">
                 <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -174,7 +176,10 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-bold text-slate-800">Business Hours</p>
-                  <p class="text-sm text-slate-500">{{ BUSINESS_HOURS }}</p>
+                  <ul class="text-sm text-slate-500">
+                    <li v-for="h in hoursSummary" :key="h.days"><span class="font-medium text-slate-600">{{ h.days }}:</span> {{ h.text }}</li>
+                  </ul>
+                  <p class="text-xs text-slate-400">WIB (GMT+7)</p>
                   <span
                     :class="[
                       'inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-xs font-bold',
@@ -188,6 +193,8 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
                   </span>
                 </div>
               </div>
+              <!-- Notes -->
+              <p v-if="info.notes" class="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">{{ info.notes }}</p>
             </div>
           </div>
 
@@ -283,7 +290,7 @@ const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`
             <!-- Submit -->
             <button
               type="submit"
-              :disabled="isSubmitting || v$.$invalid"
+              :disabled="isSubmitting || v$.$invalid || !whatsappHref"
               class="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold text-sm hover:shadow-lg hover:shadow-primary-200 active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none"
             >
               <svg v-if="!isSubmitting" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

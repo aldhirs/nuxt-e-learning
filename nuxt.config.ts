@@ -14,6 +14,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     ssoApiKey: '',
+    // Optional override for the ds_sso_state cookie Domain (e.g. ".drillspace.id").
+    // Empty = derived from the storefront host + API host (see server/api/sso/generate.post.ts).
+    ssoStateCookieDomain: '',
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.staging.drillspace.id/api/v1',
       clientBaseUrl: process.env.NUXT_PUBLIC_CLIENT_BASE_URL || 'https://staging.lms.drillspace.id',
