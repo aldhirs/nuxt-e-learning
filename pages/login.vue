@@ -24,6 +24,7 @@ const fieldErrors = ref<Record<string, string>>({})
 const showActivationHint = ref(false)
 
 const FORM_FIELDS = ['email', 'password']
+const INVALID_CREDENTIALS_MESSAGE = "Sorry, we couldn't sign you in. Your email or password is incorrect. Please check and try again, or use 'Forgot password?'."
 watch(() => ({ ...form }), () => { if (Object.keys(fieldErrors.value).length) fieldErrors.value = {} }, { deep: true })
 
 const rules = {
@@ -178,9 +179,14 @@ async function submit() {
       serverError.value = 'Account temporarily locked due to too many attempts. Try again in 15 minutes.'
       return
     }
+    // Same message for an unknown email and a wrong password (no account enumeration).
+    if (reason.includes('invalid credential')) {
+      serverError.value = INVALID_CREDENTIALS_MESSAGE
+      return
+    }
     const { global, perField } = mapApiError(err, FORM_FIELDS)
     fieldErrors.value = perField
-    serverError.value = global || 'Incorrect email or password.'
+    serverError.value = global || INVALID_CREDENTIALS_MESSAGE
   } finally {
     isLoading.value = false
   }
