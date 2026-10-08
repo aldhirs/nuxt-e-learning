@@ -98,6 +98,18 @@ function toggleWishlist(e: MouseEvent) {
           >
             {{ difficultyLabel[course.difficulty] ?? course.difficulty }}
           </span>
+          <span
+            v-if="course.course_type === 'exam'"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-violet-50 text-violet-700 ring-1 ring-violet-200"
+          >
+            Exam
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 ring-1 ring-sky-200"
+          >
+            Training
+          </span>
         </div>
 
         <!-- Price -->

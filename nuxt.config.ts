@@ -14,6 +14,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     ssoApiKey: '',
+    // Optional override for the ds_sso_state cookie Domain (e.g. ".drillspace.id").
+    // Empty = derived from the storefront host + API host (see server/api/sso/generate.post.ts).
+    ssoStateCookieDomain: '',
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.staging.drillspace.id/api/v1',
       clientBaseUrl: process.env.NUXT_PUBLIC_CLIENT_BASE_URL || 'https://staging.lms.drillspace.id',
@@ -25,7 +28,7 @@ export default defineNuxtConfig({
       // MinIO URL transform: replace internal host with public CDN host.
       // Must match VITE_FILE_URL_TRANSFORM_TO in vue-e-learning.
       fileUrlTransformFrom: process.env.NUXT_PUBLIC_FILE_URL_TRANSFORM_FROM || 'minio:9000',
-      fileUrlTransformTo: process.env.NUXT_PUBLIC_FILE_URL_TRANSFORM_TO || 's3.minio.imaremaritimjakarta.id'
+      fileUrlTransformTo: process.env.NUXT_PUBLIC_FILE_URL_TRANSFORM_TO || 's3.drillspace.id'
     }
   },
 
