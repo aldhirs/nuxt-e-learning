@@ -1,9 +1,8 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-  const tokenCookie = useAuthCookie()
   const auth = useAuthStore()
 
   // No token → redirect to login
-  if (!tokenCookie.value) {
+  if (!auth.hasToken) {
     return navigateTo({ path: '/login', query: { redirect: to.fullPath } })
   }
 

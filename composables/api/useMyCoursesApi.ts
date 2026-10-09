@@ -1,5 +1,5 @@
 import type { PurchasedCourseItem, PagedPaging } from '~/types'
-import { useAuthCookie } from '~/composables/useApi'
+import { useAuthCookie, handleUnauthorized } from '~/composables/useApi'
 
 export interface PurchasedCoursesPage {
   data: PurchasedCourseItem[]
@@ -9,6 +9,7 @@ export interface PurchasedCoursesPage {
 export function useMyCoursesApi() {
   const config = useRuntimeConfig()
   const tokenCookie = useAuthCookie()
+  const nuxtApp = useNuxtApp()
 
   // Uses $fetch directly (not useApi) to capture the top-level `paging` field
   // that useApi would drop when unwrapping `env.data`.
@@ -36,7 +37,13 @@ export function useMyCoursesApi() {
     }>('/my/purchased-courses', {
       baseURL: config.public.apiBaseUrl as string,
       query,
-      headers
+      headers,
+      timeout: 15000
+    }).catch((err: { response?: { status?: number } }) => {
+      if (err.response?.status === 401 && headers.Authorization) {
+        handleUnauthorized(nuxtApp, '/my/purchased-courses')
+      }
+      throw err
     })
 
     return {

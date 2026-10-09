@@ -24,6 +24,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<User | null>(null)
   const isAuthenticated = computed(() => !!api.tokenCookie.value && !!user.value)
+  // Token present (session not yet rejected). Read from the store's cookie ref,
+  // not a fresh useCookie(): on the server a fresh ref re-reads the *request*
+  // cookie and would not see a token cleared after a 401 earlier in the render.
+  const hasToken = computed(() => !!api.tokenCookie.value)
   const isLoadingMe = ref(false)
 
   function setToken(token: string | null) {
@@ -163,6 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     isAuthenticated,
+    hasToken,
     isLoadingMe,
     login,
     login2FA,
