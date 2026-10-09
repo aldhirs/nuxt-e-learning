@@ -47,6 +47,39 @@ function buildApiError(status: number, payload: RawErrorPayload | undefined, fal
   return err
 }
 
+// Auth endpoints answer 401 for bad credentials, not for an expired session.
+const CREDENTIAL_ENDPOINTS = /^\/(auth\/storefront\/(login|register|activate|forgot-password|reset-password|resend-activation)|public\/auth\/)/
+
+// Route middleware that require a session — on expiry we send the user to /login.
+const PROTECTED_MIDDLEWARE = ['auth', 'partner-auth']
+
+let _expiryHandled = false
+
+// Force-logout when an authenticated request comes back 401. The JWT lives
+// 24h but the cookie 7 days, so a 401 means the session is dead: clear it
+// instead of leaving the user "logged in" with every request failing.
+export function handleUnauthorized(nuxtApp: ReturnType<typeof useNuxtApp>, path: string) {
+  if (CREDENTIAL_ENDPOINTS.test(path)) return
+  nuxtApp.runWithContext(() => {
+    useAuthStore().logout()
+    if (import.meta.server) return
+
+    // Parallel requests all fail at once — notify/redirect only once.
+    if (_expiryHandled) return
+    _expiryHandled = true
+    setTimeout(() => { _expiryHandled = false }, 3000)
+
+    useToast().info('Sesi Anda telah berakhir. Silakan login kembali.')
+    // router.currentRoute (not useRoute) — during a navigation the failing
+    // request belongs to the page being entered, which useRoute doesn't show yet.
+    const route = useRouter().currentRoute.value
+    const middleware = [route.meta.middleware].flat()
+    if (middleware.some(m => typeof m === 'string' && PROTECTED_MIDDLEWARE.includes(m))) {
+      navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+    }
+  })
+}
+
 export function useAuthCookie() {
   return useCookie<string | null>(TOKEN_COOKIE, {
     maxAge: TOKEN_COOKIE_MAX_AGE,
@@ -60,6 +93,7 @@ export function useApi() {
   const config = useRuntimeConfig()
   const baseURL = config.public.apiBaseUrl as string
   const tokenCookie = useAuthCookie()
+  const nuxtApp = useNuxtApp()
 
   async function request<T>(path: string, opts: ApiRequestOptions = {}): Promise<T> {
     const headers: Record<string, string> = {
@@ -93,11 +127,16 @@ export function useApi() {
       }
       return res as T
     } catch (err: unknown) {
-      if ((err as ApiError).isApiError === true) throw err
-      const fetchErr = err as { response?: { status?: number; _data?: { error?: RawErrorPayload } }; message?: string }
-      const status = fetchErr.response?.status ?? 0
-      const payload = fetchErr.response?._data?.error
-      throw buildApiError(status, payload, fetchErr.message || 'Tidak bisa terhubung ke server.')
+      const apiErr = (err as ApiError).isApiError === true
+        ? err as ApiError
+        : (() => {
+            const fetchErr = err as { response?: { status?: number; _data?: { error?: RawErrorPayload } }; message?: string }
+            const status = fetchErr.response?.status ?? 0
+            const payload = fetchErr.response?._data?.error
+            return buildApiError(status, payload, fetchErr.message || 'Tidak bisa terhubung ke server.')
+          })()
+      if (apiErr.status === 401 && headers.Authorization) handleUnauthorized(nuxtApp, path)
+      throw apiErr
     }
   }
 
