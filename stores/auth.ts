@@ -129,7 +129,12 @@ export const useAuthStore = defineStore('auth', () => {
       }
       return me
     } catch (err: unknown) {
-      if ((err as { status?: number }).status === 401) {
+      // 401 = token rejected; 403/404 = token valid but the user no longer
+      // exists / is disabled (e.g. after a data reset). In all three cases the
+      // session is dead — drop the cookie, otherwise the guest middleware keeps
+      // bouncing /login and /register back to "/".
+      const status = (err as { status?: number }).status
+      if (status === 401 || status === 403 || status === 404) {
         setToken(null)
         setUser(null)
       }

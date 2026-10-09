@@ -79,7 +79,10 @@ export function useApi() {
         method: opts.method ?? 'GET',
         body: opts.body as Record<string, unknown> | undefined,
         query: opts.query,
-        headers
+        headers,
+        // Never hang forever — a stalled API must surface as an error, not
+        // freeze the page (the client auth plugin awaits /me before hydration).
+        timeout: 15000
       })
       const env = res as { success?: boolean; data?: T; error?: RawErrorPayload }
       if (env && typeof env === 'object' && 'success' in env) {
