@@ -16,9 +16,12 @@ export function useFileUrl() {
     if (!url) return url
     // Already a proper https URL pointing to the public host — return as-is
     if (url.startsWith('https://') && url.includes(to)) return url
-    // Strip any existing scheme so we can reliably prefix with https://
-    const stripped = url.replace(/^https?:\/\//, '').replace(from, to)
-    return 'https://' + stripped
+    // Internal MinIO host → public host, always over https.
+    if (url.includes(from)) return 'https://' + url.replace(/^https?:\/\//, '').replace(from, to)
+    // Any other absolute URL is already public — keep its scheme.
+    if (/^https?:\/\//i.test(url)) return url
+    // Scheme-less "host/bucket/key" → https.
+    return 'https://' + url
   }
 
   return { transformUrl }
